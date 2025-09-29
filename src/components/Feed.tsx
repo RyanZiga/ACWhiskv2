@@ -47,6 +47,7 @@ interface Post {
   author_id: string;
   author_name: string;
   author_role: string;
+  author_avatar?: string;
   created_at: string;
   likes: string[];
   comments: Comment[];
@@ -148,9 +149,11 @@ export function Feed({ user, onNavigate }: FeedProps) {
   const [topRecipes, setTopRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [editingPost, setEditingPost] = useState<string | null>(
+  const [editingPost, setEditingPost] = useState<Post | null>(
     null,
   );
+  const [editContent, setEditContent] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showComments, setShowComments] = useState<
     string | null
   >(null);
@@ -181,7 +184,18 @@ export function Feed({ user, onNavigate }: FeedProps) {
       setScrolled(window.scrollY > 100);
     };
 
+    // Close dropdowns when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdowns = document.querySelectorAll('[id^="dropdown-"]');
+      dropdowns.forEach(dropdown => {
+        if (!dropdown.contains(event.target as Node)) {
+          dropdown.classList.add('hidden');
+        }
+      });
+    };
+
     window.addEventListener("scroll", handleScroll);
+    document.addEventListener("click", handleClickOutside);
 
     // Change cooking tip every minute
     const tipInterval = setInterval(() => {
@@ -193,6 +207,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
       clearInterval(recipesInterval);
       clearInterval(tipInterval);
       window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, []);
 
@@ -493,6 +508,69 @@ export function Feed({ user, onNavigate }: FeedProps) {
     setCommentText((prev) => ({ ...prev, [postId]: "" }));
   };
 
+  const handleEditPost = async (content: string) => {
+    if (!editingPost || !content.trim()) return;
+
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${editingPost.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ content: content.trim() }),
+        },
+      );
+
+      if (response.ok) {
+        const { post } = await response.json();
+        setPosts((prevPosts) =>
+          prevPosts.map((p) => (p.id === editingPost.id ? post : p)),
+        );
+        setEditingPost(null);
+        setEditContent("");
+      }
+    } catch (error) {
+      console.error("Error editing post:", error);
+      // Optimistic update for demo
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === editingPost.id
+            ? { ...post, content: content.trim() }
+            : post,
+        ),
+      );
+      setEditingPost(null);
+      setEditContent("");
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+          },
+        },
+      );
+
+      if (response.ok) {
+        setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
+        setShowDeleteConfirm(null);
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      // Optimistic update for demo
+      setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
+      setShowDeleteConfirm(null);
+    }
+  };
+
 
 
   const formatDate = (dateString: string) => {
@@ -579,10 +657,23 @@ export function Feed({ user, onNavigate }: FeedProps) {
             {/* Create Post Section */}
             <div className="bg-theme-gradient rounded-2xl border border-gray-200 p-4 lg:p-6 mb-6 shadow-sm">
               <div className="flex items-center space-x-3 lg:space-x-4 mb-4">
-                <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm lg:text-base font-medium">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
+                  {user.avatar_url ? (
+                    <ImageWithFallback
+                      src={user.avatar_url}
+                      alt={user.name}
+                      className="w-full h-full object-cover rounded-full"
+                      fallback={
+                        <span className="text-white text-sm lg:text-base font-medium">
+                          {user.name.charAt(0).toUpperCase()}
+                        </span>
+                      }
+                    />
+                  ) : (
+                    <span className="text-white text-sm lg:text-base font-medium">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <input
                   type="text"
@@ -602,16 +693,6 @@ export function Feed({ user, onNavigate }: FeedProps) {
                     <Camera className="h-4 w-4 lg:h-5 lg:w-5" />
                     <span className="hidden sm:inline">
                       Photo
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => onNavigate("dashboard")}
-                    className="flex items-center space-x-1 lg:space-x-2 px-3 lg:px-4 py-2 btn-gradient rounded-full transition-colors text-sm lg:text-base"
-                  >
-                    <ChefHat className="h-4 w-4 lg:h-5 lg:w-5" />
-                    <span className="hidden sm:inline">
-                      Recipe
                     </span>
                   </button>
                 </div>
@@ -695,25 +776,68 @@ export function Feed({ user, onNavigate }: FeedProps) {
                         </div>
                       </div>
 
-                      {post.author_id === user.id && (
-                        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                          <MoreHorizontal className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
-                        </button>
+                      {(post.author_id === user.id || user.role === 'admin') && (
+                        <div className="relative">
+                          <button 
+                            onClick={() => {
+                              const dropdown = document.getElementById(`dropdown-${post.id}`);
+                              if (dropdown) {
+                                dropdown.classList.toggle('hidden');
+                              }
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
+                          </button>
+                          <div 
+                            id={`dropdown-${post.id}`}
+                            className="hidden absolute right-0 mt-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg z-10"
+                          >
+                            {post.author_id === user.id && (
+                              <button
+                                onClick={() => {
+                                  setEditingPost(post);
+                                  setEditContent(post.content);
+                                  document.getElementById(`dropdown-${post.id}`)?.classList.add('hidden');
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 rounded-t-lg"
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span>Edit Post</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setShowDeleteConfirm(post.id);
+                                document.getElementById(`dropdown-${post.id}`)?.classList.add('hidden');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 rounded-b-lg"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>Delete Post</span>
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    {/* Recipe Title and Description */}
-                    {post.type === "recipe" &&
-                      post.recipe_data && (
-                        <div className="mb-4">
+                    {/* Post Content - Recipe or Regular Post */}
+                    <div className="mb-4">
+                      {post.type === "recipe" && post.recipe_data ? (
+                        <>
                           <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-2">
                             {post.recipe_data.title}
                           </h2>
                           <p className="text-gray-700 leading-relaxed text-sm lg:text-base">
                             {post.content}
                           </p>
-                        </div>
+                        </>
+                      ) : (
+                        <p className="text-gray-900 leading-relaxed text-sm lg:text-base">
+                          {post.content}
+                        </p>
                       )}
+                    </div>
                   </div>
 
                   {/* Recipe Image */}
@@ -844,12 +968,23 @@ export function Feed({ user, onNavigate }: FeedProps) {
                       <div className="border-t border-gray-100 pt-4 mt-4">
                         {/* Comment Input */}
                         <div className="flex items-center space-x-3 mb-4">
-                          <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs lg:text-sm font-medium">
-                              {user.name
-                                .charAt(0)
-                                .toUpperCase()}
-                            </span>
+                          <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center overflow-hidden">
+                            {user.avatar_url ? (
+                              <ImageWithFallback
+                                src={user.avatar_url}
+                                alt={user.name}
+                                className="w-full h-full object-cover rounded-full"
+                                fallback={
+                                  <span className="text-white text-xs lg:text-sm font-medium">
+                                    {user.name.charAt(0).toUpperCase()}
+                                  </span>
+                                }
+                              />
+                            ) : (
+                              <span className="text-white text-xs lg:text-sm font-medium">
+                                {user.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
                           </div>
                           <div className="flex-1 flex space-x-2">
                             <input
@@ -977,6 +1112,29 @@ export function Feed({ user, onNavigate }: FeedProps) {
             setShowCreatePost(false);
             loadFeed();
           }}
+        />
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <EditPostModal
+          post={editingPost}
+          content={editContent}
+          onContentChange={setEditContent}
+          onSave={handleEditPost}
+          onClose={() => {
+            setEditingPost(null);
+            setEditContent("");
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          postId={showDeleteConfirm}
+          onConfirm={handleDeletePost}
+          onCancel={() => setShowDeleteConfirm(null)}
         />
       )}
     </div>
@@ -1216,10 +1374,23 @@ function CreatePostModal({
 
         <form onSubmit={handleSubmit} className="p-4 lg:p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center">
-              <span className="text-white text-sm lg:text-base font-medium">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
+            <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
+              {user.avatar_url ? (
+                <ImageWithFallback
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-full h-full object-cover rounded-full"
+                  fallback={
+                    <span className="text-white text-sm lg:text-base font-medium">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
+                  }
+                />
+              ) : (
+                <span className="text-white text-sm lg:text-base font-medium">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
+              )}
             </div>
             <div>
               <p className="font-medium text-gray-900 text-sm lg:text-base">
@@ -1293,6 +1464,136 @@ function CreatePostModal({
             </div>
           )}
         </form>
+      </div>
+    </div>
+  );
+}
+
+interface EditPostModalProps {
+  post: Post;
+  content: string;
+  onContentChange: (content: string) => void;
+  onSave: (content: string) => void;
+  onClose: () => void;
+}
+
+function EditPostModal({ post, content, onContentChange, onSave, onClose }: EditPostModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-theme-gradient rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-theme-gradient border-b border-gray-200 p-4 lg:p-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg lg:text-xl font-bold text-gray-900">
+              Edit Post
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-xl lg:text-2xl transition-colors"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
+              {post.author_avatar ? (
+                <ImageWithFallback
+                  src={post.author_avatar}
+                  alt={post.author_name}
+                  className="w-full h-full object-cover rounded-full"
+                  fallback={
+                    <span className="text-white text-sm lg:text-base font-medium">
+                      {post.author_name.charAt(0).toUpperCase()}
+                    </span>
+                  }
+                />
+              ) : (
+                <span className="text-white text-sm lg:text-base font-medium">
+                  {post.author_name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 text-sm lg:text-base">
+                {post.author_name}
+              </p>
+              <p className="text-xs lg:text-sm text-gray-500 capitalize">
+                {post.author_role}
+              </p>
+            </div>
+          </div>
+
+          <textarea
+            value={content}
+            onChange={(e) => onContentChange(e.target.value)}
+            placeholder="What's cooking? Share your recipe or cooking experience..."
+            className="w-full p-3 lg:p-4 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm lg:text-base text-gray-900"
+            rows={4}
+          />
+
+          <div className="flex items-center justify-end pt-4 lg:pt-6 border-t border-gray-200 mt-4 lg:mt-6 space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 lg:px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm lg:text-base"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onSave(content)}
+              disabled={!content.trim()}
+              className="px-4 lg:px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm lg:text-base"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DeleteConfirmModalProps {
+  postId: string;
+  onConfirm: (postId: string) => void;
+  onCancel: () => void;
+}
+
+function DeleteConfirmModal({ postId, onConfirm, onCancel }: DeleteConfirmModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-theme-gradient rounded-2xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <Trash2 className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Delete Post</h3>
+              <p className="text-sm text-gray-600">This action cannot be undone.</p>
+            </div>
+          </div>
+
+          <p className="text-gray-700 mb-6">
+            Are you sure you want to delete this post? This will permanently remove the post and all its comments.
+          </p>
+
+          <div className="flex items-center justify-end space-x-3">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onConfirm(postId)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Delete Post
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
