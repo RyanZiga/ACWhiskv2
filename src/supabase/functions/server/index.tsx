@@ -32,6 +32,7 @@ async function initializeBuckets() {
     "make-c56dfc7a-avatars",
     "make-c56dfc7a-assignments",
     "make-c56dfc7a-submissions",
+    "make-c56dfc7a-assignment-files",
   ];
 
   for (const bucketName of buckets) {
@@ -42,11 +43,23 @@ async function initializeBuckets() {
     );
 
     if (!bucketExists) {
-      await supabase.storage.createBucket(bucketName);
-      console.log(`Created bucket: ${bucketName}`);
+      // Create bucket with public access
+      const { data: bucket, error: bucketError } = await supabase.storage.createBucket(bucketName, {
+        public: true,
+        allowedMimeTypes: ['image/*', 'video/*'],
+        fileSizeLimit: 52428800 // 50MB
+      });
+      
+      if (bucketError) {
+        console.error(`Error creating bucket ${bucketName}:`, bucketError);
+      } else {
+        console.log(`Created public bucket: ${bucketName}`);
+      }
     }
   }
 }
+
+
 
 // Initialize buckets on startup
 initializeBuckets();
@@ -363,13 +376,18 @@ app.post("/make-server-c56dfc7a/posts", async (c) => {
     const { content, images = [] } = await c.req.json();
     const postId = crypto.randomUUID();
 
+    // Get user profile to include avatar
+    const userProfile = await kv.get(`user:${user.id}`);
+    const safeUserProfile = ensureUserProfile(userProfile);
+
     const post = {
       id: postId,
       content,
       images: Array.isArray(images) ? images : [],
       author_id: user.id,
-      author_name: user.user_metadata.name,
-      author_role: user.user_metadata.role,
+      author_name: user.user_metadata.name || safeUserProfile.name,
+      author_role: user.user_metadata.role || safeUserProfile.role,
+      author_avatar: safeUserProfile.avatar_url,
       created_at: new Date().toISOString(),
       likes: [],
       comments: [],

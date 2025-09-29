@@ -3,11 +3,11 @@
 :root {
   --font-size: 14px;
   --background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-  --foreground: #1f2937;
+  --foreground: #111827;
   --card: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-  --card-foreground: #1f2937;
+  --card-foreground: #111827;
   --popover: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-  --popover-foreground: #1f2937;
+  --popover-foreground: #111827;
   --primary: linear-gradient(294deg,rgba(192, 132, 252, 1) 0%, rgba(96, 165, 250, 1) 100%);
   --primary-foreground: #ffffff;
   --secondary: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
@@ -43,11 +43,11 @@
 
 .dark {
   --background: #1e293b;
-  --foreground: #f1f5f9;
+  --foreground: #ffffff;
   --card: #1e293b;
-  --card-foreground: #f1f5f9;
+  --card-foreground: #ffffff;
   --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
+  --popover-foreground: #ffffff;
   --primary: linear-gradient(294deg,rgba(192, 132, 252, 1) 0%, rgba(96, 165, 250, 1) 100%);
   --primary-foreground: #ffffff;
   --secondary: #1e293b;
@@ -568,6 +568,21 @@ html {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Header gradient utility matching sidebar */
+.header-gradient {
+  background: rgba(138, 170, 230, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .header-gradient {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Component-specific responsive utilities */
