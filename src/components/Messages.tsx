@@ -92,6 +92,7 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [searchingUsers, setSearchingUsers] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [notifications, setNotifications] = useState<Array<{
     id: string
@@ -105,11 +106,20 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messageInputRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -356,45 +366,61 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
   const searchUsers = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([])
+      setSearchingUsers(false)
       return
     }
+
+    setSearchingUsers(true)
 
     try {
       const supabase = getAuthenticatedClient()
       
-      // Try user_profiles first, then fall back to auth.users
-      let { data, error } = await supabase
+      // Search user_profiles table with improved error handling
+      const { data, error } = await supabase
         .from('user_profiles')
         .select('id, name, avatar_url, status, role')
-        .ilike('name', `%${query}%`)
+        .or(`name.ilike.%${query}%`)
         .neq('id', user.id)
         .limit(10)
 
-      // If user_profiles doesn't exist, try auth.users
-      if (error && error.code === '42P01') {
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
-        
-        if (!authError && authData?.users) {
-          const filteredUsers = authData.users
-            .filter(u => 
-              u.id !== user.id && 
-              u.user_metadata?.name?.toLowerCase().includes(query.toLowerCase())
-            )
-            .slice(0, 10)
-            .map(u => ({
-              id: u.id,
-              name: u.user_metadata?.name || u.email || 'Unknown User',
-              avatar_url: u.user_metadata?.avatar_url,
-              status: 'offline' as const,
-              role: u.user_metadata?.role || 'student'
-            }))
+      if (error) {
+        console.warn('Error searching user_profiles:', error)
+        // Fallback: try to search auth.users if available
+        try {
+          const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
           
-          setSearchResults(filteredUsers)
-          return
+          if (!authError && authData?.users) {
+            const filteredUsers = authData.users
+              .filter(u => {
+                if (u.id === user.id) return false
+                const name = u.user_metadata?.name || u.email || ''
+                const email = u.email || ''
+                return name.toLowerCase().includes(query.toLowerCase()) || 
+                       email.toLowerCase().includes(query.toLowerCase())
+              })
+              .slice(0, 10)
+              .map(u => ({
+                id: u.id,
+                name: u.user_metadata?.name || u.email || 'Unknown User',
+                avatar_url: u.user_metadata?.avatar_url,
+                status: 'offline' as const,
+                role: u.user_metadata?.role || 'student'
+              }))
+            
+            setSearchResults(filteredUsers)
+            setSearchingUsers(false)
+            return
+          }
+        } catch (fallbackError) {
+          console.error('Fallback user search failed:', fallbackError)
         }
+        
+        setSearchResults([])
+        setSearchingUsers(false)
+        return
       }
 
-      if (!error && data) {
+      if (data) {
         setSearchResults(data.map(u => ({
           ...u,
           status: (u.status || 'offline') as 'online' | 'offline' | 'away'
@@ -405,7 +431,19 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     } catch (error) {
       console.error('Error searching users:', error)
       setSearchResults([])
+    } finally {
+      setSearchingUsers(false)
     }
+  }
+
+  const debouncedSearchUsers = (query: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      searchUsers(query)
+    }, 300)
   }
 
   const startNewConversation = async (targetUserId: string) => {
@@ -643,6 +681,14 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-muted/50 rounded"
+                >
+                  <X className="h-3 w-3 text-muted-foreground" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -747,15 +793,9 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
                 <div className="text-center">
                   <MessageCircle className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
                   <h3 className="font-medium text-card-foreground mb-2">No conversations found</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {searchQuery ? 'Try a different search term' : 'Start your first conversation'}
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery ? 'Try a different search term or start a new conversation using the button above' : 'Start your first conversation using the "New Chat" button above'}
                   </p>
-                  <button
-                    onClick={() => setShowNewChatModal(true)}
-                    className="px-4 py-2 btn-gradient rounded-lg hover:bg-primary/90 transition-colors text-sm"
-                  >
-                    Start New Chat
-                  </button>
                 </div>
               </div>
             )}
@@ -1006,13 +1046,7 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
               <div className="text-center">
                 <MessageCircle className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
                 <h3 className="font-medium text-foreground mb-2">Select a conversation</h3>
-                <p className="text-muted-foreground mb-4">Choose a conversation from the sidebar to start messaging</p>
-                <button
-                  onClick={() => setShowNewChatModal(true)}
-                  className="px-4 py-2 btn-gradient rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  Start New Chat
-                </button>
+                <p className="text-muted-foreground">Choose a conversation from the sidebar to start messaging or use the "New Chat" button in the sidebar</p>
               </div>
             </div>
           )}
@@ -1048,7 +1082,7 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
                     value={userSearchQuery}
                     onChange={(e) => {
                       setUserSearchQuery(e.target.value)
-                      searchUsers(e.target.value)
+                      debouncedSearchUsers(e.target.value)
                     }}
                     className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                   />
@@ -1058,7 +1092,12 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
             
             {/* Search results */}
             <div className="max-h-96 overflow-y-auto">
-              {searchResults.length > 0 ? (
+              {searchingUsers ? (
+                <div className="p-8 text-center">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Searching users...</p>
+                </div>
+              ) : searchResults.length > 0 ? (
                 <div className="p-2">
                   {searchResults.map((profile) => (
                     <div
@@ -1094,12 +1133,14 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
               ) : userSearchQuery.trim() ? (
                 <div className="p-8 text-center">
                   <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">No users found</p>
+                  <p className="text-muted-foreground">No users found matching "{userSearchQuery}"</p>
+                  <p className="text-xs text-muted-foreground mt-2">Try searching by name or email</p>
                 </div>
               ) : (
                 <div className="p-8 text-center">
                   <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                   <p className="text-muted-foreground">Search for users to start a conversation</p>
+                  <p className="text-xs text-muted-foreground mt-2">Type a name or email to find users</p>
                 </div>
               )}
             </div>

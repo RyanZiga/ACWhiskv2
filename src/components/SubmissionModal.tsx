@@ -48,6 +48,7 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dragActive, setDragActive] = useState(false)
 
   const testUploadEndpoint = async () => {
     try {
@@ -171,6 +172,26 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
     }
   }
 
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files)
+    }
+  }
+
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index))
   }
@@ -256,25 +277,25 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Submit Assignment</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.title}</p>
+                <h2 className="text-xl font-bold text-foreground">Submit Assignment</h2>
+                <p className="text-sm text-muted-foreground">{assignment.title}</p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
               </button>
             </div>
 
             {/* Assignment Info */}
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Assignment Details</span>
+                <FileText className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Assignment Details</span>
               </div>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">{assignment.description}</p>
-              <div className="flex items-center space-x-4 text-xs text-blue-600 dark:text-blue-400">
+              <p className="text-sm text-foreground/80 mb-2">{assignment.description}</p>
+              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                 <span>Due: {new Date(assignment.deadline).toLocaleDateString()}</span>
                 <span>Points: {assignment.points}</span>
                 <span className="capitalize">Difficulty: {assignment.difficulty}</span>
@@ -282,22 +303,22 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
             </div>
 
             {error && (
-              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <div className="mb-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                  <span className="text-sm text-red-800 dark:text-red-200">{error}</span>
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <span className="text-sm text-destructive">{error}</span>
                 </div>
               </div>
             )}
 
             {/* Debug Info - Remove after testing */}
             {process.env.NODE_ENV === 'development' && (
-              <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
-                <div className="font-semibold mb-1">🔧 Debug Info:</div>
-                <div>User Role: {user.role}</div>
-                <div>Has Token: {user.access_token ? '✅ Yes' : '❌ No'}</div>
-                <div>Token Preview: {user.access_token ? `${user.access_token.substring(0, 20)}...` : 'None'}</div>
-                <div>Project ID: {projectId}</div>
+              <div className="mb-4 p-3 bg-muted/50 border border-border rounded-lg text-xs">
+                <div className="font-semibold mb-1 text-foreground">🔧 Debug Info:</div>
+                <div className="text-muted-foreground">User Role: {user.role}</div>
+                <div className="text-muted-foreground">Has Token: {user.access_token ? '✅ Yes' : '❌ No'}</div>
+                <div className="text-muted-foreground">Token Preview: {user.access_token ? `${user.access_token.substring(0, 20)}...` : 'None'}</div>
+                <div className="text-muted-foreground">Project ID: {projectId}</div>
               </div>
             )}
 
@@ -305,14 +326,14 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Recipe Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Recipe Title *
                 </label>
                 <input
                   type="text"
                   value={recipeTitle}
                   onChange={(e) => setRecipeTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground placeholder:text-muted-foreground"
                   placeholder="Enter your recipe title..."
                   required
                 />
@@ -320,14 +341,14 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Description *
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground placeholder:text-muted-foreground"
                   placeholder="Describe your recipe..."
                   required
                 />
@@ -335,38 +356,48 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
 
               {/* Ingredients */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Ingredients
                 </label>
                 <textarea
                   value={ingredients}
                   onChange={(e) => setIngredients(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground placeholder:text-muted-foreground"
                   placeholder="List ingredients (one per line)..."
                 />
               </div>
 
               {/* Instructions */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Instructions
                 </label>
                 <textarea
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                   rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground placeholder:text-muted-foreground"
                   placeholder="List cooking instructions (one per line)..."
                 />
               </div>
 
               {/* File Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Images & Videos
                 </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                    dragActive 
+                      ? 'border-primary bg-primary/10 scale-105' 
+                      : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
                   <input
                     type="file"
                     multiple
@@ -378,70 +409,122 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
                   />
                   <label 
                     htmlFor="file-upload" 
-                    className={`cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`cursor-pointer block ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'} transition-opacity`}
                   >
-                    {uploading ? (
-                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    ) : (
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    )}
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                      {uploading ? 'Uploading files...' : 'Click to upload images and videos'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                      Images: JPEG, PNG, GIF, WebP (Max 10MB)<br />
-                      Videos: MP4, WebM, OGG, AVI, MOV (Max 50MB)
-                    </p>
+                    <div className="flex flex-col items-center space-y-3">
+                      {uploading ? (
+                        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                      ) : dragActive ? (
+                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+                          <Upload className="h-6 w-6 text-primary" />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/15 transition-colors">
+                          <Upload className="h-6 w-6 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-base text-foreground font-medium mb-1">
+                          {uploading 
+                            ? `Uploading ${uploadedFiles.length > 0 ? 'additional ' : ''}files...` 
+                            : dragActive 
+                              ? 'Drop files here'
+                              : uploadedFiles.length > 0
+                                ? 'Add more files'
+                                : 'Upload Images & Videos'
+                          }
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {dragActive 
+                            ? 'Release to upload files'
+                            : 'Drag and drop files here or click to browse'
+                          }
+                        </p>
+                        <div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <Image className="h-3 w-3" />
+                            <span>Images (Max 10MB)</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Video className="h-3 w-3" />
+                            <span>Videos (Max 50MB)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </label>
                 </div>
 
                 {/* Uploaded Files */}
                 {uploadedFiles.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          {file.type === 'image' ? (
-                            <Image className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Video className="h-4 w-4 text-blue-600" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-foreground">
+                        Uploaded Files ({uploadedFiles.length})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedFiles([])}
+                        className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        Remove all
+                      </button>
+                    </div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {uploadedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted/20 border border-border rounded-lg hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {file.type === 'image' ? (
+                                <div className="w-8 h-8 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                  <Image className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                </div>
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                  <Video className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                                <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                <span>•</span>
+                                <span className="capitalize">{file.type}</span>
+                              </div>
+                            </div>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="p-1.5 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"
+                            title="Remove file"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-red-600 dark:text-red-400"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Additional Notes
                 </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground placeholder:text-muted-foreground"
                   placeholder="Any additional notes or comments..."
                 />
               </div>
 
               {/* Submit Button */}
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-border">
                 <GlassButton
                   type="button"
                   onClick={onClose}

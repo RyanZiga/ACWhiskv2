@@ -41,15 +41,15 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
   }
 
   return (
-    <header className="lg:ml-80 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50">
+    <header className="lg:ml-80 header-gradient sticky top-0 z-50">
       <div className="px-6 py-4 rounded-[13px] bg-[rgba(226,232,240,0)]">
         <div className="flex items-center justify-between">
           {/* Page Title */}
           <div className="ml-16 lg:ml-0 flex-1 min-w-0">
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white truncate">
+            <h1 className="text-xl lg:text-2xl font-bold text-[rgba(255,255,255,1)] truncate">
               {getPageTitle()}
             </h1>
-            <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
+            <p className="text-xs lg:text-sm text-[rgba(243,245,248,1)] mt-1 truncate">
               Welcome back, {user.name}
             </p>
           </div>
@@ -63,7 +63,7 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
                 e.stopPropagation()
                 setShowSearch(!showSearch)
               }}
-              className="relative p-2 lg:p-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="relative p-2 lg:p-3 text-[rgba(253,253,253,1)] hover:text-foreground hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Search"
               type="button"
             >
@@ -77,7 +77,7 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
                 e.stopPropagation()
                 toggleTheme()
               }}
-              className="relative p-2 lg:p-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="relative p-2 lg:p-3 text-[rgba(233,235,237,1)] hover:text-foreground hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               type="button"
             >
@@ -108,26 +108,26 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search recipes, people, forum posts..."
-                  className="flex-1 px-4 py-3 pl-10 pr-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                  className="flex-1 px-4 py-3 pl-10 pr-12 bg-background border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                   autoFocus
                 />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <button
                   type="button"
                   onClick={() => {
                     setShowSearch(false)
                     setSearchQuery('')
                   }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="mt-2 flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-2 flex justify-between items-center text-sm text-muted-foreground">
                 <span>Press Enter to search or click the search icon</span>
                 <button
                   type="submit"
-                  className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  className="px-3 py-1 btn-gradient rounded-lg hover:opacity-90 transition-opacity text-sm"
                 >
                   Search
                 </button>

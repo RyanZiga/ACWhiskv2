@@ -164,6 +164,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
     useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [currentTip, setCurrentTip] = useState(0);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     loadFeed();
@@ -186,12 +187,10 @@ export function Feed({ user, onNavigate }: FeedProps) {
 
     // Close dropdowns when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
-      const dropdowns = document.querySelectorAll('[id^="dropdown-"]');
-      dropdowns.forEach(dropdown => {
-        if (!dropdown.contains(event.target as Node)) {
-          dropdown.classList.add('hidden');
-        }
-      });
+      const target = event.target as Element;
+      if (!target.closest('[data-dropdown]') && !target.closest('[data-dropdown-trigger]')) {
+        setActiveDropdown(null);
+      }
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -548,6 +547,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
   };
 
   const handleDeletePost = async (postId: string) => {
+    setActiveDropdown(null); // Close any open dropdowns
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}`,
@@ -779,44 +779,47 @@ export function Feed({ user, onNavigate }: FeedProps) {
                       {(post.author_id === user.id || user.role === 'admin') && (
                         <div className="relative">
                           <button 
-                            onClick={() => {
-                              const dropdown = document.getElementById(`dropdown-${post.id}`);
-                              if (dropdown) {
-                                dropdown.classList.toggle('hidden');
-                              }
+                            data-dropdown-trigger
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveDropdown(activeDropdown === post.id ? null : post.id);
                             }}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors z-10"
                           >
                             <MoreHorizontal className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
                           </button>
-                          <div 
-                            id={`dropdown-${post.id}`}
-                            className="hidden absolute right-0 mt-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg z-10"
-                          >
-                            {post.author_id === user.id && (
-                              <button
-                                onClick={() => {
-                                  setEditingPost(post);
-                                  setEditContent(post.content);
-                                  document.getElementById(`dropdown-${post.id}`)?.classList.add('hidden');
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 rounded-t-lg"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span>Edit Post</span>
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setShowDeleteConfirm(post.id);
-                                document.getElementById(`dropdown-${post.id}`)?.classList.add('hidden');
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 rounded-b-lg"
+                          {activeDropdown === post.id && (
+                            <div 
+                              data-dropdown
+                              className="absolute right-0 mt-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg z-50 dropdown-mobile"
                             >
-                              <Trash2 className="h-4 w-4" />
-                              <span>Delete Post</span>
-                            </button>
-                          </div>
+                              {post.author_id === user.id && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingPost(post);
+                                    setEditContent(post.content);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 rounded-t-lg"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span>Edit Post</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowDeleteConfirm(post.id);
+                                  setActiveDropdown(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 rounded-b-lg"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete Post</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1125,6 +1128,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
           onClose={() => {
             setEditingPost(null);
             setEditContent("");
+            setActiveDropdown(null);
           }}
         />
       )}
@@ -1134,7 +1138,10 @@ export function Feed({ user, onNavigate }: FeedProps) {
         <DeleteConfirmModal
           postId={showDeleteConfirm}
           onConfirm={handleDeletePost}
-          onCancel={() => setShowDeleteConfirm(null)}
+          onCancel={() => {
+            setShowDeleteConfirm(null);
+            setActiveDropdown(null);
+          }}
         />
       )}
     </div>

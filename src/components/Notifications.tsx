@@ -214,7 +214,7 @@ export function Notifications({ user }: NotificationsProps) {
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+        className="relative p-2 text-[rgba(248,248,248,1)] hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors touch-target"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

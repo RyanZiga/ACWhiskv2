@@ -651,7 +651,7 @@ function GradingPanel({ submissions, assignments, user, onReviewSubmission }: Gr
               <div className="flex-1">
                 <h4 className="font-medium text-card-foreground">{submission.recipe_title}</h4>
                 <p className="text-sm text-muted-foreground">
-                  By {submission.student_name} • Assignment: {assignment?.title}
+                  Submitted By {submission.student_name} • Assignment: {assignment?.title}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Submitted: {new Date(submission.submitted_at).toLocaleDateString()}
@@ -879,10 +879,13 @@ function SubmissionModal({ assignment, existingSubmission, onClose, onSuccess, u
     recipe_description: existingSubmission?.recipe_description || '',
     ingredients: existingSubmission?.ingredients || [''],
     instructions: existingSubmission?.instructions || [''],
-    notes: existingSubmission?.notes || ''
+    notes: existingSubmission?.notes || '',
+    uploadedFiles: [] as Array<{name: string, size: number, type: 'image' | 'video', url: string}>
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [dragActive, setDragActive] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const addIngredient = () => {
     setFormData({...formData, ingredients: [...formData.ingredients, '']})
@@ -914,6 +917,99 @@ function SubmissionModal({ assignment, existingSubmission, onClose, onSuccess, u
     setFormData({...formData, instructions: newInstructions})
   }
 
+  // File upload functionality
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    const files = Array.from(e.dataTransfer.files)
+    handleFileUpload(files)
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files)
+      handleFileUpload(files)
+    }
+  }
+
+  const handleFileUpload = async (files: File[]) => {
+    if (!files.length) return
+    
+    setUploading(true)
+    setError('')
+    
+    try {
+      const supabase = getAuthenticatedClient()
+      const uploadedFiles = []
+      
+      for (const file of files) {
+        // Validate file size
+        const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024 // 50MB for videos, 10MB for images
+        if (file.size > maxSize) {
+          setError(`File ${file.name} is too large. Maximum size is ${file.type.startsWith('video/') ? '50MB' : '10MB'}.`)
+          continue
+        }
+
+        // Create unique filename
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `submissions/${user.id}/${fileName}`
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('make-c56dfc7a-assignment-files')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          setError(`Failed to upload ${file.name}: ${uploadError.message}`)
+          continue
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('make-c56dfc7a-assignment-files')
+          .getPublicUrl(filePath)
+
+        uploadedFiles.push({
+          name: file.name,
+          size: file.size,
+          type: file.type.startsWith('video/') ? 'video' : 'image',
+          url: urlData.publicUrl
+        })
+      }
+
+      // Update form data with new files
+      setFormData(prev => ({
+        ...prev,
+        uploadedFiles: [...prev.uploadedFiles, ...uploadedFiles]
+      }))
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      setError('Failed to upload files. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeFile = (index: number) => {
+    const newFiles = formData.uploadedFiles.filter((_, i) => i !== index)
+    setFormData({...formData, uploadedFiles: newFiles})
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -923,11 +1019,16 @@ function SubmissionModal({ assignment, existingSubmission, onClose, onSuccess, u
       const supabase = getAuthenticatedClient()
       
       const submissionData = {
-        ...formData,
+        recipe_title: formData.recipe_title,
+        recipe_description: formData.recipe_description,
+        ingredients: formData.ingredients,
+        instructions: formData.instructions,
+        notes: formData.notes,
         assignment_id: assignment.id,
         student_id: user.id,
         student_name: user.name,
-        images: [],
+        images: formData.uploadedFiles.map(file => file.url),
+        files: formData.uploadedFiles,
         status: 'pending'
       }
 
@@ -968,7 +1069,7 @@ function SubmissionModal({ assignment, existingSubmission, onClose, onSuccess, u
       <div className="bg-card border border-border rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 className="text-card-foreground">
+            <h2 className="text-foreground font-semibold">
               {existingSubmission ? 'Resubmit Recipe' : 'Submit Recipe'} - {assignment.title}
             </h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -979,7 +1080,7 @@ function SubmissionModal({ assignment, existingSubmission, onClose, onSuccess, u
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-card-foreground mb-2">Recipe Title *</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Recipe Title *</label>
             <input
               type="text"
               required
@@ -1082,6 +1183,130 @@ function SubmissionModal({ assignment, existingSubmission, onClose, onSuccess, u
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-card-foreground mb-2">Images & Videos</label>
+            <div 
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                dragActive 
+                  ? 'border-primary bg-primary/10 scale-105' 
+                  : 'border-border hover:border-primary/50 hover:bg-primary/5'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/webm,video/ogg,video/avi,video/mov"
+                onChange={handleFileInputChange}
+                className="hidden"
+                id="file-upload"
+                disabled={uploading}
+              />
+              <label 
+                htmlFor="file-upload" 
+                className={`cursor-pointer block ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'} transition-opacity`}
+              >
+                <div className="flex flex-col items-center space-y-3">
+                  {uploading ? (
+                    <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : dragActive ? (
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/15 transition-colors">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-base text-foreground font-medium mb-1">
+                      {uploading 
+                        ? `Uploading ${formData.uploadedFiles?.length > 0 ? 'additional ' : ''}files...` 
+                        : dragActive 
+                          ? 'Drop files here'
+                          : formData.uploadedFiles?.length > 0
+                            ? 'Add more files'
+                            : 'Upload Images & Videos'
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {dragActive 
+                        ? 'Release to upload files'
+                        : 'Drag and drop files here or click to browse'
+                      }
+                    </p>
+                    <div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground">
+                      <div className="flex items-center space-x-1">
+                        <Image className="h-3 w-3" />
+                        <span>Images (Max 10MB)</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Video className="h-3 w-3" />
+                        <span>Videos (Max 50MB)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {/* Uploaded Files */}
+            {formData.uploadedFiles && formData.uploadedFiles.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-foreground">
+                    Uploaded Files ({formData.uploadedFiles.length})
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, uploadedFiles: []})}
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    Remove all
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {formData.uploadedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-muted/20 border border-border rounded-lg hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          {file.type === 'image' ? (
+                            <div className="w-8 h-8 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                              <Image className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                              <Video className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                          <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                            <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                            <span>•</span>
+                            <span className="capitalize">{file.type}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="p-1.5 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"
+                        title="Remove file"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {error && (
             <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-lg border border-destructive/20">
               {error}
@@ -1163,7 +1388,7 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
       <div className="bg-card border border-border rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 className="text-card-foreground">Review Submission - {submission.recipe_title}</h2>
+            <h2 className="text-foreground font-semibold">Review Submission - {submission.recipe_title}</h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="h-6 w-6" />
             </button>
@@ -1173,38 +1398,38 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
         <div className="p-6 space-y-6">
           {/* Submission Details */}
           <div className="bg-muted/50 rounded-lg p-4">
-            <h3 className="font-semibold text-card-foreground mb-4">Submission Details</h3>
+            <h3 className="font-semibold text-foreground mb-4">Submission Details</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Student:</span>
-                <span className="ml-2 text-card-foreground">{submission.student_name}</span>
+                <span className="ml-2 text-foreground">{submission.student_name}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Assignment:</span>
-                <span className="ml-2 text-card-foreground">{assignment?.title}</span>
+                <span className="ml-2 text-foreground">{assignment?.title}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Submitted:</span>
-                <span className="ml-2 text-card-foreground">{new Date(submission.submitted_at).toLocaleDateString()}</span>
+                <span className="ml-2 text-foreground">{new Date(submission.submitted_at).toLocaleDateString()}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Points Possible:</span>
-                <span className="ml-2 text-card-foreground">{assignment?.points || 0}</span>
+                <span className="ml-2 text-foreground">{assignment?.points || 0}</span>
               </div>
             </div>
           </div>
 
           {/* Recipe Content */}
           <div>
-            <h3 className="font-semibold text-card-foreground mb-4">Recipe Content</h3>
+            <h3 className="font-semibold text-foreground mb-4">Recipe Content</h3>
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium text-card-foreground mb-2">Description</h4>
+                <h4 className="font-medium text-foreground mb-2">Description</h4>
                 <p className="text-muted-foreground">{submission.recipe_description}</p>
               </div>
               
               <div>
-                <h4 className="font-medium text-card-foreground mb-2">Ingredients</h4>
+                <h4 className="font-medium text-foreground mb-2">Ingredients</h4>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1">
                   {submission.ingredients.map((ingredient, index) => (
                     <li key={index}>{ingredient}</li>
@@ -1213,7 +1438,7 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
               </div>
               
               <div>
-                <h4 className="font-medium text-card-foreground mb-2">Instructions</h4>
+                <h4 className="font-medium text-foreground mb-2">Instructions</h4>
                 <ol className="list-decimal list-inside text-muted-foreground space-y-1">
                   {submission.instructions.map((instruction, index) => (
                     <li key={index}>{instruction}</li>
@@ -1223,8 +1448,87 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
 
               {submission.notes && (
                 <div>
-                  <h4 className="font-medium text-card-foreground mb-2">Additional Notes</h4>
+                  <h4 className="font-medium text-foreground mb-2">Additional Notes</h4>
                   <p className="text-muted-foreground">{submission.notes}</p>
+                </div>
+              )}
+              
+              {/* Uploaded Images and Videos */}
+              {submission.files && submission.files.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-foreground mb-2">Uploaded Files ({submission.files.length})</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {submission.files.map((file, index) => (
+                      <div key={index} className="relative group border border-border rounded-lg overflow-hidden bg-muted/30">
+                        {file.type === 'image' ? (
+                          <div className="aspect-square relative">
+                            <ImageWithFallback
+                              src={file.url}
+                              alt={file.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="bg-white/90 rounded-full p-2">
+                                <Eye className="h-4 w-4 text-gray-700" />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="aspect-square bg-blue-50 dark:bg-blue-900/20 flex flex-col items-center justify-center p-4">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mb-2">
+                              <Video className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs font-medium text-foreground truncate max-w-full">{file.name}</p>
+                              <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)}MB</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                          <p className="text-white text-xs font-medium truncate">{file.name}</p>
+                        </div>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-0"
+                          title={`View ${file.name}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy image support */}
+              {submission.images && submission.images.length > 0 && (!submission.files || submission.files.length === 0) && (
+                <div>
+                  <h4 className="font-medium text-foreground mb-2">Images ({submission.images.length})</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {submission.images.map((imageUrl, index) => (
+                      <div key={index} className="relative group border border-border rounded-lg overflow-hidden bg-muted/30">
+                        <div className="aspect-square relative">
+                          <ImageWithFallback
+                            src={imageUrl}
+                            alt={`Submission image ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white/90 rounded-full p-2">
+                              <Eye className="h-4 w-4 text-gray-700" />
+                            </div>
+                          </div>
+                        </div>
+                        <a
+                          href={imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-0"
+                          title={`View image ${index + 1}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1233,7 +1537,7 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
           {/* Review Form */}
           <form onSubmit={handleSubmit} className="space-y-6 border-t border-border pt-6">
             <div>
-              <label className="block text-sm font-medium text-card-foreground mb-2">Review Status *</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Review Status *</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
@@ -1246,7 +1550,7 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-card-foreground mb-2">Grade (0-{assignment?.points || 100})</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Grade (0-{assignment?.points || 100})</label>
               <input
                 type="number"
                 min="0"
@@ -1258,7 +1562,7 @@ function ReviewSubmissionModal({ submission, assignment, onClose, onSuccess, use
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-card-foreground mb-2">Feedback</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Feedback</label>
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}

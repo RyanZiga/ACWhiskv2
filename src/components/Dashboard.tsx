@@ -513,7 +513,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
                     <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-gray-400">No submissions yet</p>
                     <button
-                      onClick={() => onNavigate('learning')}
+                      onClick={() => onNavigate('recipes')}
                       className="text-purple-600 dark:text-purple-400 text-sm mt-2 hover:underline"
                     >
                       View assignments
@@ -695,89 +695,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </GlassCard>
         </div>
 
-        {/* Video Tutorials Section */}
-        <div className="mt-8">
-          <GlassCard className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-gray-900 dark:text-white">Video Tutorials</h3>
-              <GlassButton
-                onClick={() => onNavigate('learning')}
-                variant="secondary"
-                className="text-sm px-3 py-1"
-              >
-                View All Tutorials
-              </GlassButton>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Tutorial 1 */}
-              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
-                <div className="relative">
-                  <iframe
-                    className="w-full h-48"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Knife Skills Fundamentals"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Knife Skills Fundamentals</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Learn proper cutting techniques</p>
-                  <div className="flex items-center mt-2 text-xs text-gray-400">
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>12:34</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tutorial 2 */}
-              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
-                <div className="relative">
-                  <iframe
-                    className="w-full h-48"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Sauce Making Basics"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Sauce Making Basics</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Master the art of sauce preparation</p>
-                  <div className="flex items-center mt-2 text-xs text-gray-400">
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>18:26</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tutorial 3 */}
-              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
-                <div className="relative">
-                  <iframe
-                    className="w-full h-48"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Plating Techniques"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Plating Techniques</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Professional presentation skills</p>
-                  <div className="flex items-center mt-2 text-xs text-gray-400">
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>15:42</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-        </div>
       </div> 
 
       {/* Submission Modal */}
