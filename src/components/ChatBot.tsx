@@ -366,28 +366,28 @@ export function ChatBot() {
       {/* Chat Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 hover:scale-110"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 hover:scale-110 hover:bg-[#1877f2]"
       >
         <MessageCircle className="h-6 w-6" />
       </button>
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-theme-gradient rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 max-w-[calc(100vw-3rem)] modal-responsive">
+        <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-card rounded-2xl shadow-2xl border border-border flex flex-col z-50 max-w-[calc(100vw-3rem)] modal-responsive">
           {/* Header */}
-          <div className="p-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-t-2xl flex items-center justify-between">
+          <div className="p-4 bg-primary text-white rounded-t-2xl flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
-                <Bot className="h-5 w-5" />
+                <Bot className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h3 className="font-semibold">Culinary Assistant</h3>
-                <p className="text-sm text-purple-100">Always here to help!</p>
+                <p className="text-sm text-blue-100">Always here to help!</p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-white hover:text-purple-200 transition-colors touch-target"
+              className="text-white hover:text-blue-100 transition-colors touch-target"
             >
               <X className="h-5 w-5" />
             </button>
@@ -403,7 +403,7 @@ export function ChatBot() {
                 }`}
               >
                 {message.sender === 'bot' && (
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-violet-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot className="h-4 w-4 text-white" />
                   </div>
                 )}
@@ -411,12 +411,12 @@ export function ChatBot() {
                 <div
                   className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
                     message.sender === 'user'
-                      ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white'
+                      ? 'bg-primary text-white'
                       : message.type === 'faq'
                       ? 'bg-blue-50 text-blue-900 border border-blue-200'
                       : message.type === 'suggestion'
-                      ? 'bg-yellow-50 text-yellow-900 border border-yellow-200'
-                      : 'bg-gray-100 text-gray-900'
+                      ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                      : 'bg-muted text-foreground'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-line leading-relaxed">
@@ -431,8 +431,8 @@ export function ChatBot() {
                 </div>
 
                 {message.sender === 'user' && (
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="h-4 w-4 text-gray-600" />
+                  <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-secondary-foreground" />
                   </div>
                 )}
               </div>
@@ -441,14 +441,14 @@ export function ChatBot() {
             {/* Typing Indicator */}
             {isTyping && (
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-violet-600 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   <Bot className="h-4 w-4 text-white" />
                 </div>
-                <div className="bg-gray-100 px-4 py-2 rounded-2xl">
+                <div className="bg-muted px-4 py-2 rounded-2xl">
                   <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               </div>
@@ -458,8 +458,8 @@ export function ChatBot() {
             {showFAQs && (
               <div className="space-y-4">
                 <div className="text-center">
-                  <h4 className="font-medium text-gray-900 mb-2">Popular Topics</h4>
-                  <p className="text-sm text-gray-600">Click on any topic to learn more</p>
+                  <h4 className="font-medium text-foreground mb-2">Popular Topics</h4>
+                  <p className="text-sm text-muted-foreground">Click on any topic to learn more</p>
                 </div>
 
                 {/* Category Filter */}
@@ -468,8 +468,8 @@ export function ChatBot() {
                     onClick={() => setSelectedCategory(null)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors touch-target ${
                       !selectedCategory 
-                        ? 'bg-purple-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-primary text-white' 
+                        : 'bg-secondary text-secondary-foreground hover:bg-muted'
                     }`}
                   >
                     All
@@ -480,8 +480,8 @@ export function ChatBot() {
                       onClick={() => setSelectedCategory(category.name)}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors flex items-center space-x-1 touch-target ${
                         selectedCategory === category.name
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'bg-primary text-white'
+                          : 'bg-secondary text-secondary-foreground hover:bg-muted'
                       }`}
                     >
                       <category.icon className="h-3 w-3" />
@@ -492,13 +492,13 @@ export function ChatBot() {
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search FAQs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm bg-input text-foreground"
                   />
                 </div>
 
@@ -508,22 +508,22 @@ export function ChatBot() {
                     <button
                       key={faq.id}
                       onClick={() => handleFAQClick(faq)}
-                      className="w-full text-left p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors group touch-target"
+                      className="w-full text-left p-3 bg-secondary hover:bg-muted rounded-lg transition-colors group touch-target"
                     >
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900 group-hover:text-purple-900">
+                        <p className="text-sm font-medium text-foreground group-hover:text-primary">
                           {faq.question}
                         </p>
-                        <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{faq.category}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{faq.category}</p>
                     </button>
                   ))}
                 </div>
 
                 {filteredFAQs.length === 0 && (
-                  <div className="text-center py-4 text-gray-500">
-                    <HelpCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <div className="text-center py-4 text-muted-foreground">
+                    <HelpCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
                     <p className="text-sm">No FAQs found. Try a different search term.</p>
                   </div>
                 )}
@@ -534,7 +534,7 @@ export function ChatBot() {
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-border">
             <div className="flex items-center space-x-2">
               <input
                 type="text"
@@ -542,12 +542,12 @@ export function ChatBot() {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me anything about cooking..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                className="flex-1 px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm bg-input text-foreground"
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isTyping}
-                className="p-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-lg hover:from-purple-700 hover:to-violet-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+                className="p-2 bg-primary text-white rounded-lg hover:bg-[#1877f2] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-target"
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -556,7 +556,7 @@ export function ChatBot() {
             {!showFAQs && (
               <button
                 onClick={() => setShowFAQs(true)}
-                className="w-full mt-2 text-xs text-purple-600 hover:text-purple-700 transition-colors touch-target"
+                className="w-full mt-2 text-xs text-primary hover:text-[#1877f2] transition-colors touch-target"
               >
                 Browse FAQ Topics
               </button>

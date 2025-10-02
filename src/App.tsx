@@ -45,6 +45,7 @@ function App() {
   const [currentRecipeId, setCurrentRecipeId] = useState<string | null>(null)
   const [currentPostId, setCurrentPostId] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [targetUserId, setTargetUserId] = useState<string | null>(null)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
   useEffect(() => {
@@ -130,6 +131,11 @@ function App() {
     if (page === 'account' && id) {
       setCurrentUserId(id)
     }
+    if (page === 'messages' && id && id.startsWith('user:')) {
+      setTargetUserId(id.replace('user:', ''))
+    } else if (page === 'messages' && !id) {
+      setTargetUserId(null)
+    }
   }
 
   const authValue: AuthContextType = {
@@ -147,7 +153,7 @@ function App() {
       <ThemeProvider>
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-transparent bg-gradient-to-r from-purple-400 to-blue-400 rounded-full animate-spin mx-auto mb-4 relative">
+            <div className="w-16 h-16 border-4 border-transparent bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 rounded-full animate-spin mx-auto mb-4 relative">
               <div className="absolute inset-2 bg-background rounded-full"></div>
             </div>
             <p className="text-muted-foreground">Loading ACWhisk...</p>
@@ -266,6 +272,7 @@ function App() {
                   user={user} 
                   onNavigate={navigateTo}
                   onUnreadCountChange={setUnreadMessagesCount}
+                  targetUserId={targetUserId}
                 />
               </div>
             )}

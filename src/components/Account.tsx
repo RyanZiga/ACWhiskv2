@@ -153,25 +153,9 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
     }
   }
 
-  const startConversation = async () => {
-    try {
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/conversations`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${currentUser.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          participant_id: userId
-        })
-      })
-
-      if (response.ok) {
-        onNavigate('messages')
-      }
-    } catch (error) {
-      console.error('Error starting conversation:', error)
-    }
+  const startConversation = () => {
+    // Navigate to messages page with the target user
+    onNavigate('messages', `user:${userId}`)
   }
 
   const formatDate = (dateString: string) => {
@@ -207,8 +191,8 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading profile...</p>
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading profile...</p>
         </div>
       </div>
     )
@@ -218,12 +202,12 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-foreground mb-2">
             {error || 'User not found'}
           </h2>
           <button
             onClick={() => onNavigate('feed')}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="btn-gradient px-4 py-2 rounded-lg"
           >
             Back to Feed
           </button>
@@ -241,7 +225,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       <div className="flex items-center justify-between mb-8">
         <button
           onClick={() => onNavigate('feed')}
-          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+          className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
           <span>Back</span>
@@ -249,7 +233,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       </div>
 
       {/* Profile Header */}
-      <div className="bg-theme-gradient rounded-xl border border-gray-200 p-8 mb-8 shadow-sm">
+      <div className="post-card p-8 mb-8 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <div className="w-24 h-24 avatar-gradient rounded-full flex items-center justify-center">
             {profile.avatar_url ? (
@@ -268,7 +252,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
           <div className="flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{profile.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{profile.name}</h1>
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium capitalize ${getRoleColor(profile.role)}`}>
                   {profile.role}
                 </span>
@@ -281,8 +265,8 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     disabled={followLoading}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                       isFollowing
-                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                        ? 'btn-secondary'
+                        : 'btn-gradient'
                     } disabled:opacity-50`}
                   >
                     {isFollowing ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
@@ -291,7 +275,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
                   <button
                     onClick={startConversation}
-                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center space-x-2 btn-secondary px-4 py-2 rounded-lg"
                   >
                     <MessageCircle className="h-4 w-4" />
                     <span>Message</span>

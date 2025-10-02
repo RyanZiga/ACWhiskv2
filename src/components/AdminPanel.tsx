@@ -74,18 +74,18 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'instructor': return 'bg-blue-100 text-blue-700'
-      case 'admin': return 'bg-purple-100 text-purple-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case 'instructor': return 'bg-accent/20 text-primary border border-accent/30'
+      case 'admin': return 'bg-primary/20 text-primary border border-primary/30'
+      default: return 'bg-secondary text-secondary-foreground border border-border'
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-700'
-      case 'suspended': return 'bg-yellow-100 text-yellow-700'
-      case 'banned': return 'bg-red-100 text-red-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case 'active': return 'bg-green-100 text-green-700 border border-green-200'
+      case 'suspended': return 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+      case 'banned': return 'bg-destructive/10 text-destructive border border-destructive/20'
+      default: return 'bg-secondary text-secondary-foreground border border-border'
     }
   }
 
@@ -143,8 +143,8 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading admin panel...</p>
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading admin panel...</p>
         </div>
       </div>
     )
@@ -154,84 +154,84 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Panel</h1>
-        <p className="text-gray-600">Manage users and platform settings</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Admin Panel</h1>
+        <p className="text-muted-foreground">Manage users and platform settings</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-theme-gradient rounded-xl border border-gray-200 p-6 text-center">
-          <Users className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-          <p className="text-gray-600">Total Users</p>
+        <div className="post-card p-6 text-center hover:shadow-lg transition-all duration-200">
+          <Users className="h-8 w-8 text-primary mx-auto mb-2" />
+          <p className="text-2xl font-bold text-foreground">{stats.totalUsers}</p>
+          <p className="text-muted-foreground">Total Users</p>
         </div>
 
-        <div className="bg-theme-gradient rounded-xl border border-gray-200 p-6 text-center">
-          <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{stats.students}</p>
-          <p className="text-gray-600">Students</p>
+        <div className="post-card p-6 text-center hover:shadow-lg transition-all duration-200">
+          <Users className="h-8 w-8 text-accent mx-auto mb-2" />
+          <p className="text-2xl font-bold text-foreground">{stats.students}</p>
+          <p className="text-muted-foreground">Students</p>
         </div>
 
-        <div className="bg-theme-gradient rounded-xl border border-gray-200 p-6 text-center">
-          <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{stats.instructors}</p>
-          <p className="text-gray-600">Instructors</p>
+        <div className="post-card p-6 text-center hover:shadow-lg transition-all duration-200">
+          <Activity className="h-8 w-8 text-primary mx-auto mb-2" />
+          <p className="text-2xl font-bold text-foreground">{stats.instructors}</p>
+          <p className="text-muted-foreground">Instructors</p>
         </div>
 
-        <div className="bg-theme-gradient rounded-xl border border-gray-200 p-6 text-center">
-          <Users className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{stats.admins}</p>
-          <p className="text-gray-600">Admins</p>
+        <div className="post-card p-6 text-center hover:shadow-lg transition-all duration-200">
+          <Settings className="h-8 w-8 text-accent mx-auto mb-2" />
+          <p className="text-2xl font-bold text-foreground">{stats.admins}</p>
+          <p className="text-muted-foreground">Admins</p>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-theme-gradient rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Platform Users</h2>
+      <div className="post-card overflow-hidden">
+        <div className="p-6 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground">Platform Users</h2>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-secondary">
               <tr>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">Name</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">Email</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">Role</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">Status</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">Actions</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">Joined</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Name</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Email</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Role</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Status</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Actions</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Joined</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {users.map((userData) => (
-                <tr key={userData.id} className="hover:bg-gray-50">
+                <tr key={userData.id} className="hover:bg-secondary/50 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center">
+                      <div className="avatar-gradient w-8 h-8 rounded-full flex items-center justify-center">
                         <span className="text-sm font-medium text-white">
                           {userData.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{userData.name}</div>
+                        <div className="font-medium text-foreground">{userData.name}</div>
                         {userData.followers !== undefined && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {userData.followers} followers • {userData.following} following
                           </div>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-gray-700">{userData.email}</td>
+                  <td className="py-4 px-6 text-foreground">{userData.email}</td>
                   <td className="py-4 px-6">
                     {updatingUser === userData.id ? (
-                      <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <select
                         value={userData.role}
                         onChange={(e) => updateUserRole(userData.id, e.target.value)}
-                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize border-0 ${getRoleColor(userData.role)}`}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getRoleColor(userData.role)}`}
                         disabled={userData.id === user.id} // Can't change own role
                       >
                         <option value="student">Student</option>
@@ -242,12 +242,12 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                   </td>
                   <td className="py-4 px-6">
                     {updatingUser === userData.id ? (
-                      <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <select
                         value={userData.status || 'active'}
                         onChange={(e) => updateUserStatus(userData.id, e.target.value)}
-                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize border-0 ${getStatusColor(userData.status || 'active')}`}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getStatusColor(userData.status || 'active')}`}
                         disabled={userData.id === user.id} // Can't change own status
                       >
                         <option value="active">Active</option>
@@ -260,16 +260,16 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => onNavigate('account', userData.id)}
-                        className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+                        className="text-xs px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all duration-200 border border-primary/20"
                       >
                         View Profile
                       </button>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-gray-500 text-sm">
+                  <td className="py-4 px-6 text-muted-foreground text-sm">
                     <div>{formatDate(userData.created_at)}</div>
                     {userData.last_login && (
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-muted-foreground/70">
                         Last: {formatDate(userData.last_login)}
                       </div>
                     )}

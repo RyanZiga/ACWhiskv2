@@ -12,6 +12,7 @@ interface MessagesProps {
   user: User
   onNavigate: (page: string, id?: string) => void
   onUnreadCountChange?: (count: number) => void
+  targetUserId?: string | null
 }
 
 interface UserProfile {
@@ -35,11 +36,6 @@ interface Message {
   reply_to_id?: string
   created_at: string
   edited_at?: string
-  reactions?: Array<{
-    emoji: string
-    count: number
-    users: string[]
-  }>
 }
 
 interface Conversation {
@@ -79,7 +75,7 @@ const formatMessageTime = (timestamp: string): string => {
   }
 }
 
-export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProps) {
+export function Messages({ user, onNavigate, onUnreadCountChange, targetUserId }: MessagesProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -88,24 +84,15 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [showNewChatModal, setShowNewChatModal] = useState(false)
   const [showConversationList, setShowConversationList] = useState(true)
-  const [typingUsers, setTypingUsers] = useState<string[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sendingMessage, setSendingMessage] = useState(false)
   const [searchingUsers, setSearchingUsers] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [notifications, setNotifications] = useState<Array<{
-    id: string
-    type: 'new_message'
-    message: string
-    sender: string
-    conversation_id: string
-    timestamp: string
-  }>>([])
+  const [error, setError] = useState<string | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messageInputRef = useRef<HTMLTextAreaElement>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
@@ -116,15 +103,20 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
-      }
     }
   }, [])
 
   useEffect(() => {
     loadConversations()
   }, [])
+
+  // Handle direct messaging when targetUserId is provided
+  useEffect(() => {
+    if (targetUserId) {
+      console.log('Starting conversation with target user:', targetUserId)
+      startNewConversation(targetUserId)
+    }
+  }, [targetUserId])
 
   useEffect(() => {
     if (selectedConversation) {
@@ -137,57 +129,46 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     scrollToBottom()
   }, [messages])
 
-  // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const loadConversations = async () => {
     try {
+      setError(null)
       const supabase = getAuthenticatedClient()
       
-      // First try to get conversations using the RPC function
-      let conversationsData = []
-      
-      try {
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_conversations_with_details', { user_uuid: user.id })
-        
-        if (!rpcError && rpcData) {
-          conversationsData = rpcData
-        }
-      } catch (rpcError) {
-        console.warn('RPC function not available, falling back to direct queries')
-      }
-      
-      // If RPC failed, fall back to direct table queries
-      if (conversationsData.length === 0) {
-        const { data: directData, error: directError } = await supabase
-          .from('conversations')
-          .select(`
-            *,
-            conversation_participants!inner (
-              user_id,
-              last_read_at
-            )
-          `)
-          .eq('conversation_participants.user_id', user.id)
-          .is('conversation_participants.left_at', null)
-          .eq('is_archived', false)
-          .order('updated_at', { ascending: false })
-        
-        if (directError) {
-          console.error('Error loading conversations:', directError)
-          setConversations([])
-          return
-        }
-        
-        conversationsData = directData || []
+      // Get conversations for the current user
+      const { data: conversationsData, error: conversationsError } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          type,
+          name,
+          description,
+          avatar_url,
+          created_at,
+          updated_at,
+          conversation_participants!inner (
+            user_id,
+            last_read_at
+          )
+        `)
+        .eq('conversation_participants.user_id', user.id)
+        .is('conversation_participants.left_at', null)
+        .eq('is_archived', false)
+        .order('updated_at', { ascending: false })
+
+      if (conversationsError) {
+        console.error('Error loading conversations:', conversationsError)
+        setError('Failed to load conversations')
+        setConversations([])
+        return
       }
 
       // Transform the data to match our interface
       const transformedConversations: Conversation[] = await Promise.all(
-        conversationsData.map(async (conv: any) => {
+        (conversationsData || []).map(async (conv: any) => {
           try {
             // Get participants for this conversation
             const { data: participants } = await supabase
@@ -202,7 +183,7 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
                   role
                 )
               `)
-              .eq('conversation_id', conv.conversation_id || conv.id)
+              .eq('conversation_id', conv.id)
               .is('left_at', null)
 
             const participantProfiles: UserProfile[] = participants?.map((p: any) => ({
@@ -222,18 +203,18 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
                 created_at,
                 user_profiles!sender_id (name)
               `)
-              .eq('conversation_id', conv.conversation_id || conv.id)
+              .eq('conversation_id', conv.id)
               .is('deleted_at', null)
               .order('created_at', { ascending: false })
               .limit(1)
               .single()
 
             return {
-              id: conv.conversation_id || conv.id,
-              type: conv.conversation_type || conv.type,
-              name: conv.conversation_name || conv.name,
-              description: conv.conversation_description || conv.description,
-              avatar_url: conv.conversation_avatar_url || conv.avatar_url,
+              id: conv.id,
+              type: conv.type,
+              name: conv.name,
+              description: conv.description,
+              avatar_url: conv.avatar_url,
               participants: participantProfiles,
               last_message: lastMessage ? {
                 content: lastMessage.content,
@@ -241,10 +222,10 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
                 sender_name: lastMessage.user_profiles?.name || 'Unknown User',
                 created_at: lastMessage.created_at
               } : undefined,
-              unread_count: 0, // Will be calculated separately
+              unread_count: 0, // Will be calculated separately if needed
               participant_count: participantProfiles.length,
-              created_at: conv.conversation_created_at || conv.created_at,
-              updated_at: conv.conversation_updated_at || conv.updated_at
+              created_at: conv.created_at,
+              updated_at: conv.updated_at
             }
           } catch (error) {
             console.error('Error processing conversation:', error)
@@ -261,7 +242,8 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
       onUnreadCountChange?.(totalUnread)
     } catch (error) {
       console.error('Error loading conversations:', error)
-      setConversations([]) // Set empty array on error
+      setError('Failed to load conversations')
+      setConversations([])
     } finally {
       setLoading(false)
     }
@@ -274,16 +256,20 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
       const { data, error } = await supabase
         .from('messages')
         .select(`
-          *,
-          sender:user_profiles (
+          id,
+          conversation_id,
+          sender_id,
+          content,
+          message_type,
+          file_url,
+          file_name,
+          reply_to_id,
+          created_at,
+          edited_at,
+          user_profiles!sender_id (
             id,
             name,
             avatar_url
-          ),
-          reactions:message_reactions (
-            emoji,
-            user_id,
-            user_profiles!user_id (name)
           )
         `)
         .eq('conversation_id', conversationId)
@@ -300,16 +286,15 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
         id: msg.id,
         conversation_id: msg.conversation_id,
         sender_id: msg.sender_id,
-        sender_name: msg.sender?.name || user.name || 'Unknown User',
-        sender_avatar: msg.sender?.avatar_url,
+        sender_name: msg.user_profiles?.name || 'Unknown User',
+        sender_avatar: msg.user_profiles?.avatar_url,
         content: msg.content,
         message_type: msg.message_type,
         file_url: msg.file_url,
         file_name: msg.file_name,
         reply_to_id: msg.reply_to_id,
         created_at: msg.created_at,
-        edited_at: msg.edited_at,
-        reactions: msg.reactions ? groupReactions(msg.reactions) : []
+        edited_at: msg.edited_at
       }))
 
       setMessages(transformedMessages)
@@ -319,30 +304,14 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     }
   }
 
-  const groupReactions = (reactions: any[]): Array<{emoji: string, count: number, users: string[]}> => {
-    const grouped = reactions.reduce((acc, reaction) => {
-      if (!acc[reaction.emoji]) {
-        acc[reaction.emoji] = {
-          emoji: reaction.emoji,
-          count: 0,
-          users: []
-        }
-      }
-      acc[reaction.emoji].count++
-      acc[reaction.emoji].users.push(reaction.user_profiles.name)
-      return acc
-    }, {})
-    
-    return Object.values(grouped)
-  }
-
   const markConversationAsRead = async (conversationId: string) => {
     try {
       const supabase = getAuthenticatedClient()
-      await supabase.rpc('mark_conversation_as_read', {
-        conv_uuid: conversationId,
-        user_uuid: user.id
-      })
+      await supabase
+        .from('conversation_participants')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
       
       // Update local state
       setConversations(prev => {
@@ -375,61 +344,27 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     try {
       const supabase = getAuthenticatedClient()
       
-      // Search user_profiles table with improved error handling
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, name, avatar_url, status, role')
-        .or(`name.ilike.%${query}%`)
+        .ilike('name', `%${query}%`)
         .neq('id', user.id)
-        .limit(10)
+        .limit(20)
 
-      if (error) {
-        console.warn('Error searching user_profiles:', error)
-        // Fallback: try to search auth.users if available
-        try {
-          const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
-          
-          if (!authError && authData?.users) {
-            const filteredUsers = authData.users
-              .filter(u => {
-                if (u.id === user.id) return false
-                const name = u.user_metadata?.name || u.email || ''
-                const email = u.email || ''
-                return name.toLowerCase().includes(query.toLowerCase()) || 
-                       email.toLowerCase().includes(query.toLowerCase())
-              })
-              .slice(0, 10)
-              .map(u => ({
-                id: u.id,
-                name: u.user_metadata?.name || u.email || 'Unknown User',
-                avatar_url: u.user_metadata?.avatar_url,
-                status: 'offline' as const,
-                role: u.user_metadata?.role || 'student'
-              }))
-            
-            setSearchResults(filteredUsers)
-            setSearchingUsers(false)
-            return
-          }
-        } catch (fallbackError) {
-          console.error('Fallback user search failed:', fallbackError)
-        }
-        
-        setSearchResults([])
-        setSearchingUsers(false)
-        return
-      }
-
-      if (data) {
-        setSearchResults(data.map(u => ({
+      if (!error && data) {
+        const searchResultsData = data.map(u => ({
           ...u,
           status: (u.status || 'offline') as 'online' | 'offline' | 'away'
-        })))
+        }))
+        
+        setSearchResults(searchResultsData)
+        console.log(`Found ${searchResultsData.length} users matching "${query}"`)
       } else {
+        console.error('Database search error:', error)
         setSearchResults([])
       }
     } catch (error) {
-      console.error('Error searching users:', error)
+      console.error('Search failed:', error)
       setSearchResults([])
     } finally {
       setSearchingUsers(false)
@@ -466,9 +401,13 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
         if (isMobile) {
           setShowConversationList(false)
         }
+      } else {
+        console.error('Error creating conversation:', error)
+        setError('Failed to start conversation')
       }
     } catch (error) {
       console.error('Error starting conversation:', error)
+      setError('Failed to start conversation')
     }
   }
 
@@ -478,21 +417,6 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     setSendingMessage(true)
     const messageContent = newMessage.trim()
     setNewMessage('')
-
-    // Optimistically add message to UI
-    const tempMessage: Message = {
-      id: `temp-${Date.now()}`,
-      conversation_id: selectedConversation,
-      sender_id: user.id,
-      sender_name: user.name,
-      sender_avatar: user.avatar_url,
-      content: messageContent,
-      message_type: 'text',
-      created_at: new Date().toISOString(),
-      reactions: []
-    }
-
-    setMessages(prev => [...prev, tempMessage])
 
     try {
       const supabase = getAuthenticatedClient()
@@ -506,8 +430,13 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
           message_type: 'text'
         }])
         .select(`
-          *,
-          sender:user_profiles (
+          id,
+          conversation_id,
+          sender_id,
+          content,
+          message_type,
+          created_at,
+          user_profiles!sender_id (
             id,
             name,
             avatar_url
@@ -520,30 +449,24 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
           id: data.id,
           conversation_id: data.conversation_id,
           sender_id: data.sender_id,
-          sender_name: data.sender?.name || user.name,
-          sender_avatar: data.sender?.avatar_url,
+          sender_name: data.user_profiles?.name || user.name,
+          sender_avatar: data.user_profiles?.avatar_url,
           content: data.content,
           message_type: data.message_type,
-          created_at: data.created_at,
-          reactions: []
+          created_at: data.created_at
         }
 
-        // Replace temp message with real message
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempMessage.id ? newMsg : msg
-        ))
-        
+        setMessages(prev => [...prev, newMsg])
         loadConversations() // Refresh to update last message
       } else {
-        // Remove temp message on error
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
+        console.error('Error sending message:', error)
         setNewMessage(messageContent) // Restore message on error
+        setError('Failed to send message')
       }
     } catch (error) {
       console.error('Error sending message:', error)
-      // Remove temp message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
       setNewMessage(messageContent) // Restore message on error
+      setError('Failed to send message')
     } finally {
       setSendingMessage(false)
     }
@@ -556,51 +479,29 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     }
   }
 
-  const handleSelectConversation = (conversationId: string) => {
-    setSelectedConversation(conversationId)
-    if (isMobile) {
-      setShowConversationList(false)
+  const getConversationName = (conversation: Conversation) => {
+    if (conversation.type === 'group') {
+      return conversation.name || 'Group Chat'
     }
+    
+    // For direct messages, show the other participant's name
+    const otherParticipant = conversation.participants.find(p => p.id !== user.id)
+    return otherParticipant?.name || 'Unknown User'
   }
 
-  const filteredConversations = conversations.filter(conv => {
-    if (!searchQuery.trim()) return true
+  const getConversationAvatar = (conversation: Conversation) => {
+    if (conversation.type === 'group') {
+      return conversation.avatar_url
+    }
     
-    if (conv.type === 'direct') {
-      const otherUser = conv.participants.find(p => p.id !== user.id)
-      return otherUser?.name.toLowerCase().includes(searchQuery.toLowerCase())
-    } else {
-      return conv.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    }
-  })
-
-  const selectedConv = conversations.find(c => c.id === selectedConversation)
-  const totalUnreadCount = conversations.reduce((sum, conv) => sum + conv.unread_count, 0)
-
-  // Show notification when new message arrives
-  const showNotification = useCallback((message: Message, conversationId: string) => {
-    if (message.sender_id !== user.id && selectedConversation !== conversationId) {
-      const notification = {
-        id: `notif-${Date.now()}`,
-        type: 'new_message' as const,
-        message: message.content,
-        sender: message.sender_name,
-        conversation_id: conversationId,
-        timestamp: message.created_at
-      }
-      
-      setNotifications(prev => [notification, ...prev.slice(0, 4)]) // Keep only 5 latest
-      
-      // Auto-remove notification after 5 seconds
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== notification.id))
-      }, 5000)
-    }
-  }, [user.id, selectedConversation])
+    // For direct messages, show the other participant's avatar
+    const otherParticipant = conversation.participants.find(p => p.id !== user.id)
+    return otherParticipant?.avatar_url
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-gradient flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading messages...</p>
@@ -609,540 +510,363 @@ export function Messages({ user, onNavigate, onUnreadCountChange }: MessagesProp
     )
   }
 
-  return (
-    <div className="min-h-screen bg-theme-gradient relative">
-      {/* Notification Banner */}
-      {notifications.length > 0 && (
-        <div className="fixed top-4 right-4 z-50 space-y-2">
-          {notifications.map((notif) => (
-            <div
-              key={notif.id}
-              className="bg-card border border-border rounded-lg shadow-lg p-4 max-w-sm animate-slide-down"
-              onClick={() => {
-                const conv = conversations.find(c => c.id === notif.conversation_id)
-                if (conv) {
-                  setSelectedConversation(conv.id)
-                  if (isMobile) setShowConversationList(false)
-                }
-                setNotifications(prev => prev.filter(n => n.id !== notif.id))
-              }}
-            >
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <MessageCircle className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-card-foreground">{notif.sender}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setNotifications(prev => prev.filter(n => n.id !== notif.id))
-                  }}
-                  className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null)
+              loadConversations()
+            }}
+            className="btn-gradient px-4 py-2 rounded-lg"
+          >
+            Try Again
+          </button>
         </div>
-      )}
+      </div>
+    )
+  }
 
-      <div className="h-screen flex">
-        {/* Conversation List Sidebar */}
-        <div className={`${
-          isMobile 
-            ? (showConversationList ? 'block' : 'hidden') 
-            : 'block'
-          } w-full lg:w-80 bg-card border-r border-border flex flex-col`}
-        >
-          {/* Header */}
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-foreground">Messages</h1>
+  return (
+    <div className={`h-screen flex ${isMobile ? 'flex-col' : ''}`}>
+      {/* Conversations List */}
+      <div className={`${isMobile ? (showConversationList ? 'flex' : 'hidden') : 'flex'} flex-col w-full ${!isMobile ? 'max-w-sm' : ''} post-card border-r`}>
+        {/* Header */}
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Messages</h2>
+            <button
+              onClick={() => setShowNewChatModal(true)}
+              className="p-2 hover:bg-secondary rounded-lg"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search conversations"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input-clean w-full pl-10 pr-4 py-2"
+            />
+          </div>
+        </div>
+
+        {/* Conversations */}
+        <div className="flex-1 overflow-y-auto">
+          {conversations.length === 0 ? (
+            <div className="p-8 text-center">
+              <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No conversations yet</p>
               <button
                 onClick={() => setShowNewChatModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 btn-gradient rounded-lg hover:bg-primary/90 transition-colors text-sm"
+                className="btn-gradient px-4 py-2 rounded-lg mt-4"
               >
-                <Plus className="h-4 w-4" />
-                <span>New Chat</span>
+                Start a conversation
               </button>
             </div>
-            
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-muted/50 rounded"
-                >
-                  <X className="h-3 w-3 text-muted-foreground" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto">
-            {filteredConversations.length > 0 ? (
-              <div className="space-y-1 p-2">
-                {filteredConversations.map((conversation) => {
-                  const isSelected = selectedConversation === conversation.id
-                  const otherUser = conversation.type === 'direct' 
-                    ? conversation.participants.find(p => p.id !== user.id)
-                    : null
-                  const isOnline = otherUser?.status === 'online'
-                  
-                  return (
-                    <div
-                      key={conversation.id}
-                      onClick={() => handleSelectConversation(conversation.id)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        isSelected 
-                          ? 'bg-primary/10 border border-primary/20' 
-                          : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {/* Avatar */}
-                        <div className="relative flex-shrink-0">
-                          {conversation.type === 'direct' && otherUser ? (
-                            <>
-                              {otherUser.avatar_url ? (
-                                <ImageWithFallback
-                                  src={otherUser.avatar_url}
-                                  alt={otherUser.name}
-                                  className="w-12 h-12 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center">
-                                  <span className="text-white font-medium">
-                                    {getInitials(otherUser.name)}
-                                  </span>
-                                </div>
-                              )}
-                              {/* Online indicator */}
-                              {isOnline && (
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center">
-                              <Users className="h-6 w-6 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Conversation Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <h3 className={`font-medium truncate ${
-                              conversation.unread_count > 0 ? 'text-foreground' : 'text-card-foreground'
-                            }`}>
-                              {conversation.type === 'direct' 
-                                ? otherUser?.name 
-                                : conversation.name
-                              }
-                            </h3>
-                            {conversation.last_message && (
-                              <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                                {formatMessageTime(conversation.last_message.created_at)}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {conversation.last_message && (
-                            <div className="flex items-center justify-between">
-                              <p className={`text-sm truncate ${
-                                conversation.unread_count > 0 
-                                  ? 'text-foreground font-medium' 
-                                  : 'text-muted-foreground'
-                              }`}>
-                                {conversation.last_message.sender_id === user.id ? 'You: ' : ''}
-                                {conversation.last_message.content}
-                              </p>
-                              
-                              {/* Unread badge */}
-                              {conversation.unread_count > 0 && (
-                                <div className="ml-2 flex-shrink-0">
-                                  <span className="inline-flex items-center justify-center w-5 h-5 text-xs bg-primary text-primary-foreground rounded-full">
-                                    {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center p-8">
-                <div className="text-center">
-                  <MessageCircle className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="font-medium text-card-foreground mb-2">No conversations found</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {searchQuery ? 'Try a different search term or start a new conversation using the button above' : 'Start your first conversation using the "New Chat" button above'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Chat Area */}
-        <div className={`${
-          isMobile 
-            ? (selectedConversation && !showConversationList ? 'block' : 'hidden') 
-            : 'block'
-          } flex-1 bg-background flex flex-col`}
-        >
-          {selectedConversation && selectedConv ? (
-            <>
-              {/* Chat Header */}
-              <div className="p-4 bg-card border-b border-border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    {/* Mobile back button */}
-                    {isMobile && (
-                      <button
-                        onClick={() => setShowConversationList(true)}
-                        className="p-2 hover:bg-muted/50 rounded-lg"
-                      >
-                        <ArrowLeft className="h-5 w-5" />
-                      </button>
-                    )}
-                    
-                    {/* Avatar and info */}
-                    <div className="relative">
-                      {selectedConv.type === 'direct' ? (
-                        (() => {
-                          const otherUser = selectedConv.participants.find(p => p.id !== user.id)
-                          return (
-                            <>
-                              {otherUser?.avatar_url ? (
-                                <ImageWithFallback
-                                  src={otherUser.avatar_url}
-                                  alt={otherUser.name}
-                                  className="w-10 h-10 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
-                                  <span className="text-white text-sm font-medium">
-                                    {getInitials(otherUser?.name || 'U')}
-                                  </span>
-                                </div>
-                              )}
-                              {otherUser?.status === 'online' && (
-                                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
-                              )}
-                            </>
-                          )
-                        })()
-                      ) : (
-                        <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
-                          <Users className="h-5 w-5 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-card-foreground">
-                        {selectedConv.type === 'direct' 
-                          ? selectedConv.participants.find(p => p.id !== user.id)?.name
-                          : selectedConv.name
-                        }
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {typingUsers.length > 0 
-                          ? `${typingUsers.join(', ')} typing...`
-                          : selectedConv.type === 'group' 
-                            ? `${selectedConv.participant_count} members` 
-                            : selectedConv.participants.find(p => p.id !== user.id)?.status === 'online' 
-                              ? 'Online' 
-                              : 'Offline'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Header actions */}
-                  <div className="flex items-center space-x-2">
-                    <button className="p-2 hover:bg-muted/50 rounded-lg">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                    <button className="p-2 hover:bg-muted/50 rounded-lg">
-                      <Video className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                    <button className="p-2 hover:bg-muted/50 rounded-lg">
-                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 message-interface">
-                {messages.map((message, index) => {
-                  const isOwnMessage = message.sender_id === user.id
-                  const showAvatar = !isOwnMessage && (
-                    index === 0 || 
-                    messages[index - 1].sender_id !== message.sender_id ||
-                    new Date(message.created_at).getTime() - new Date(messages[index - 1].created_at).getTime() > 300000 // 5 minutes
-                  )
-                  
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} ${
-                        showAvatar ? 'mt-4' : 'mt-1'
-                      }`}
-                    >
-                      {!isOwnMessage && (
-                        <div className="flex-shrink-0 mr-3">
-                          {showAvatar ? (
-                            message.sender_avatar ? (
-                              <ImageWithFallback
-                                src={message.sender_avatar}
-                                alt={message.sender_name}
-                                className="w-8 h-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs font-medium">
-                                  {getInitials(message.sender_name)}
-                                </span>
-                              </div>
-                            )
-                          ) : (
-                            <div className="w-8 h-8"></div>
-                          )}
-                        </div>
-                      )}
-                      
-                      <div className={`max-w-xs lg:max-w-md ${isOwnMessage ? 'message-bubble' : ''}`}>
-                        {!isOwnMessage && showAvatar && (
-                          <p className="text-xs text-muted-foreground mb-1 ml-1">
-                            {message.sender_name}
-                          </p>
-                        )}
-                        
-                        <div
-                          className={`px-4 py-2 rounded-2xl ${
-                            isOwnMessage
-                              ? 'bg-primary text-primary-foreground ml-auto'
-                              : 'bg-card border border-border text-card-foreground'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap break-words">
-                            {message.content}
-                          </p>
-                          
-                          {/* Message reactions */}
-                          {message.reactions && message.reactions.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {message.reactions.map((reaction, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center px-2 py-1 bg-muted/50 rounded-full text-xs"
-                                  title={reaction.users.join(', ')}
-                                >
-                                  {reaction.emoji} {reaction.count}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className={`text-xs text-muted-foreground mt-1 ${
-                          isOwnMessage ? 'text-right' : 'text-left'
-                        }`}>
-                          {formatMessageTime(message.created_at)}
-                          {message.edited_at && ' (edited)'}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-                
-                {/* Typing indicator */}
-                {typingUsers.length > 0 && (
-                  <div className="flex justify-start">
-                    <div className="flex-shrink-0 mr-3">
-                      <div className="w-8 h-8"></div>
-                    </div>
-                    <div className="bg-card border border-border rounded-2xl px-4 py-2">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Message Input */}
-              <div className={`p-4 bg-card border-t border-border chat-input-mobile`}>
-                <div className="flex items-end space-x-3">
-                  <div className="flex-1">
-                    <div className="flex items-end bg-input border border-border rounded-2xl">
-                      <textarea
-                        ref={messageInputRef}
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-3 bg-transparent border-none outline-none resize-none text-foreground placeholder-muted-foreground max-h-32"
-                        rows={1}
-                        style={{ minHeight: '44px' }}
-                      />
-                      
-                      <div className="flex items-center space-x-2 px-3 py-3">
-                        <button className="p-1 hover:bg-muted/50 rounded-lg">
-                          <Paperclip className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                        <button className="p-1 hover:bg-muted/50 rounded-lg">
-                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                        <button className="p-1 hover:bg-muted/50 rounded-lg">
-                          <Smile className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sendingMessage}
-                    className="p-3 btn-gradient rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target"
-                  >
-                    {sendingMessage ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Send className="h-5 w-5 text-white" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </>
           ) : (
-            /* Empty state */
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center">
-                <MessageCircle className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="font-medium text-foreground mb-2">Select a conversation</h3>
-                <p className="text-muted-foreground">Choose a conversation from the sidebar to start messaging or use the "New Chat" button in the sidebar</p>
-              </div>
-            </div>
+            conversations
+              .filter(conv => 
+                !searchQuery || 
+                getConversationName(conv).toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((conversation) => (
+                <div
+                  key={conversation.id}
+                  onClick={() => {
+                    setSelectedConversation(conversation.id)
+                    if (isMobile) setShowConversationList(false)
+                  }}
+                  className={`p-4 border-b cursor-pointer hover:bg-secondary transition-colors ${
+                    selectedConversation === conversation.id ? 'bg-secondary' : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center">
+                      {getConversationAvatar(conversation) ? (
+                        <ImageWithFallback
+                          src={getConversationAvatar(conversation)!}
+                          alt={getConversationName(conversation)}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-lg font-semibold text-white">
+                          {getInitials(getConversationName(conversation))}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-foreground truncate">
+                          {getConversationName(conversation)}
+                        </h3>
+                        {conversation.last_message && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {formatMessageTime(conversation.last_message.created_at)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {conversation.last_message ? (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {conversation.last_message.sender_id === user.id ? 'You: ' : ''}
+                          {conversation.last_message.content}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No messages yet</p>
+                      )}
+                    </div>
+                    
+                    {conversation.unread_count > 0 && (
+                      <div className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {conversation.unread_count}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
           )}
         </div>
       </div>
 
-      {/* New Chat Modal */}
-      {showNewChatModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-border">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-card-foreground">Start New Chat</h2>
-                <button
-                  onClick={() => {
-                    setShowNewChatModal(false)
-                    setUserSearchQuery('')
-                    setSearchResults([])
-                  }}
-                  className="p-2 hover:bg-muted/50 rounded-lg"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+      {/* Chat Area */}
+      <div className={`${isMobile ? (showConversationList ? 'hidden' : 'flex') : 'flex'} flex-col flex-1`}>
+        {selectedConversation ? (
+          <>
+            {/* Chat Header */}
+            <div className="p-4 border-b post-card flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {isMobile && (
+                  <button
+                    onClick={() => setShowConversationList(true)}
+                    className="p-1 hover:bg-secondary rounded-lg mr-2"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
+                
+                {selectedConversation && (
+                  (() => {
+                    const conversation = conversations.find(c => c.id === selectedConversation)
+                    if (!conversation) return null
+                    
+                    return (
+                      <>
+                        <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
+                          {getConversationAvatar(conversation) ? (
+                            <ImageWithFallback
+                              src={getConversationAvatar(conversation)!}
+                              alt={getConversationName(conversation)}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-semibold text-white">
+                              {getInitials(getConversationName(conversation))}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-foreground">
+                            {getConversationName(conversation)}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            {conversation.participant_count} participants
+                          </p>
+                        </div>
+                      </>
+                    )
+                  })()
+                )}
               </div>
               
-              {/* User search */}
-              <div className="mt-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search users by name..."
-                    value={userSearchQuery}
-                    onChange={(e) => {
-                      setUserSearchQuery(e.target.value)
-                      debouncedSearchUsers(e.target.value)
-                    }}
-                    className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
-                  />
-                </div>
+              <div className="flex items-center space-x-2">
+                <button className="p-2 hover:bg-secondary rounded-lg">
+                  <Phone className="h-5 w-5" />
+                </button>
+                <button className="p-2 hover:bg-secondary rounded-lg">
+                  <Video className="h-5 w-5" />
+                </button>
+                <button className="p-2 hover:bg-secondary rounded-lg">
+                  <MoreVertical className="h-5 w-5" />
+                </button>
               </div>
             </div>
-            
-            {/* Search results */}
-            <div className="max-h-96 overflow-y-auto">
-              {searchingUsers ? (
-                <div className="p-8 text-center">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Searching users...</p>
-                </div>
-              ) : searchResults.length > 0 ? (
-                <div className="p-2">
-                  {searchResults.map((profile) => (
-                    <div
-                      key={profile.id}
-                      onClick={() => startNewConversation(profile.id)}
-                      className="flex items-center space-x-3 p-3 hover:bg-muted/50 rounded-lg cursor-pointer"
-                    >
-                      {profile.avatar_url ? (
-                        <ImageWithFallback
-                          src={profile.avatar_url}
-                          alt={profile.name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">
-                            {getInitials(profile.name)}
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex items-end space-x-2 max-w-[70%] ${
+                    message.sender_id === user.id ? 'flex-row-reverse space-x-reverse' : ''
+                  }`}>
+                    {message.sender_id !== user.id && (
+                      <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center">
+                        {message.sender_avatar ? (
+                          <ImageWithFallback
+                            src={message.sender_avatar}
+                            alt={message.sender_name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs font-semibold text-white">
+                            {getInitials(message.sender_name)}
                           </span>
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-card-foreground truncate">{profile.name}</p>
-                        <p className="text-sm text-muted-foreground capitalize">{profile.role}</p>
+                        )}
                       </div>
-                      
-                      <div className={`w-3 h-3 rounded-full ${
-                        profile.status === 'online' ? 'bg-green-400' : 'bg-gray-400'
-                      }`} />
+                    )}
+                    
+                    <div className={`p-3 rounded-2xl ${
+                      message.sender_id === user.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground'
+                    }`}>
+                      <p className="break-words">{message.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        message.sender_id === user.id
+                          ? 'text-primary-foreground/70'
+                          : 'text-muted-foreground'
+                      }`}>
+                        {formatMessageTime(message.created_at)}
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : userSearchQuery.trim() ? (
-                <div className="p-8 text-center">
-                  <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">No users found matching "{userSearchQuery}"</p>
-                  <p className="text-xs text-muted-foreground mt-2">Try searching by name or email</p>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="p-4 border-t post-card">
+              <div className="flex items-end space-x-2">
+                <button className="p-2 hover:bg-secondary rounded-lg">
+                  <Paperclip className="h-5 w-5" />
+                </button>
+                
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={messageInputRef}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type a message..."
+                    rows={1}
+                    className="input-clean w-full resize-none min-h-[44px] max-h-32 pr-12"
+                  />
+                  <button className="absolute right-2 top-2 p-1 hover:bg-secondary rounded-lg">
+                    <Smile className="h-5 w-5" />
+                  </button>
                 </div>
-              ) : (
-                <div className="p-8 text-center">
-                  <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Search for users to start a conversation</p>
-                  <p className="text-xs text-muted-foreground mt-2">Type a name or email to find users</p>
-                </div>
-              )}
+                
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sendingMessage}
+                  className="btn-gradient p-2 rounded-lg disabled:opacity-50"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Select a conversation</h3>
+              <p className="text-muted-foreground">Choose a conversation from the sidebar to start messaging</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Chat Modal */}
+      {showNewChatModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="post-card rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">New Message</h3>
+              <button
+                onClick={() => {
+                  setShowNewChatModal(false)
+                  setUserSearchQuery('')
+                  setSearchResults([])
+                }}
+                className="p-1 hover:bg-secondary rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search users by name"
+                  value={userSearchQuery}
+                  onChange={(e) => {
+                    setUserSearchQuery(e.target.value)
+                    debouncedSearchUsers(e.target.value)
+                  }}
+                  className="input-clean w-full pl-10 pr-4 py-2"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="max-h-60 overflow-y-auto">
+                {searchingUsers ? (
+                  <div className="text-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">Searching...</p>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((userProfile) => (
+                    <div
+                      key={userProfile.id}
+                      onClick={() => startNewConversation(userProfile.id)}
+                      className="flex items-center space-x-3 p-3 hover:bg-secondary rounded-lg cursor-pointer"
+                    >
+                      <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
+                        {userProfile.avatar_url ? (
+                          <ImageWithFallback
+                            src={userProfile.avatar_url}
+                            alt={userProfile.name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-semibold text-white">
+                            {getInitials(userProfile.name)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-foreground truncate">{userProfile.name}</h4>
+                        <p className="text-sm text-muted-foreground capitalize">{userProfile.role}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : userSearchQuery.trim() ? (
+                  <div className="text-center py-8">
+                    <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No users found</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Search className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Start typing to search for users</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

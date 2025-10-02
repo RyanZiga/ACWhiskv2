@@ -150,11 +150,11 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-gradient">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading dashboard...</p>
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
           </div>
         </div>
       </div>
@@ -176,7 +176,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   const totalSubmissions = submissions.length
 
   return (
-    <div className="min-h-screen bg-theme-gradient p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         
         {/* Temporary Debug Components */}
@@ -191,19 +191,18 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-6">
             <div className="mb-4 lg:mb-0">
-              <p className="text-gray-600 dark:text-gray-400 mb-1">Hello {user.name}, Welcome back</p>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Your Learning Dashboard</h1>
+              <p className="text-muted-foreground mb-1">Hello {user.name}, Welcome back</p>
+              <h1 className="text-3xl font-bold text-foreground">Your Learning Dashboard</h1>
             </div>
             
             <div className="flex items-center space-x-4">
-              <GlassButton
+              <button
                 onClick={() => onNavigate(user.role === 'instructor' ? 'admin' : 'learning')}
-                variant="primary"
-                className="px-6 py-3 flex items-center space-x-2 transform hover:scale-105 shadow-lg touch-target"
+                className="btn-gradient px-6 py-3 rounded-lg flex items-center space-x-2 transform hover:scale-105 shadow-lg touch-target"
               >
                 <Plus className="h-5 w-5" />
                 <span>{user.role === 'instructor' ? 'Create Assignment' : 'Browse Learning Hub'}</span>
-              </GlassButton>
+              </button>
             </div>
           </div>
         </div>
@@ -513,7 +512,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
                     <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-gray-400">No submissions yet</p>
                     <button
-                      onClick={() => onNavigate('recipes')}
+                      onClick={() => onNavigate('learning')}
                       className="text-purple-600 dark:text-purple-400 text-sm mt-2 hover:underline"
                     >
                       View assignments
@@ -695,6 +694,89 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </GlassCard>
         </div>
 
+        {/* Video Tutorials Section */}
+        <div className="mt-8">
+          <GlassCard className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-gray-900 dark:text-white">Video Tutorials</h3>
+              <GlassButton
+                onClick={() => onNavigate('learning')}
+                variant="secondary"
+                className="text-sm px-3 py-1"
+              >
+                View All Tutorials
+              </GlassButton>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Tutorial 1 */}
+              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
+                <div className="relative">
+                  <iframe
+                    className="w-full h-48"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    title="Knife Skills Fundamentals"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+                <div className="p-4">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Knife Skills Fundamentals</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Learn proper cutting techniques</p>
+                  <div className="flex items-center mt-2 text-xs text-gray-400">
+                    <Clock className="h-3 w-3 mr-1" />
+                    <span>12:34</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tutorial 2 */}
+              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
+                <div className="relative">
+                  <iframe
+                    className="w-full h-48"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    title="Sauce Making Basics"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+                <div className="p-4">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Sauce Making Basics</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Master the art of sauce preparation</p>
+                  <div className="flex items-center mt-2 text-xs text-gray-400">
+                    <Clock className="h-3 w-3 mr-1" />
+                    <span>18:26</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tutorial 3 */}
+              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
+                <div className="relative">
+                  <iframe
+                    className="w-full h-48"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    title="Plating Techniques"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+                <div className="p-4">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Plating Techniques</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Professional presentation skills</p>
+                  <div className="flex items-center mt-2 text-xs text-gray-400">
+                    <Clock className="h-3 w-3 mr-1" />
+                    <span>15:42</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        </div>
       </div> 
 
       {/* Submission Modal */}

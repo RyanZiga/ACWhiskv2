@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChefHat, X } from "lucide-react";
 import { useAuth } from "../App";
-import logoImage from "../assets/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png";
+import logoImage from "./assets/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png";
 
 interface LandingProps {
   onNavigate: (page: string) => void;
@@ -14,57 +14,47 @@ export function Landing({ onNavigate }: LandingProps) {
   >("signin");
 
   return (
-    <div
-      className="min-h-screen relative overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(294deg,rgba(238, 174, 202, 1) 0%, rgba(122, 165, 222, 1) 73%)",
-      }}
-    >
-      {/* Background Effects */}
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Beautiful sage green background pattern */}
       <div className="absolute inset-0">
-        <div
-          className="absolute top-20 left-20 w-72 h-72 rounded-full opacity-20 animate-pulse"
-          style={{ backgroundColor: "#3C467B" }}
-        ></div>
-        <div
-          className="absolute bottom-20 right-20 w-96 h-96 rounded-full opacity-15 animate-pulse"
-          style={{
-            backgroundColor: "#3C467B",
-            animationDelay: "2s",
-          }}
-        ></div>
-        <div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 animate-pulse"
-          style={{
-            backgroundColor: "#3C467B",
-            animationDelay: "1s",
-          }}
-        ></div>
+        {/* Floating sage green orbs */}
+        <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-gradient-to-br from-primary/15 to-accent/10 animate-pulse blur-3xl"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full bg-gradient-to-br from-accent/15 to-primary/10 animate-pulse blur-3xl" style={{ animationDelay: "2s" }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-primary/8 to-accent/8 animate-pulse blur-3xl" style={{ animationDelay: "1s" }}></div>
+        
+        {/* Additional floating elements */}
+        <div className="absolute top-1/4 right-1/3 w-48 h-48 rounded-full bg-gradient-to-tr from-green-200/20 to-emerald-200/15 animate-pulse blur-2xl" style={{ animationDelay: "3s" }}></div>
+        <div className="absolute bottom-1/3 left-1/4 w-64 h-64 rounded-full bg-gradient-to-bl from-teal-200/15 to-primary/10 animate-pulse blur-2xl" style={{ animationDelay: "4s" }}></div>
+        
+        {/* Subtle animated lines */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-primary/30 to-transparent animate-pulse" style={{ animationDelay: "0.5s" }}></div>
+          <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-transparent via-accent/30 to-transparent animate-pulse" style={{ animationDelay: "1.5s" }}></div>
+        </div>
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md mx-auto">
-          {/* Glassmorphism Container */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl">
+        <div className="w-full max-w-md mx-auto animate-fade-in">
+          {/* Clean Instagram-like Container */}
+          <div className="post-card p-8 shadow-xl transform hover:scale-[1.02] transition-all duration-500 hover:shadow-2xl backdrop-blur-sm border border-border/50">
             {/* Form Toggle */}
-            <div className="flex bg-white/10 backdrop-blur-md rounded-2xl p-1 mb-8">
+            <div className="flex bg-secondary rounded-xl p-1 mb-8">
               <button
                 onClick={() => setActiveForm("signin")}
-                className={`flex-1 py-3 px-4 text-sm font-medium rounded-xl transition-all duration-300 ${
+                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all duration-300 ${
                   activeForm === "signin"
-                    ? "bg-white/20 text-white shadow-lg"
-                    : "text-white/70 hover:text-white"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Sign In
               </button>
               <button
                 onClick={() => setActiveForm("signup")}
-                className={`flex-1 py-3 px-4 text-sm font-medium rounded-xl transition-all duration-300 ${
+                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all duration-300 ${
                   activeForm === "signup"
-                    ? "bg-white/20 text-white shadow-lg"
-                    : "text-white/70 hover:text-white"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Sign Up
@@ -123,29 +113,29 @@ function SignInForm({ onNavigate }: SignInFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Logo */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full mb-4">
-          <div className="w-8 h-8 flex items-center justify-center">
+        <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-primary/10 to-accent/10 px-6 py-3 rounded-full mb-4 border border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+          <div className="w-8 h-8 flex items-center justify-center p-1 bg-gradient-to-br from-primary to-accent rounded-full">
             <img
               src={logoImage}
               alt="ACWhisk Logo"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain filter brightness-0 invert"
             />
           </div>
-          <span className="text-white/90 font-medium font-bold">
+          <span className="text-foreground font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             ACWhisk
           </span>
         </div>
-        <h2 className="text-2xl font-bold text-[rgba(255,255,255,1)] mb-2">
+        <h2 className="text-2xl font-bold text-foreground mb-2 animate-slide-up">
           Welcome Back
         </h2>
-        <p className="text-white/70">
+        <p className="text-muted-foreground animate-slide-up" style={{ animationDelay: "0.2s" }}>
           Sign in to continue your culinary journey
         </p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-white/90 text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Email Address
           </label>
           <input
@@ -158,13 +148,13 @@ function SignInForm({ onNavigate }: SignInFormProps) {
                 email: e.target.value,
               })
             }
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+            className="input-clean w-full px-4 py-3"
             placeholder="Enter your email"
           />
         </div>
 
         <div>
-          <label className="block text-white/90 text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Password
           </label>
           <input
@@ -177,14 +167,14 @@ function SignInForm({ onNavigate }: SignInFormProps) {
                 password: e.target.value,
               })
             }
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+            className="input-clean w-full px-4 py-3"
             placeholder="Enter your password"
           />
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-500/20 backdrop-blur-md border border-red-400/30 rounded-xl p-4 text-red-200 text-sm">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive text-sm">
           {error}
         </div>
       )}
@@ -192,7 +182,7 @@ function SignInForm({ onNavigate }: SignInFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-[rgba(254,254,254,1)] rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 font-semibold transform hover:scale-[1.02] active:scale-[0.98] shadow-lg px-[16px] py-[12px] text-center"
+        className="w-full btn-gradient px-4 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 transform hover:scale-[1.02] active:scale-[0.98]"
       >
         {loading ? "Signing In..." : "Sign In"}
       </button>
@@ -243,29 +233,29 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Logo */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full mb-4">
-          <div className="w-8 h-8 flex items-center justify-center">
+        <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-primary/10 to-accent/10 px-6 py-3 rounded-full mb-4 border border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+          <div className="w-8 h-8 flex items-center justify-center p-1 bg-gradient-to-br from-primary to-accent rounded-full">
             <img
               src={logoImage}
               alt="ACWhisk Logo"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain filter brightness-0 invert"
             />
           </div>
-          <span className="text-white/90 font-medium">
+          <span className="text-foreground font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             ACWhisk
           </span>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-2xl font-bold text-foreground mb-2 animate-slide-up">
           Join ACWhisk
         </h2>
-        <p className="text-white/70">
+        <p className="text-muted-foreground animate-slide-up" style={{ animationDelay: "0.2s" }}>
           Start your culinary adventure today
         </p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-white/90 text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Full Name
           </label>
           <input
@@ -275,13 +265,13 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
             onChange={(e) =>
               setFormData({ ...formData, name: e.target.value })
             }
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+            className="input-clean w-full px-4 py-3"
             placeholder="Enter your full name"
           />
         </div>
 
         <div>
-          <label className="block text-white/90 text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Role
           </label>
           <select
@@ -289,31 +279,16 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
             onChange={(e) =>
               setFormData({ ...formData, role: e.target.value })
             }
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+            className="input-clean w-full px-4 py-3"
           >
-            <option
-              value="student"
-              className="bg-blue-900 text-white"
-            >
-              Student
-            </option>
-            <option
-              value="instructor"
-              className="bg-blue-900 text-white"
-            >
-              Instructor
-            </option>
-            <option
-              value="admin"
-              className="bg-blue-900 text-white"
-            >
-              Admin
-            </option>
+            <option value="student">Student</option>
+            <option value="instructor">Instructor</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-white/90 text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Email Address
           </label>
           <input
@@ -326,13 +301,13 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
                 email: e.target.value,
               })
             }
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+            className="input-clean w-full px-4 py-3"
             placeholder="Enter your email"
           />
         </div>
 
         <div>
-          <label className="block text-white/90 text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Password
           </label>
           <input
@@ -345,14 +320,14 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
                 password: e.target.value,
               })
             }
-            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+            className="input-clean w-full px-4 py-3"
             placeholder="Enter your password"
           />
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-500/20 backdrop-blur-md border border-red-400/30 rounded-xl p-4 text-red-200 text-sm">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive text-sm">
           {error}
         </div>
       )}
@@ -360,7 +335,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 font-semibold transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+        className="w-full btn-gradient px-4 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 transform hover:scale-[1.02] active:scale-[0.98]"
       >
         {loading ? "Creating Account..." : "Create Account"}
       </button>

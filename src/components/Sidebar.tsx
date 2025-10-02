@@ -24,16 +24,9 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       { name: 'Messages', id: 'messages', icon: MessageCircle }
     ]
 
-    // Add Dashboard only for admins
+    // Add Admin Panel only for admins (replacing Dashboard)
     if (user.role === 'admin') {
-      baseNavigation.splice(1, 0, { name: 'Dashboard', id: 'dashboard', icon: BarChart3 })
-    }
-
-
-
-    // Add admin-only items
-    if (user.role === 'admin') {
-      baseNavigation.push({ name: 'Admin Panel', id: 'admin', icon: Shield })
+      baseNavigation.splice(1, 0, { name: 'Admin Panel', id: 'admin', icon: Shield })
     }
 
     return baseNavigation
@@ -44,7 +37,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo and Brand */}
-      <div className="p-6 border-b border-white/20 dark:border-gray-700/50">
+      <div className="p-6 border-b border-sidebar-border">
         <button
           onClick={(e) => {
             e.preventDefault()
@@ -60,10 +53,10 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           </div>
           {!isCollapsed && (
             <div>
-              <span className="font-bold text-xl text-white dark:text-white group-hover:text-yellow-300 dark:group-hover:text-blue-200 transition-colors drop-shadow-sm">
+              <span className="font-bold text-xl text-sidebar-foreground group-hover:text-sidebar-primary transition-colors">
                 ACWhisk
               </span>
-              <p className="text-sm text-white/80 dark:text-gray-300">Culinary Community</p>
+              <p className="text-sm text-sidebar-foreground/70">Culinary Community</p>
             </div>
           )}
         </button>
@@ -86,12 +79,12 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               }}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group touch-manipulation min-h-[48px] ${
                 isActive
-                  ? 'bg-white/30 dark:bg-white/10 text-white dark:text-white shadow-lg backdrop-blur-md border border-white/40 dark:border-white/20'
-                  : 'text-white/80 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/5 hover:text-white dark:hover:text-white'
+                  ? 'bg-sidebar-accent text-sidebar-primary shadow-sm border border-sidebar-border'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary'
               }`}
               type="button"
             >
-              <Icon className={`h-5 w-5 ${isActive ? 'text-white dark:text-white' : 'text-white/70 dark:text-gray-400 group-hover:text-white dark:group-hover:text-white'}`} />
+              <Icon className={`h-5 w-5 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70 group-hover:text-sidebar-primary'}`} />
               {!isCollapsed && (
                 <span className="font-medium flex-1">{item.name}</span>
               )}
@@ -107,7 +100,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       </nav>
 
       {/* User Profile & Settings */}
-      <div className="p-4 border-t border-white/20 dark:border-gray-700/50 space-y-2">
+      <div className="p-4 border-t border-sidebar-border space-y-2">
 
         {/* Profile */}
         <button
@@ -119,8 +112,8 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           }}
           className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 touch-manipulation min-h-[48px] ${
             currentPage === 'profile'
-              ? 'bg-white/30 dark:bg-white/10 text-white dark:text-white shadow-lg backdrop-blur-md border border-white/40 dark:border-white/20'
-              : 'text-white/80 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/5 hover:text-white dark:hover:text-white'
+              ? 'bg-sidebar-accent text-sidebar-primary shadow-sm border border-sidebar-border'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary'
           }`}
           type="button"
         >
@@ -132,7 +125,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           {!isCollapsed && (
             <div className="flex-1 text-left">
               <p className="font-medium truncate">{user.name}</p>
-              <p className="text-xs text-white/60 dark:text-gray-400 capitalize">{user.role}</p>
+              <p className="text-xs text-sidebar-foreground/60 capitalize">{user.role}</p>
             </div>
           )}
         </button>
@@ -145,7 +138,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
             onNavigate('account')
             setIsMobileOpen(false)
           }}
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-white/80 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/5 hover:text-white dark:hover:text-white transition-all duration-200 touch-manipulation min-h-[48px]"
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary transition-all duration-200 touch-manipulation min-h-[48px]"
           type="button"
         >
           <Settings className="h-5 w-5" />
@@ -160,7 +153,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
             onLogout()
             setIsMobileOpen(false)
           }}
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-100 transition-all duration-200 touch-manipulation min-h-[48px]"
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive transition-all duration-200 touch-manipulation min-h-[48px]"
           type="button"
         >
           <LogOut className="h-5 w-5" />
@@ -169,14 +162,14 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       </div>
 
       {/* Collapse Toggle (Desktop only) */}
-      <div className="hidden lg:block p-4 border-t border-white/20 dark:border-gray-700/50">
+      <div className="hidden lg:block p-4 border-t border-sidebar-border">
         <button
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
             setIsCollapsed(!isCollapsed)
           }}
-          className="w-full flex items-center justify-center px-4 py-2 rounded-xl text-white/70 dark:text-white/60 hover:bg-white/20 dark:hover:bg-white/10 hover:text-white dark:hover:text-white transition-all duration-200 touch-manipulation min-h-[44px]"
+          className="w-full flex items-center justify-center px-4 py-2 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-primary transition-all duration-200 touch-manipulation min-h-[44px]"
           type="button"
           aria-label="Toggle sidebar"
         >
@@ -226,7 +219,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               e.stopPropagation()
               setIsMobileOpen(false)
             }}
-            className="absolute top-4 right-4 p-3 text-white/80 dark:text-white/80 hover:text-white dark:hover:text-white hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center z-10"
+            className="absolute top-4 right-4 p-3 text-sidebar-foreground/80 hover:text-sidebar-primary hover:bg-sidebar-accent/50 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center z-10"
             type="button"
             aria-label="Close menu"
           >
@@ -240,7 +233,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       <div className={`hidden lg:block fixed inset-y-0 left-0 z-30 transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-80'
       }`}>
-        <div className="h-full rounded-[28px] sidebar-gradient">
+        <div className="h-full rounded-[0px] sidebar-gradient px-[-13px] py-[0px]">
           <SidebarContent />
         </div>
       </div>

@@ -46,10 +46,10 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
         <div className="flex items-center justify-between">
           {/* Page Title */}
           <div className="ml-16 lg:ml-0 flex-1 min-w-0">
-            <h1 className="text-xl lg:text-2xl font-bold text-[rgba(255,255,255,1)] truncate">
+            <h1 className="text-xl lg:text-2xl font-bold text-foreground truncate">
               {getPageTitle()}
             </h1>
-            <p className="text-xs lg:text-sm text-[rgba(243,245,248,1)] mt-1 truncate">
+            <p className="text-xs lg:text-sm text-muted-foreground mt-1 truncate">
               Welcome back, {user.name}
             </p>
           </div>
@@ -63,7 +63,7 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
                 e.stopPropagation()
                 setShowSearch(!showSearch)
               }}
-              className="relative p-2 lg:p-3 text-[rgba(253,253,253,1)] hover:text-foreground hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="relative p-2 lg:p-3 text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Search"
               type="button"
             >
@@ -77,7 +77,7 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
                 e.stopPropagation()
                 toggleTheme()
               }}
-              className="relative p-2 lg:p-3 text-[rgba(233,235,237,1)] hover:text-foreground hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="relative p-2 lg:p-3 text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               type="button"
             >
@@ -90,7 +90,7 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
             </div>
 
             {/* User Avatar */}
-            <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center shadow-lg">
+            <div className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center shadow-lg">
               <span className="text-white text-sm lg:text-base font-medium">
                 {user.name.charAt(0).toUpperCase()}
               </span>
@@ -108,7 +108,7 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search recipes, people, forum posts..."
-                  className="flex-1 px-4 py-3 pl-10 pr-12 bg-background border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  className="input-clean flex-1 px-4 py-3 pl-10 pr-12"
                   autoFocus
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />

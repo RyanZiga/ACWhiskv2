@@ -97,7 +97,7 @@ export function Forum({ user, onNavigate }: ForumProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-gradient">
+      <div className="min-h-screen bg-background">
         <div className="px-6 py-8 max-w-7xl mx-auto">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -109,7 +109,7 @@ export function Forum({ user, onNavigate }: ForumProps) {
   }
 
   return (
-    <div className="min-h-screen bg-theme-gradient">
+    <div className="min-h-screen bg-background">
       <div className="px-6 py-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

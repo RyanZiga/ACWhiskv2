@@ -268,8 +268,8 @@ export function MessageInput({
           {/* Attachment Button */}
           <button
             onClick={() => setShowAttachments(!showAttachments)}
-            className={`p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 touch-target ${
-              showAttachments ? 'bg-gray-100 text-gray-700' : ''
+            className={`p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors flex-shrink-0 touch-target ${
+              showAttachments ? 'bg-secondary text-foreground' : ''
             }`}
           >
             <Plus className="h-5 w-5" />

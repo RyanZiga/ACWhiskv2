@@ -183,8 +183,8 @@ export function Profile({ user, onNavigate }: ProfileProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading profile...</p>
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading profile...</p>
         </div>
       </div>
     )
@@ -194,10 +194,10 @@ export function Profile({ user, onNavigate }: ProfileProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile not found</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Profile not found</h2>
           <button
             onClick={() => onNavigate('feed')}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="btn-gradient px-4 py-2 rounded-lg"
           >
             Back to Feed
           </button>
@@ -208,16 +208,16 @@ export function Profile({ user, onNavigate }: ProfileProps) {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="bg-theme-gradient rounded-xl border border-gray-200 shadow-sm">
+      <div className="post-card shadow-sm">
         {/* Header */}
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-border p-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+            <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
             
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="flex items-center space-x-2 btn-gradient px-4 py-2 rounded-lg"
               >
                 <Edit className="h-4 w-4" />
                 <span>Edit Profile</span>
@@ -226,7 +226,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
               <div className="flex space-x-2">
                 <button
                   onClick={handleCancel}
-                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-2 btn-secondary px-4 py-2 rounded-lg"
                 >
                   <X className="h-4 w-4" />
                   <span>Cancel</span>
@@ -234,7 +234,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-2 btn-gradient px-4 py-2 rounded-lg disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" />
                   <span>{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -248,7 +248,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
           {/* Profile Picture Section */}
           <div className="flex items-center space-x-6 mb-8">
             <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center">
+              <div className="w-24 h-24 avatar-gradient rounded-full flex items-center justify-center">
                 {profile.avatar_url ? (
                   <ImageWithFallback
                     src={profile.avatar_url}

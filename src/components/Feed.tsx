@@ -591,34 +591,34 @@ export function Feed({ user, onNavigate }: FeedProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Easy":
-        return "bg-green-100 text-green-700";
+        return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200";
       case "Medium":
-        return "bg-yellow-100 text-yellow-700";
+        return "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200";
       case "Hard":
-        return "bg-red-100 text-red-700";
+        return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-secondary text-muted-foreground";
     }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
       case "instructor":
-        return "bg-blue-100 text-blue-700";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200";
       case "admin":
-        return "bg-purple-100 text-purple-700";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-secondary text-muted-foreground";
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-gradient">
-        <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="text-center">
-            <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-2 text-gray-600">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">
               Loading feed...
             </p>
           </div>
@@ -629,7 +629,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
 
   return (
     <div className="min-h-screen bg-theme-gradient">
-      {/* Sticky Blur Header for Mobile */}
+      {/* Sticky Header for Mobile */}
       <div
         className={`fixed top-16 left-0 right-0 z-40 transition-all duration-300 ${
           scrolled
@@ -637,12 +637,12 @@ export function Feed({ user, onNavigate }: FeedProps) {
             : "-translate-y-full opacity-0"
         } lg:hidden`}
       >
-        <div className="bg-theme-gradient/80 backdrop-blur-md border-b border-gray-200 px-4 py-3">
+        <div className="header-gradient px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="font-bold text-gray-900">Feed</h1>
+            <h1 className="text-xl font-semibold text-foreground">ACWhisk</h1>
             <button
               onClick={() => setShowMobileSidebar(true)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -650,12 +650,12 @@ export function Feed({ user, onNavigate }: FeedProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex gap-6 relative">
           {/* Main Feed */}
-          <div className="flex-1 max-w-2xl lg:max-w-none lg:flex-1">
+          <div className="flex-1 max-w-2xl mx-auto lg:mx-0">
             {/* Create Post Section */}
-            <div className="bg-theme-gradient rounded-2xl border border-gray-200 p-4 lg:p-6 mb-6 shadow-sm">
+            <div className="post-card p-4 lg:p-6 mb-6">
               <div className="flex items-center space-x-3 lg:space-x-4 mb-4">
                 <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
                   {user.avatar_url ? (
@@ -678,7 +678,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                 <input
                   type="text"
                   placeholder={`What's cooking, ${user.name}?`}
-                  className="flex-1 px-3 lg:px-4 py-2 lg:py-3 bg-white/50 rounded-full border-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm lg:text-base text-[rgba(0,0,0,1)]"
+                  className="flex-1 input-clean px-4 py-3 rounded-full border text-sm lg:text-base placeholder-muted-foreground"
                   onClick={() => setShowCreatePost(true)}
                   readOnly
                 />
@@ -688,7 +688,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                 <div className="flex space-x-2 lg:space-x-4">
                   <button
                     onClick={() => setShowCreatePost(true)}
-                    className="flex items-center space-x-1 lg:space-x-2 px-3 lg:px-4 py-2 btn-gradient rounded-full transition-colors text-sm lg:text-base"
+                    className="flex items-center space-x-1 lg:space-x-2 px-3 lg:px-4 py-2 btn-secondary rounded-lg transition-colors text-sm lg:text-base"
                   >
                     <Camera className="h-4 w-4 lg:h-5 lg:w-5" />
                     <span className="hidden sm:inline">
@@ -699,26 +699,23 @@ export function Feed({ user, onNavigate }: FeedProps) {
 
                 <button
                   onClick={() => setShowCreatePost(true)}
-                  className="px-4 lg:px-6 py-2 btn-gradient rounded-full transition-colors text-sm lg:text-base"
+                  className="px-4 lg:px-6 py-2 btn-gradient rounded-lg transition-colors text-sm lg:text-base font-medium"
                 >
-                  <span className="hidden sm:inline">
-                    Share
-                  </span>
-                  <span className="sm:hidden">Share</span>
+                  Share
                 </button>
               </div>
             </div>
 
             {/* Feed Posts */}
-            <div className="space-y-4 lg:space-y-6">
+            <div className="space-y-6">
               {posts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-theme-gradient rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
+                  className="post-card overflow-hidden"
                 >
                   {/* Post Header */}
-                  <div className="p-4 lg:p-6 pb-4">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="p-4 lg:p-6 pb-3">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <button
                           onClick={() =>
@@ -727,7 +724,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                               post.author_id,
                             )
                           }
-                          className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden"
+                          className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center overflow-hidden p-0.5"
                         >
                           {post.author_avatar ? (
                             <ImageWithFallback
@@ -735,19 +732,23 @@ export function Feed({ user, onNavigate }: FeedProps) {
                               alt={post.author_name}
                               className="w-full h-full object-cover rounded-full"
                               fallback={
-                                <span className="text-white text-sm lg:text-base font-medium">
-                                  {post.author_name
-                                    .charAt(0)
-                                    .toUpperCase()}
-                                </span>
+                                <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                                  <span className="text-foreground text-sm font-medium">
+                                    {post.author_name
+                                      .charAt(0)
+                                      .toUpperCase()}
+                                  </span>
+                                </div>
                               }
                             />
                           ) : (
-                            <span className="text-white text-sm lg:text-base font-medium">
-                              {post.author_name
-                                .charAt(0)
-                                .toUpperCase()}
-                            </span>
+                            <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                              <span className="text-foreground text-sm font-medium">
+                                {post.author_name
+                                  .charAt(0)
+                                  .toUpperCase()}
+                              </span>
+                            </div>
                           )}
                         </button>
 
@@ -760,19 +761,20 @@ export function Feed({ user, onNavigate }: FeedProps) {
                                   post.author_id,
                                 )
                               }
-                              className="font-semibold text-gray-900 hover:text-purple-600 transition-colors text-sm lg:text-base"
+                              className="font-semibold text-foreground hover:text-muted-foreground transition-colors text-sm"
                             >
                               {post.author_name}
                             </button>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(post.author_role)}`}
-                            >
-                              {post.author_role}
+                            <span className="text-muted-foreground text-xs">•</span>
+                            <span className="text-muted-foreground text-xs">
+                              {formatDate(post.created_at)}
                             </span>
                           </div>
-                          <p className="text-xs lg:text-sm text-gray-500">
-                            {formatDate(post.created_at)}
-                          </p>
+                          {post.author_role !== 'student' && (
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {post.author_role}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -784,14 +786,14 @@ export function Feed({ user, onNavigate }: FeedProps) {
                               e.stopPropagation();
                               setActiveDropdown(activeDropdown === post.id ? null : post.id);
                             }}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors z-10"
+                            className="p-2 hover:bg-secondary rounded-full transition-colors z-10"
                           >
-                            <MoreHorizontal className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                           </button>
                           {activeDropdown === post.id && (
                             <div 
                               data-dropdown
-                              className="absolute right-0 mt-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg z-50 dropdown-mobile"
+                              className="absolute right-0 mt-1 w-48 bg-card rounded-lg border border-border shadow-lg z-50 dropdown-mobile"
                             >
                               {post.author_id === user.id && (
                                 <button
@@ -801,7 +803,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                                     setEditContent(post.content);
                                     setActiveDropdown(null);
                                   }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 rounded-t-lg"
+                                  className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-2 rounded-t-lg"
                                 >
                                   <Edit className="h-4 w-4" />
                                   <span>Edit Post</span>
@@ -813,7 +815,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                                   setShowDeleteConfirm(post.id);
                                   setActiveDropdown(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 rounded-b-lg"
+                                className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center space-x-2 rounded-b-lg"
                               >
                                 <Trash2 className="h-4 w-4" />
                                 <span>Delete Post</span>
@@ -823,25 +825,27 @@ export function Feed({ user, onNavigate }: FeedProps) {
                         </div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Post Content - Recipe or Regular Post */}
-                    <div className="mb-4">
+                  {/* Post Content - Recipe or Regular Post */}
+                  {post.content && (
+                    <div className="px-4 lg:px-6 pb-3">
                       {post.type === "recipe" && post.recipe_data ? (
                         <>
-                          <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-2">
+                          <h2 className="text-base font-semibold text-foreground mb-1">
                             {post.recipe_data.title}
                           </h2>
-                          <p className="text-gray-700 leading-relaxed text-sm lg:text-base">
+                          <p className="text-foreground leading-relaxed text-sm">
                             {post.content}
                           </p>
                         </>
                       ) : (
-                        <p className="text-gray-900 leading-relaxed text-sm lg:text-base">
+                        <p className="text-foreground leading-relaxed text-sm">
                           {post.content}
                         </p>
                       )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Recipe Image */}
                   {post.images && post.images.length > 0 && (
@@ -860,12 +864,12 @@ export function Feed({ user, onNavigate }: FeedProps) {
                         post.recipe_data && (
                           <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                             <span
-                              className={`px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium ${getDifficultyColor(post.recipe_data.difficulty)}`}
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(post.recipe_data.difficulty)}`}
                             >
                               {post.recipe_data.difficulty}
                             </span>
-                            <span className="px-2 lg:px-3 py-1 bg-white/90 backdrop-blur-sm text-gray-800 rounded-full text-xs lg:text-sm font-medium flex items-center space-x-1">
-                              <Star className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500 fill-current" />
+                            <span className="px-3 py-1 bg-black/70 backdrop-blur-sm text-white rounded-full text-xs font-medium flex items-center space-x-1">
+                              <Star className="h-3 w-3 text-yellow-400 fill-current" />
                               <span>
                                 {post.recipe_data.rating}
                               </span>
@@ -878,43 +882,37 @@ export function Feed({ user, onNavigate }: FeedProps) {
                   {/* Recipe Stats */}
                   {post.type === "recipe" &&
                     post.recipe_data && (
-                      <div className="px-4 lg:px-6 py-4 border-b border-gray-100">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-4 lg:space-x-6">
-                            <div className="flex items-center space-x-1 lg:space-x-2 text-gray-600">
-                              <Clock className="h-3 w-3 lg:h-4 lg:w-4" />
-                              <span className="text-xs lg:text-sm">
-                                {post.recipe_data.cooking_time}{" "}
-                                min
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1 lg:space-x-2 text-gray-600">
-                              <Users className="h-3 w-3 lg:h-4 lg:w-4" />
-                              <span className="text-xs lg:text-sm">
-                                {post.recipe_data.servings}{" "}
-                                servings
-                              </span>
-                            </div>
+                      <div className="px-4 lg:px-6 py-3 border-b border-border">
+                        <div className="flex items-center space-x-6 mb-3">
+                          <div className="flex items-center space-x-2 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span className="text-sm">
+                              {post.recipe_data.cooking_time} min
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                            <span className="text-sm">
+                              {post.recipe_data.servings} servings
+                            </span>
                           </div>
                         </div>
 
                         {/* Tags */}
-                        <div className="flex flex-wrap gap-1 lg:gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {post.recipe_data.tags
                             .slice(0, 4)
                             .map((tag, index) => (
                               <span
                                 key={index}
-                                className="px-2 lg:px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs lg:text-sm hover:bg-purple-100 cursor-pointer transition-colors"
+                                className="px-2 py-1 bg-secondary text-muted-foreground rounded text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
                               >
                                 #{tag}
                               </span>
                             ))}
                           {post.recipe_data.tags.length > 4 && (
-                            <span className="px-2 lg:px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-xs lg:text-sm">
-                              +
-                              {post.recipe_data.tags.length - 4}{" "}
-                              more
+                            <span className="px-2 py-1 bg-secondary text-muted-foreground rounded text-xs">
+                              +{post.recipe_data.tags.length - 4} more
                             </span>
                           )}
                         </div>
@@ -922,23 +920,20 @@ export function Feed({ user, onNavigate }: FeedProps) {
                     )}
 
                   {/* Post Actions */}
-                  <div className="px-4 lg:px-6 py-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4 lg:space-x-6">
+                  <div className="px-4 lg:px-6 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-4">
                         <button
                           onClick={() => handleLike(post.id)}
-                          className={`flex items-center space-x-1 lg:space-x-2 transition-colors ${
+                          className={`transition-transform active:scale-110 ${
                             post.likes.includes(user.id)
                               ? "text-red-500"
-                              : "text-gray-500 hover:text-red-500"
+                              : "text-foreground hover:text-muted-foreground"
                           }`}
                         >
                           <Heart
-                            className={`h-4 w-4 lg:h-5 lg:w-5 ${post.likes.includes(user.id) ? "fill-current" : ""}`}
+                            className={`h-6 w-6 ${post.likes.includes(user.id) ? "fill-current" : ""}`}
                           />
-                          <span className="text-sm lg:text-base font-medium">
-                            {post.likes.length}
-                          </span>
                         </button>
 
                         <button
@@ -949,50 +944,84 @@ export function Feed({ user, onNavigate }: FeedProps) {
                                 : post.id,
                             )
                           }
-                          className="flex items-center space-x-1 lg:space-x-2 text-gray-500 hover:text-purple-500 transition-colors"
+                          className="text-foreground hover:text-muted-foreground transition-colors"
                         >
-                          <MessageCircle className="h-4 w-4 lg:h-5 lg:w-5" />
-                          <span className="text-sm lg:text-base font-medium">
-                            {post.comments.length}
-                          </span>
+                          <MessageCircle className="h-6 w-6" />
                         </button>
 
-                        <button className="flex items-center space-x-1 lg:space-x-2 text-gray-500 hover:text-purple-500 transition-colors">
-                          <Share className="h-4 w-4 lg:h-5 lg:w-5" />
-                          <span className="text-sm lg:text-base font-medium hidden sm:inline">
-                            67
-                          </span>
+                        <button className="text-foreground hover:text-muted-foreground transition-colors">
+                          <Share className="h-6 w-6" />
                         </button>
                       </div>
                     </div>
 
+                    {/* Like count */}
+                    {post.likes.length > 0 && (
+                      <div className="mb-2">
+                        <span className="text-sm font-semibold text-foreground">
+                          {post.likes.length} {post.likes.length === 1 ? 'like' : 'likes'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* View comments */}
+                    {post.comments.length > 0 && showComments !== post.id && (
+                      <button
+                        onClick={() => setShowComments(post.id)}
+                        className="text-muted-foreground text-sm hover:text-foreground transition-colors mb-2"
+                      >
+                        View all {post.comments.length} comments
+                      </button>
+                    )}
+
                     {/* Comments Section */}
                     {showComments === post.id && (
-                      <div className="border-t border-gray-100 pt-4 mt-4">
-                        {/* Comment Input */}
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center overflow-hidden">
-                            {user.avatar_url ? (
-                              <ImageWithFallback
-                                src={user.avatar_url}
-                                alt={user.name}
-                                className="w-full h-full object-cover rounded-full"
-                                fallback={
-                                  <span className="text-white text-xs lg:text-sm font-medium">
-                                    {user.name.charAt(0).toUpperCase()}
+                      <div className="border-t border-border pt-3 mt-3 space-y-3">
+                        {/* Comments List */}
+                        <div className="space-y-2">
+                          {post.comments.map((comment) => (
+                            <div
+                              key={comment.id}
+                              className="flex items-start space-x-3"
+                            >
+                              <div className="w-6 h-6 avatar-gradient rounded-full flex items-center justify-center overflow-hidden p-0.5">
+                                <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                                  <span className="text-foreground text-xs font-medium">
+                                    {comment.author_name
+                                      .charAt(0)
+                                      .toUpperCase()}
                                   </span>
-                                }
-                              />
-                            ) : (
-                              <span className="text-white text-xs lg:text-sm font-medium">
-                                {user.name.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 flex space-x-2">
+                                </div>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm">
+                                  <span className="font-semibold text-foreground mr-2">
+                                    {comment.author_name}
+                                  </span>
+                                  <span className="text-foreground">
+                                    {comment.content}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-4 mt-1">
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatDate(comment.created_at)}
+                                  </span>
+                                  <button className="text-xs text-muted-foreground font-semibold hover:text-foreground">
+                                    Reply
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Comment Input */}
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-1 flex items-center space-x-2">
                             <input
                               type="text"
-                              placeholder="Write a comment..."
+                              placeholder="Add a comment..."
                               value={commentText[post.id] || ""}
                               onChange={(e) =>
                                 setCommentText((prev) => ({
@@ -1004,7 +1033,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                                 e.key === "Enter" &&
                                 handleComment(post.id)
                               }
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm lg:text-base"
+                              className="flex-1 px-0 py-2 border-0 focus:outline-none focus:ring-0 text-sm placeholder-muted-foreground bg-transparent"
                             />
                             <button
                               onClick={() =>
@@ -1013,45 +1042,11 @@ export function Feed({ user, onNavigate }: FeedProps) {
                               disabled={
                                 !commentText[post.id]?.trim()
                               }
-                              className="p-2 btn-gradient rounded-full transition-colors disabled:opacity-50"
+                              className="text-primary font-semibold text-sm disabled:opacity-50 hover:text-primary/80 transition-colors disabled:cursor-not-allowed"
                             >
-                              <Send className="h-3 w-3 lg:h-4 lg:w-4" />
+                              Post
                             </button>
                           </div>
-                        </div>
-
-                        {/* Comments List */}
-                        <div className="space-y-3">
-                          {post.comments.map((comment) => (
-                            <div
-                              key={comment.id}
-                              className="flex items-start space-x-3"
-                            >
-                              <div className="w-6 h-6 lg:w-8 lg:h-8 avatar-gradient rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs lg:text-sm font-medium">
-                                  {comment.author_name
-                                    .charAt(0)
-                                    .toUpperCase()}
-                                </span>
-                              </div>
-
-                              <div className="flex-1 bg-gray-50 rounded-xl px-3 lg:px-4 py-2 lg:py-3">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <span className="font-medium text-xs lg:text-sm text-gray-900">
-                                    {comment.author_name}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {formatDate(
-                                      comment.created_at,
-                                    )}
-                                  </span>
-                                </div>
-                                <p className="text-xs lg:text-sm text-gray-700">
-                                  {comment.content}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
                         </div>
                       </div>
                     )}
@@ -1062,7 +1057,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
           </div>
 
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block w-80 space-y-6 sticky top-24 h-fit">
+          <div className="hidden lg:block w-80 space-y-4 sticky top-24 h-fit">
             <SidebarContent
               topRankedRecipes={topRecipes}
               currentTip={currentTip}
@@ -1080,21 +1075,21 @@ export function Feed({ user, onNavigate }: FeedProps) {
             className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden"
             onClick={() => setShowMobileSidebar(false)}
           />
-          <div className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-theme-gradient z-50 overflow-y-auto lg:hidden">
-            <div className="p-4 border-b border-gray-200">
+          <div className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-card z-50 overflow-y-auto lg:hidden border-l border-border">
+            <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between">
-                <h2 className="font-bold text-gray-900">
+                <h2 className="font-semibold text-foreground">
                   Discover
                 </h2>
                 <button
                   onClick={() => setShowMobileSidebar(false)}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
-            <div className="p-4 space-y-6">
+            <div className="p-4 space-y-4">
               <SidebarContent
                 topRankedRecipes={topRecipes}
                 currentTip={currentTip}
@@ -1165,12 +1160,12 @@ function SidebarContent({
     <>
 
 
-      {/* Live Recipe Rankings */}
-      <div className="bg-theme-gradient rounded-2xl border border-gray-200 p-6 shadow-sm">
+      {/* Trending Recipes */}
+      <div className="post-card p-4">
         <div className="flex items-center space-x-2 mb-4">
-          <Trophy className="h-5 w-5 text-yellow-500" />
-          <h3 className="font-bold text-gray-900">
-            Live Recipe Rankings
+          <Trophy className="h-5 w-5 text-amber-500" />
+          <h3 className="font-semibold text-foreground">
+            Trending Recipes
           </h3>
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         </div>
@@ -1179,39 +1174,39 @@ function SidebarContent({
           {topRankedRecipes.map((recipe, index) => (
             <div
               key={recipe.id}
-              className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer"
+              className="flex items-center justify-between hover:bg-secondary p-2 rounded-lg transition-colors cursor-pointer"
             >
               <div className="flex items-center space-x-3">
                 <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
                     index === 0
-                      ? "bg-yellow-100 text-yellow-700"
+                      ? "bg-amber-100 text-amber-700"
                       : index === 1
                         ? "bg-gray-100 text-gray-700"
                         : index === 2
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-purple-100 text-purple-700"
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-blue-100 text-blue-700"
                   }`}
                 >
                   {index + 1}
                 </span>
                 <div>
-                  <h4 className="font-medium text-gray-900 text-sm">
+                  <h4 className="font-medium text-foreground text-sm">
                     {recipe.title}
                   </h4>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     by {recipe.author_name}
                   </p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="flex items-center space-x-1">
-                  <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                  <span className="text-sm font-medium">
+                  <Star className="h-3 w-3 text-amber-500 fill-current" />
+                  <span className="text-sm font-medium text-foreground">
                     {recipe.rating}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {recipe.reviews_count} reviews
                 </p>
               </div>
@@ -1220,35 +1215,35 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Dynamic Cooking Tips */}
-      <div className="bg-theme-gradient rounded-2xl border border-purple-200 p-6">
+      {/* Cooking Tips */}
+      <div className="post-card p-4">
         <div className="flex items-center space-x-2 mb-4">
-          <Lightbulb className="h-5 w-5 text-purple-600" />
-          <h3 className="font-bold text-gray-900">
+          <Lightbulb className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold text-foreground">
             Daily Cooking Tips
           </h3>
-          <span className="px-2 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-medium">
+          <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
             Live
           </span>
         </div>
 
-        <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 transition-all duration-500 transform">
+        <div className="bg-secondary rounded-lg p-4 transition-all duration-500">
           <div className="flex items-center space-x-2 mb-2">
             <span className="text-lg">
               {cookingTips[currentTip].icon}
             </span>
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+            <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
               {cookingTips[currentTip].category}
             </span>
           </div>
-          <h4 className="font-medium text-gray-900 mb-2">
+          <h4 className="font-medium text-foreground mb-2">
             {cookingTips[currentTip].title}
           </h4>
-          <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
             {cookingTips[currentTip].tip}
           </p>
           <div className="flex items-center justify-between">
-            <button className="text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors">
+            <button className="text-primary hover:text-primary/80 font-medium text-sm transition-colors">
               Read More Tips →
             </button>
             <div className="flex space-x-1">
@@ -1257,8 +1252,8 @@ function SidebarContent({
                   key={index}
                   className={`w-2 h-2 rounded-full transition-colors ${
                     index === currentTip % 5
-                      ? "bg-purple-600"
-                      : "bg-purple-200"
+                      ? "bg-primary"
+                      : "bg-border"
                   }`}
                 />
               ))}
@@ -1364,15 +1359,15 @@ function CreatePostModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-theme-gradient rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-theme-gradient border-b border-gray-200 p-4 lg:p-6 rounded-t-2xl">
+      <div className="post-card max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-card border-b border-border p-4 lg:p-6 rounded-t-lg">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg lg:text-xl font-bold text-gray-900">
-              Create Post
+            <h2 className="text-lg font-semibold text-foreground">
+              Create New Post
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-xl lg:text-2xl transition-colors"
+              className="text-muted-foreground hover:text-foreground text-xl transition-colors"
             >
               ×
             </button>
@@ -1381,29 +1376,33 @@ function CreatePostModal({
 
         <form onSubmit={handleSubmit} className="p-4 lg:p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center overflow-hidden p-0.5">
               {user.avatar_url ? (
                 <ImageWithFallback
                   src={user.avatar_url}
                   alt={user.name}
                   className="w-full h-full object-cover rounded-full"
                   fallback={
-                    <span className="text-white text-sm lg:text-base font-medium">
-                      {user.name.charAt(0).toUpperCase()}
-                    </span>
+                    <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                      <span className="text-foreground text-sm font-medium">
+                        {user.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   }
                 />
               ) : (
-                <span className="text-white text-sm lg:text-base font-medium">
-                  {user.name.charAt(0).toUpperCase()}
-                </span>
+                <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                  <span className="text-foreground text-sm font-medium">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
               )}
             </div>
             <div>
-              <p className="font-medium text-gray-900 text-sm lg:text-base">
+              <p className="font-semibold text-foreground text-sm">
                 {user.name}
               </p>
-              <p className="text-xs lg:text-sm text-gray-500 capitalize">
+              <p className="text-xs text-muted-foreground capitalize">
                 {user.role}
               </p>
             </div>
@@ -1413,7 +1412,7 @@ function CreatePostModal({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="What's cooking? Share your recipe or cooking experience..."
-            className="w-full p-3 lg:p-4 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm lg:text-base font-bold font-normal text-[rgba(0,0,0,1)]"
+            className="w-full p-3 border-0 resize-none focus:outline-none text-sm placeholder-muted-foreground bg-transparent text-foreground"
             rows={4}
           />
 
@@ -1439,9 +1438,9 @@ function CreatePostModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-4 lg:pt-6 border-t border-gray-200 mt-4 lg:mt-6">
-            <label className="flex items-center space-x-2 px-3 lg:px-4 py-2 btn-gradient rounded-lg cursor-pointer transition-colors text-sm lg:text-base">
-              <Camera className="h-4 w-4 lg:h-5 lg:w-5" />
+          <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+            <label className="flex items-center space-x-2 px-3 py-2 btn-secondary rounded-lg cursor-pointer transition-colors text-sm">
+              <Camera className="h-4 w-4" />
               <span>Add Photos</span>
               <input
                 type="file"
@@ -1459,14 +1458,14 @@ function CreatePostModal({
                 (!content.trim() && images.length === 0) ||
                 loading
               }
-              className="px-4 lg:px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm lg:text-base"
+              className="px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm font-semibold"
             >
-              {loading ? "Sharing..." : "Share Post"}
+              {loading ? "Sharing..." : "Share"}
             </button>
           </div>
 
           {error && (
-            <div className="mt-4 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+            <div className="mt-4 text-destructive text-sm bg-destructive/10 p-3 rounded-lg">
               {error}
             </div>
           )}
@@ -1487,15 +1486,15 @@ interface EditPostModalProps {
 function EditPostModal({ post, content, onContentChange, onSave, onClose }: EditPostModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-theme-gradient rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-theme-gradient border-b border-gray-200 p-4 lg:p-6 rounded-t-2xl">
+      <div className="post-card max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-card border-b border-border p-4 lg:p-6 rounded-t-lg">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg lg:text-xl font-bold text-gray-900">
+            <h2 className="text-lg font-semibold text-foreground">
               Edit Post
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-xl lg:text-2xl transition-colors"
+              className="text-muted-foreground hover:text-foreground text-xl transition-colors"
             >
               ×
             </button>
@@ -1504,29 +1503,33 @@ function EditPostModal({ post, content, onContentChange, onSave, onClose }: Edit
 
         <div className="p-4 lg:p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center overflow-hidden p-0.5">
               {post.author_avatar ? (
                 <ImageWithFallback
                   src={post.author_avatar}
                   alt={post.author_name}
                   className="w-full h-full object-cover rounded-full"
                   fallback={
-                    <span className="text-white text-sm lg:text-base font-medium">
-                      {post.author_name.charAt(0).toUpperCase()}
-                    </span>
+                    <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                      <span className="text-foreground text-sm font-medium">
+                        {post.author_name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   }
                 />
               ) : (
-                <span className="text-white text-sm lg:text-base font-medium">
-                  {post.author_name.charAt(0).toUpperCase()}
-                </span>
+                <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
+                  <span className="text-foreground text-sm font-medium">
+                    {post.author_name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
               )}
             </div>
             <div>
-              <p className="font-medium text-gray-900 text-sm lg:text-base">
+              <p className="font-semibold text-foreground text-sm">
                 {post.author_name}
               </p>
-              <p className="text-xs lg:text-sm text-gray-500 capitalize">
+              <p className="text-xs text-muted-foreground capitalize">
                 {post.author_role}
               </p>
             </div>
@@ -1536,21 +1539,21 @@ function EditPostModal({ post, content, onContentChange, onSave, onClose }: Edit
             value={content}
             onChange={(e) => onContentChange(e.target.value)}
             placeholder="What's cooking? Share your recipe or cooking experience..."
-            className="w-full p-3 lg:p-4 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm lg:text-base text-gray-900"
+            className="w-full p-3 border-0 resize-none focus:outline-none text-sm placeholder-muted-foreground bg-transparent text-foreground"
             rows={4}
           />
 
-          <div className="flex items-center justify-end pt-4 lg:pt-6 border-t border-gray-200 mt-4 lg:mt-6 space-x-3">
+          <div className="flex items-center justify-end pt-4 border-t border-border mt-4 space-x-3">
             <button
               onClick={onClose}
-              className="px-4 lg:px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm lg:text-base"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
             >
               Cancel
             </button>
             <button
               onClick={() => onSave(content)}
               disabled={!content.trim()}
-              className="px-4 lg:px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm lg:text-base"
+              className="px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm font-semibold"
             >
               Save Changes
             </button>
@@ -1570,32 +1573,32 @@ interface DeleteConfirmModalProps {
 function DeleteConfirmModal({ postId, onConfirm, onCancel }: DeleteConfirmModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-theme-gradient rounded-2xl max-w-md w-full">
+      <div className="post-card max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <Trash2 className="h-6 w-6 text-red-600" />
+            <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
+              <Trash2 className="h-6 w-6 text-destructive" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900">Delete Post</h3>
-              <p className="text-sm text-gray-600">This action cannot be undone.</p>
+              <h3 className="text-lg font-semibold text-foreground">Delete Post</h3>
+              <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
             </div>
           </div>
 
-          <p className="text-gray-700 mb-6">
+          <p className="text-foreground mb-6">
             Are you sure you want to delete this post? This will permanently remove the post and all its comments.
           </p>
 
           <div className="flex items-center justify-end space-x-3">
             <button
               onClick={onCancel}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={() => onConfirm(postId)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors font-semibold"
             >
               Delete Post
             </button>

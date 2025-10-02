@@ -211,17 +211,17 @@ export function Search({ user, onNavigate }: SearchProps) {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Acwhisk</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-4">Search ACWhisk</h1>
         
         {/* Search Input */}
         <div className="relative mb-6">
-          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search for people, recipes, discussions..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="input-clean w-full pl-10 pr-4 py-3"
           />
         </div>
 

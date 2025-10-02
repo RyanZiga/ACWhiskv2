@@ -3,7 +3,7 @@ import { Search, Menu, X, Bell, LogOut, Settings, User, ChevronDown, Shield, Gra
 import { Notifications } from './Notifications'
 import { UserRoleBadge } from './UserRoleBadge'
 import { AuthService } from '../utils/auth'
-import logoImage from '../assets/6ca58feaf512431e14a13cc86c72c7775ee404a3.png'
+import logoImage from 'figma:asset/6ca58feaf512431e14a13cc86c72c7775ee404a3.png'
 
 interface User {
   id: string

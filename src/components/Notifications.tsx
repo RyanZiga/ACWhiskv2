@@ -176,18 +176,18 @@ export function Notifications({ user }: NotificationsProps) {
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'follow':
-        return 'bg-green-50 border-green-200'
+        return 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
       case 'recipe_upload':
-        return 'bg-purple-50 border-purple-200'
+        return 'bg-primary/10 border-primary/30'
       case 'feed_post':
-        return 'bg-blue-50 border-blue-200'
+        return 'bg-accent/10 border-accent/30'
       case 'recipe_like':
       case 'post_like':
-        return 'bg-red-50 border-red-200'
+        return 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
       case 'comment':
-        return 'bg-blue-50 border-blue-200'
+        return 'bg-accent/10 border-accent/30'
       default:
-        return 'bg-gray-50 border-gray-200'
+        return 'bg-secondary border-border'
     }
   }
 
@@ -214,7 +214,7 @@ export function Notifications({ user }: NotificationsProps) {
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-[rgba(248,248,248,1)] hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+        className="relative p-2 text-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-lg transition-colors touch-target"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -234,24 +234,24 @@ export function Notifications({ user }: NotificationsProps) {
           />
           
           {/* Notifications Panel - Mobile Responsive */}
-          <div className={`absolute z-40 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden ${
+          <div className={`absolute z-40 post-card shadow-xl overflow-hidden ${
             // Mobile: Full width with proper positioning
             window.innerWidth < 768 
               ? 'right-0 mt-2 w-screen max-w-sm max-h-[70vh]' 
               : 'right-0 mt-2 w-96 max-h-96'
           }`}>
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-violet-50">
+            <div className="p-4 border-b border-border bg-secondary">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  <h3 className="font-semibold text-foreground">Notifications</h3>
                   {unreadCount > 0 && (
-                    <p className="text-sm text-purple-600">{unreadCount} unread</p>
+                    <p className="text-sm text-primary">{unreadCount} unread</p>
                   )}
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors touch-target"
+                  className="text-muted-foreground hover:text-foreground transition-colors touch-target"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -262,15 +262,15 @@ export function Notifications({ user }: NotificationsProps) {
             <div className="max-h-80 overflow-y-auto">
               {loading ? (
                 <div className="p-8 text-center">
-                  <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">Loading notifications...</p>
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading notifications...</p>
                 </div>
               ) : notifications.length > 0 ? (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-border">
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 ${
+                      className={`p-4 hover:bg-secondary/50 transition-colors cursor-pointer border-l-4 ${
                         !notification.read ? getNotificationColor(notification.type) : 'border-l-transparent'
                       }`}
                       onClick={() => handleNotificationClick(notification)}
@@ -282,20 +282,20 @@ export function Notifications({ user }: NotificationsProps) {
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">
+                            <h4 className="text-sm font-medium text-foreground truncate">
                               {notification.title}
                             </h4>
                             {!notification.read && (
-                              <div className="w-2 h-2 bg-purple-600 rounded-full flex-shrink-0 ml-2"></div>
+                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 ml-2"></div>
                             )}
                           </div>
                           
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                             {notification.message}
                           </p>
                           
                           <div className="flex items-center justify-between">
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground/70">
                               {formatTimeAgo(notification.timestamp)}
                             </p>
                             
@@ -326,8 +326,8 @@ export function Notifications({ user }: NotificationsProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-gray-500">
-                  <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <div className="p-8 text-center text-muted-foreground">
+                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p>No notifications yet</p>
                   <p className="text-sm mt-1">Activity from your network will appear here</p>
                 </div>
@@ -336,10 +336,10 @@ export function Notifications({ user }: NotificationsProps) {
 
             {/* Footer */}
             {notifications.length > 0 && unreadCount > 0 && (
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="p-4 border-t border-border bg-secondary">
                 <button
                   onClick={markAllAsRead}
-                  className="w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors touch-target"
+                  className="w-full text-center text-sm text-primary hover:text-primary/80 font-medium transition-colors touch-target"
                 >
                   Mark all as read
                 </button>
