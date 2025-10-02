@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChefHat, X } from "lucide-react";
 import { useAuth } from "../App";
-import logoImage from "./assets/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png";
+import logoImage from "../assets/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png";
 
 interface LandingProps {
   onNavigate: (page: string) => void;
