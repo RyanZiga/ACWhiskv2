@@ -117,7 +117,7 @@ function findBestAnswer(query: string) {
 }
 
 // ✅ Main Chatbot Component
-export default function ChatbotWithGemini() {
+export default function Chatbot() {
   const [messages, setMessages] = useState<{ type: "user" | "bot"; text: string }[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
