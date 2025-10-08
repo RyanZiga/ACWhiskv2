@@ -176,7 +176,7 @@ function App() {
                 onLogout={logout}
                 unreadMessagesCount={unreadMessagesCount}
               />
-              <TopHeader user={user} currentPage={currentPage} onNavigate={navigateTo} />
+              <TopHeader user={user} currentPage={currentPage} onNavigate={navigateTo} onLogout={logout} />
             </>
           )}
           
