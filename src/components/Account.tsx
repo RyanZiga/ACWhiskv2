@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ArrowLeft, MessageCircle, UserPlus, UserMinus, Grid, Users, Calendar, MapPin, Camera } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
 import { ImageWithFallback } from './figma/ImageWithFallback'
+import { isValidUUID } from '../utils/auth'
 
 interface User {
   id: string
@@ -57,6 +58,15 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
   const loadProfile = async () => {
     try {
       setError(null)
+      
+      // Validate userId before making API call
+      if (!isValidUUID(userId)) {
+        console.error('Invalid user ID:', userId)
+        setError('Invalid user ID')
+        setLoading(false)
+        return
+      }
+      
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/${userId}`, {
         headers: {
           'Authorization': `Bearer ${currentUser.access_token}`,
@@ -171,9 +181,9 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'instructor': return 'bg-blue-100 text-blue-700'
-      case 'admin': return 'bg-purple-100 text-purple-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case 'instructor': return 'bg-primary text-primary-foreground'
+      case 'admin': return 'bg-accent text-accent-foreground'
+      default: return 'bg-muted text-muted-foreground'
     }
   }
 
@@ -287,26 +297,26 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
             {/* Stats */}
             <div className="flex items-center space-x-6 mb-4 text-sm">
               <div>
-                <span className="font-semibold text-gray-900">{posts.length}</span>
-                <span className="text-gray-600 ml-1">posts</span>
+                <span className="font-semibold text-foreground">{posts.length}</span>
+                <span className="text-muted-foreground ml-1">posts</span>
               </div>
               <div>
-                <span className="font-semibold text-gray-900">{profile.followers.length}</span>
-                <span className="text-gray-600 ml-1">followers</span>
+                <span className="font-semibold text-foreground">{profile.followers.length}</span>
+                <span className="text-muted-foreground ml-1">followers</span>
               </div>
               <div>
-                <span className="font-semibold text-gray-900">{profile.following.length}</span>
-                <span className="text-gray-600 ml-1">following</span>
+                <span className="font-semibold text-foreground">{profile.following.length}</span>
+                <span className="text-muted-foreground ml-1">following</span>
               </div>
             </div>
 
             {/* Bio */}
             {profile.bio && (
-              <p className="text-gray-700 mb-3">{profile.bio}</p>
+              <p className="text-foreground mb-3">{profile.bio}</p>
             )}
 
             {/* Location and Join Date */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
               {profile.location && (
                 <div className="flex items-center space-x-1">
                   <MapPin className="h-4 w-4" />
@@ -326,7 +336,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                   {profile.skills.map((skill, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                      className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
                     >
                       {skill}
                     </span>
@@ -339,14 +349,14 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="border-b border-gray-200 mb-8">
+      <div className="border-b border-border mb-8">
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('posts')}
             className={`flex items-center space-x-2 py-3 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'posts'
-                ? 'border-purple-500 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <Grid className="h-4 w-4" />
@@ -357,8 +367,8 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
             onClick={() => setActiveTab('photos')}
             className={`flex items-center space-x-2 py-3 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'photos'
-                ? 'border-purple-500 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <Camera className="h-4 w-4" />
@@ -368,7 +378,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
           {isOwnProfile && (
             <button
               onClick={() => onNavigate('profile')}
-              className="flex items-center space-x-2 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors"
+              className="flex items-center space-x-2 py-3 border-b-2 border-transparent text-muted-foreground hover:text-foreground font-medium text-sm transition-colors"
             >
               <Users className="h-4 w-4" />
               <span>Settings</span>
@@ -382,7 +392,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
         {activeTab === 'posts' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post) => (
-              <div key={post.id} className="bg-theme-gradient rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+              <div key={post.id} className="post-card overflow-hidden shadow-sm">
                 {post.images && post.images.length > 0 ? (
                   <div className="h-48 relative">
                     <ImageWithFallback
@@ -391,23 +401,23 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                       className="w-full h-full object-cover"
                     />
                     {post.images.length > 1 && (
-                      <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                      <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
                         +{post.images.length - 1}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="h-48 bg-gray-100 flex items-center justify-center">
+                  <div className="h-48 bg-muted flex items-center justify-center">
                     <div className="text-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto mb-2"></div>
-                      <p className="text-gray-500 text-sm">Text Post</p>
+                      <div className="w-12 h-12 bg-muted-foreground/20 rounded-full mx-auto mb-2"></div>
+                      <p className="text-muted-foreground text-sm">Text Post</p>
                     </div>
                   </div>
                 )}
                 
                 <div className="p-4">
-                  <p className="text-gray-900 text-sm line-clamp-3 mb-2">{post.content}</p>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <p className="text-foreground text-sm line-clamp-3 mb-2">{post.content}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{formatDate(post.created_at)}</span>
                     <div className="flex items-center space-x-2">
                       <span>{post.likes.length} likes</span>
@@ -420,11 +430,11 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
             {posts.length === 0 && (
               <div className="col-span-full text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Grid className="h-8 w-8 text-gray-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Grid className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-medium text-foreground mb-2">No posts yet</h3>
+                <p className="text-muted-foreground">
                   {isOwnProfile ? 'Share your first post!' : `${profile.name} hasn't shared any posts yet.`}
                 </p>
               </div>
@@ -446,11 +456,11 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
             {photos.length === 0 && (
               <div className="col-span-full text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Camera className="h-8 w-8 text-gray-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Camera className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-medium text-foreground mb-2">No photos yet</h3>
+                <p className="text-muted-foreground">
                   {isOwnProfile ? 'Share photos in your posts to see them here!' : `${profile.name} hasn't shared any photos yet.`}
                 </p>
               </div>
