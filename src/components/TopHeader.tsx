@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Bell, Search, Moon, Sun, X, Loader2 } from 'lucide-react'
+import { Bell, Search, Moon, Sun, X, Loader2, User as UserIcon, Settings, LogOut } from 'lucide-react'
 import { Notifications } from './Notifications'
 import { User } from '../utils/auth'
 import { useTheme } from '../contexts/ThemeContext'
@@ -10,6 +10,7 @@ interface TopHeaderProps {
   user: User
   currentPage: string
   onNavigate: (page: string, id?: string) => void
+  onLogout?: () => void
 }
 
 interface SearchResult {
@@ -20,14 +21,16 @@ interface SearchResult {
   bio?: string
 }
 
-export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
+export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeaderProps) {
   const { isDark, toggleTheme } = useTheme()
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
 
   const getPageTitle = () => {
@@ -51,6 +54,9 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false)
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false)
       }
     }
 
@@ -195,24 +201,75 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
               <Notifications user={user} />
             </div>
 
-            {/* User Avatar */}
-            <button
-              onClick={() => onNavigate('profile')}
-              className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform cursor-pointer"
-              aria-label="View your profile"
-            >
-              {user.avatar_url ? (
-                <ImageWithFallback
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-white text-sm lg:text-base font-medium">
-                  {user.name.charAt(0).toUpperCase()}
-                </span>
+            {/* User Avatar with Dropdown */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform cursor-pointer overflow-hidden"
+                aria-label="User menu"
+              >
+                {user.avatar_url ? (
+                  <ImageWithFallback
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-sm lg:text-base font-medium">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-56 post-card rounded-xl shadow-lg z-50 py-2 dropdown-mobile">
+                  {/* User Info */}
+                  <div className="px-4 py-3 border-b border-border">
+                    <p className="font-medium text-foreground truncate">{user.name}</p>
+                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="py-2">
+                    <button
+                      onClick={() => {
+                        onNavigate('profile')
+                        setShowUserMenu(false)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
+                    >
+                      <UserIcon className="h-4 w-4" />
+                      <span>Profile</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onNavigate('account', user.id)
+                        setShowUserMenu(false)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </button>
+
+                    <div className="border-t border-border my-2"></div>
+
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false)
+                        onLogout?.()
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center space-x-3 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
           </div>
         </div>
 
