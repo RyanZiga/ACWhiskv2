@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { projectId } from "../utils/supabase/info";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { LinkifiedText } from "../utils/linkify";
 
 interface User {
   id: string;
@@ -836,12 +837,12 @@ export function Feed({ user, onNavigate }: FeedProps) {
                             {post.recipe_data.title}
                           </h2>
                           <p className="text-foreground leading-relaxed text-sm">
-                            {post.content}
+                            <LinkifiedText text={post.content} />
                           </p>
                         </>
                       ) : (
                         <p className="text-foreground leading-relaxed text-sm">
-                          {post.content}
+                          <LinkifiedText text={post.content} />
                         </p>
                       )}
                     </div>
@@ -1000,7 +1001,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
                                     {comment.author_name}
                                   </span>
                                   <span className="text-foreground">
-                                    {comment.content}
+                                    <LinkifiedText text={comment.content} />
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-4 mt-1">
