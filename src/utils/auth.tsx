@@ -5,7 +5,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'student' | 'instructor' | 'admin'
+  role: 'student' | 'instructor' | 'admin' | null
   status?: 'active' | 'suspended' | 'banned'
   access_token?: string
   created_at?: string
@@ -16,6 +16,7 @@ export interface User {
   avatar_url?: string
   followers?: string[]
   following?: string[]
+  needs_onboarding?: boolean
   privacy_settings?: {
     profile_visible: boolean
     posts_visible: boolean
@@ -81,10 +82,18 @@ export const Permissions = {
   }
 }
 
+// UUID validation utility
+export const isValidUUID = (uuid: string | null | undefined): boolean => {
+  if (!uuid || typeof uuid !== 'string') return false
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(uuid)
+}
+
 export class AuthService {
+  static supabase = supabase
   // Check if user has specific permission
   static hasPermission(user: User | null, permission: keyof typeof Permissions.admin): boolean {
-    if (!user) return false
+    if (!user || !user.role) return false
     
     const userPermissions = Permissions[user.role]
     return userPermissions && (userPermissions as any)[permission] === true
@@ -113,6 +122,7 @@ export class AuthService {
   // Check if user can access a specific page
   static canAccessPage(user: User | null, page: string): boolean {
     if (!user) return false
+    if (user.needs_onboarding) return false // Restrict access during onboarding
     
     switch (page) {
       case 'admin':
@@ -125,13 +135,19 @@ export class AuthService {
   }
 
   // Validate role
-  static isValidRole(role: string): role is 'student' | 'instructor' | 'admin' {
+  static isValidRole(role: string | null): role is 'student' | 'instructor' | 'admin' {
+    if (!role) return false
     return ['student', 'instructor', 'admin'].includes(role)
   }
 
   // Sign up new user
   static async signup(email: string, password: string, name: string, role: string): Promise<AuthResult> {
     try {
+      // Validate email domain - TEMPORARILY DISABLED
+      // if (!this.validateEmailDomain(email)) {
+      //   return { success: false, error: 'Must be Asian College students' }
+      // }
+
       // Validate role
       if (!this.isValidRole(role)) {
         return { success: false, error: 'Invalid role specified' }
@@ -239,6 +255,12 @@ export class AuthService {
             const { profile } = await response.json()
             console.log('✅ Profile loaded successfully')
             
+            // Validate user profile data
+            if (!isValidUUID(profile.id)) {
+              console.error('Invalid user ID in login profile:', profile.id)
+              return { success: false, error: 'Invalid user profile data' }
+            }
+            
             const user: User = {
               ...profile,
               access_token: session.access_token
@@ -298,6 +320,12 @@ export class AuthService {
             const { profile } = await response.json()
             console.log('✅ Profile loaded from session')
             
+            // Validate user profile data
+            if (!isValidUUID(profile.id)) {
+              console.error('Invalid user ID in session profile:', profile.id)
+              return { success: false, error: 'Invalid user profile data' }
+            }
+            
             const user: User = {
               ...profile,
               access_token: session.access_token
@@ -319,6 +347,185 @@ export class AuthService {
     } catch (error) {
       console.error('❌ Session check error:', error)
       return { success: false, error: 'Session check failed' }
+    }
+  }
+
+  // Validate email domain - TEMPORARILY DISABLED
+  static validateEmailDomain(email: string): boolean {
+    // return email.toLowerCase().endsWith('@asiancollege.edu.ph')
+    return true // Temporarily allow all email domains
+  }
+
+  // Google Sign-In
+  static async signInWithGoogle(): Promise<AuthResult> {
+    try {
+      console.log('🔐 Starting Google sign-in...')
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      })
+      
+      if (error) {
+        console.error('❌ Google sign-in error:', error)
+        return { success: false, error: error.message }
+      }
+      
+      console.log('✅ Google sign-in initiated')
+      return { success: true }
+    } catch (error) {
+      console.error('❌ Google sign-in error:', error)
+      return { 
+        success: false, 
+        error: `Google sign-in failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      }
+    }
+  }
+
+  // Handle Google authentication callback
+  static async handleGoogleCallback(): Promise<AuthResult> {
+    try {
+      console.log('🔍 Handling Google authentication callback...')
+      
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        console.error('❌ Google callback error:', error)
+        return { success: false, error: error.message }
+      }
+      
+      if (session?.user?.email) {
+        // Validate email domain - TEMPORARILY DISABLED
+        // if (!this.validateEmailDomain(session.user.email)) {
+        //   console.error('❌ Invalid email domain:', session.user.email)
+        //   // Sign out the user since they don't have the right domain
+        //   await supabase.auth.signOut()
+        //   return { 
+        //     success: false, 
+        //     error: 'Must be Asian College students' 
+        //   }
+        // }
+        
+        // Check if user profile exists
+        try {
+          console.log('🔍 Fetching user profile for:', session.user.id)
+          const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          console.log('📊 Profile fetch response status:', response.status)
+          
+          if (response.ok) {
+            const responseData = await response.json()
+            console.log('✅ Google user profile response:', responseData)
+            
+            const { profile } = responseData
+            
+            // Validate user profile data
+            if (!profile) {
+              console.error('❌ No profile data in response:', responseData)
+              return { success: false, error: 'No profile data received' }
+            }
+            
+            if (!profile.id || !isValidUUID(profile.id)) {
+              console.error('❌ Invalid user ID in Google profile:', profile?.id, 'Full profile:', profile)
+              return { success: false, error: 'Invalid user profile data' }
+            }
+
+            // For Google users, role validation is different since they might not have a role yet
+            if (profile.role && !this.isValidRole(profile.role)) {
+              console.error('Invalid role in Google profile:', profile.role)
+              return { success: false, error: 'Invalid user role' }
+            }
+            
+            const user: User = {
+              ...profile,
+              access_token: session.access_token
+            }
+            
+            return { success: true, user }
+          } else if (response.status === 404) {
+            // User doesn't exist, create profile
+            console.log('📝 Creating new user profile from Google account...', {
+              userId: session.user.id,
+              email: session.user.email,
+              metadata: session.user.user_metadata
+            })
+            
+            const createResponse = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/google-signup`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: session.user.email,
+                name: session.user.user_metadata?.full_name || session.user.email.split('@')[0],
+                avatar_url: session.user.user_metadata?.avatar_url,
+                needs_onboarding: true // Mark user as needing role selection
+              })
+            })
+            
+            if (createResponse.ok) {
+              const createResponseData = await createResponse.json()
+              console.log('✅ Google user profile creation response:', createResponseData)
+              
+              const { profile } = createResponseData
+              
+              // Validate user profile data
+              if (!profile) {
+                console.error('❌ No profile data in creation response:', createResponseData)
+                return { success: false, error: 'No profile data received' }
+              }
+              
+              if (!profile.id || !isValidUUID(profile.id)) {
+                console.error('❌ Invalid user ID in Google signup profile:', profile?.id, 'Full profile:', profile)
+                return { success: false, error: 'Invalid user profile data' }
+              }
+
+              // For new Google users, role validation is different since they won't have a role yet
+              if (profile.role && !this.isValidRole(profile.role)) {
+                console.error('Invalid role in Google signup profile:', profile.role)
+                return { success: false, error: 'Invalid user role' }
+              }
+              
+              const user: User = {
+                ...profile,
+                access_token: session.access_token
+              }
+              
+              return { success: true, user }
+            } else {
+              const errorText = await createResponse.text()
+              console.error('❌ Failed to create Google user profile. Status:', createResponse.status, 'Response:', errorText)
+              return { success: false, error: 'Failed to create user profile' }
+            }
+          } else {
+            console.error('❌ Failed to fetch/create Google user profile')
+            return { success: false, error: 'Authentication failed' }
+          }
+        } catch (profileError) {
+          console.error('❌ Google profile error:', profileError)
+          return { success: false, error: 'Failed to process Google authentication' }
+        }
+      }
+      
+      return { success: false, error: 'No user data received from Google' }
+    } catch (error) {
+      console.error('❌ Google callback error:', error)
+      return { 
+        success: false, 
+        error: `Google authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      }
     }
   }
 
