@@ -117,7 +117,7 @@ function findBestAnswer(query: string) {
 }
 
 // ✅ Main Chatbot Component
-export default function Chatbot() {
+export default function ChatBot() {
   const [messages, setMessages] = useState<{ type: "user" | "bot"; text: string }[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
