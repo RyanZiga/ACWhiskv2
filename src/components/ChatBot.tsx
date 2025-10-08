@@ -3,7 +3,7 @@ import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensil
 
 // Gemini API Configuration
 const GEMINI_API_KEY = 'AIzaSyDyUg2FIWKve9YAP3bytJ2aWFZRQP4C970'
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
 interface Message {
   id: string
@@ -310,12 +310,28 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(`API Error: ${errorData.error?.message || response.statusText}`)
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error?.message || response.statusText
+        console.error('Gemini API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        })
+        throw new Error(`API Error: ${errorMessage}`)
       }
 
       const data = await response.json()
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.'
+      
+      // Check if we got a valid response
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error('No response generated from AI')
+      }
+
+      const text = data.candidates[0]?.content?.parts?.[0]?.text
+
+      if (!text) {
+        throw new Error('Invalid response format from AI')
+      }
 
       // Update chat history
       chatHistoryRef.current.push(
@@ -331,6 +347,10 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       return text
     } catch (error) {
       console.error('Gemini API Error:', error)
+      // Return a more helpful error message
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw new Error('AI model temporarily unavailable. Please try FAQ mode or try again later.')
+      }
       throw error
     }
   }
@@ -419,11 +439,24 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       }
     } catch (error) {
       console.error('Error getting response:', error)
-      addMessage(
-        "I'm having trouble connecting to my AI brain right now. Please try again in a moment, or browse our FAQ topics below for quick answers!",
-        'bot'
-      )
-      setShowFAQs(true)
+      
+      // Fallback to FAQ mode automatically
+      const bestAnswer = findBestAnswer(userMessage)
+      if (bestAnswer) {
+        addMessage(
+          "⚠️ AI is temporarily unavailable. Here's an answer from our FAQ library:\n\n" + bestAnswer.answer,
+          'bot',
+          'faq'
+        )
+      } else {
+        addMessage(
+          "I'm having trouble connecting to my AI brain right now. Let me switch you to FAQ mode for reliable answers! Please try browsing the topics below.",
+          'bot'
+        )
+        setShowFAQs(true)
+        // Auto-switch to FAQ mode
+        setUseAI(false)
+      }
     } finally {
       setIsTyping(false)
     }
