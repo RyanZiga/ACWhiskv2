@@ -3,6 +3,7 @@ import { Bell, Search, Moon, Sun, X } from 'lucide-react'
 import { Notifications } from './Notifications'
 import { User } from '../utils/auth'
 import { useTheme } from '../contexts/ThemeContext'
+import { ImageWithFallback } from './figma/ImageWithFallback'
 
 interface TopHeaderProps {
   user: User
@@ -90,11 +91,23 @@ export function TopHeader({ user, currentPage, onNavigate }: TopHeaderProps) {
             </div>
 
             {/* User Avatar */}
-            <div className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-white text-sm lg:text-base font-medium">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <button
+              onClick={() => onNavigate('profile')}
+              className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform cursor-pointer"
+              aria-label="View your profile"
+            >
+              {user.avatar_url ? (
+                <ImageWithFallback
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-white text-sm lg:text-base font-medium">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
