@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensils, Clock, Thermometer, Users, BookOpen, Star, ArrowRight, Sparkles } from 'lucide-react'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-
+// Initialize Gemini AI
 const GEMINI_API_KEY = 'AIzaSyDyUg2FIWKve9YAP3bytJ2aWFZRQP4C970'
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
 
@@ -262,7 +262,7 @@ export function ChatBot() {
     // Initialize Gemini model
     if (useAI && !modelRef.current) {
       const model = genAI.getGenerativeModel({ 
-        model: 'gemini-pro',
+        model: 'gemini-1.5-flash',
         generationConfig: {
           temperature: 0.7,
           topK: 40,
