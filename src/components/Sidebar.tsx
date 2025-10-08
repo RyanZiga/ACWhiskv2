@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, Settings, User, LogOut, Shield, Menu, X, FileText, BarChart3 } from 'lucide-react'
 import { User as UserType } from '../utils/auth'
+import { ImageWithFallback } from './figma/ImageWithFallback'
 
 interface SidebarProps {
   user: UserType
@@ -117,10 +118,18 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           }`}
           type="button"
         >
-          <div className="avatar-gradient w-8 h-8 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">
-              {user.name.charAt(0).toUpperCase()}
-            </span>
+          <div className="avatar-gradient w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+            {user.avatar_url ? (
+              <ImageWithFallback
+                src={user.avatar_url}
+                alt={user.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-white text-sm font-medium">
+                {user.name.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
           {!isCollapsed && (
             <div className="flex-1 text-left">
