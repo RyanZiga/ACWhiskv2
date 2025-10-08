@@ -1,12 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensils, Clock, Thermometer, Users, BookOpen, Star, ArrowRight } from 'lucide-react'
+import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensils, Clock, Thermometer, Users, BookOpen, Star, ArrowRight, Sparkles } from 'lucide-react'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+
+const GEMINI_API_KEY = 'AIzaSyDyUg2FIWKve9YAP3bytJ2aWFZRQP4C970'
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
 
 interface Message {
   id: string
   content: string
   sender: 'user' | 'bot'
   timestamp: Date
-  type?: 'text' | 'faq' | 'suggestion'
+  type?: 'text' | 'faq' | 'suggestion' | 'ai'
 }
 
 interface FAQ {
@@ -233,10 +238,10 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I'm your culinary assistant. I can help you with cooking techniques, recipes, food safety, and more. Ask me anything or browse our FAQ topics below!",
+      content: "Hi! I'm your AI-powered culinary assistant using Google Gemini. I can help you with cooking techniques, recipes, food safety, ingredient substitutions, and much more. Ask me anything or browse our FAQ topics below!",
       sender: 'bot',
       timestamp: new Date(),
-      type: 'text'
+      type: 'ai'
     }
   ])
   const [inputMessage, setInputMessage] = useState('')
@@ -244,14 +249,88 @@ export function ChatBot() {
   const [showFAQs, setShowFAQs] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [useAI, setUseAI] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatHistoryRef = useRef<Array<{ role: string; parts: string }>>([])
+  const modelRef = useRef<any>(null)
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
+  useEffect(() => {
+    // Initialize Gemini model
+    if (useAI && !modelRef.current) {
+      const model = genAI.getGenerativeModel({ 
+        model: 'gemini-pro',
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+      })
+      modelRef.current = model
+    }
+  }, [useAI])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const getGeminiResponse = async (userMessage: string): Promise<string> => {
+    try {
+      if (!modelRef.current) {
+        throw new Error('Gemini model not initialized')
+      }
+
+      // Create a culinary-focused system prompt
+      const systemContext = `You are a professional culinary assistant helping students and instructors in a culinary education platform called ACWhisk. Your role is to:
+- Provide expert advice on cooking techniques, recipes, and food preparation
+- Help with food safety and proper kitchen practices
+- Suggest ingredient substitutions and recipe modifications
+- Explain culinary terms and concepts
+- Assist with baking, pastry, and various cuisines
+- Be encouraging and educational
+
+Keep responses concise (2-3 paragraphs max), practical, and easy to understand. Use bullet points when listing steps or tips.`
+
+      // Add system context to the conversation
+      const prompt = `${systemContext}\n\nUser question: ${userMessage}`
+
+      const chat = modelRef.current.startChat({
+        history: chatHistoryRef.current.map(msg => ({
+          role: msg.role,
+          parts: [{ text: msg.parts }]
+        })),
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+      })
+
+      const result = await chat.sendMessage(userMessage)
+      const response = await result.response
+      const text = response.text()
+
+      // Update chat history
+      chatHistoryRef.current.push(
+        { role: 'user', parts: userMessage },
+        { role: 'model', parts: text }
+      )
+
+      // Keep only last 10 exchanges to manage context
+      if (chatHistoryRef.current.length > 20) {
+        chatHistoryRef.current = chatHistoryRef.current.slice(-20)
+      }
+
+      return text
+    } catch (error) {
+      console.error('Gemini API Error:', error)
+      throw error
+    }
   }
 
   const addMessage = (content: string, sender: 'user' | 'bot', type: 'text' | 'faq' | 'suggestion' = 'text') => {
@@ -293,35 +372,59 @@ export function ChatBot() {
     setIsTyping(true)
     setShowFAQs(false)
 
-    // Simulate AI processing delay
-    setTimeout(() => {
-      const bestAnswer = findBestAnswer(userMessage)
-      
-      if (bestAnswer) {
-        addMessage(bestAnswer.answer, 'bot', 'faq')
+    try {
+      if (useAI) {
+        // Use Gemini AI for response
+        const aiResponse = await getGeminiResponse(userMessage)
+        addMessage(aiResponse, 'bot', 'ai')
         
-        // Add related FAQs as suggestions
-        if (bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
+        // Optionally suggest related FAQs based on keywords
+        const bestAnswer = findBestAnswer(userMessage)
+        if (bestAnswer && bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
           const relatedFAQs = FAQS.filter(faq => 
             bestAnswer.relatedFAQs?.includes(faq.id)
-          )
+          ).slice(0, 3) // Limit to 3 suggestions
           
           if (relatedFAQs.length > 0) {
             const suggestions = relatedFAQs.map(faq => faq.question).join('\n• ')
-            addMessage(`Related topics you might find helpful:\n• ${suggestions}`, 'bot', 'suggestion')
+            addMessage(`💡 You might also find these helpful:\n• ${suggestions}`, 'bot', 'suggestion')
           }
         }
       } else {
-        // Generic helpful response
-        addMessage(
-          "I'd be happy to help! While I search for the best answer, here are some popular topics you might be interested in. You can also try rephrasing your question or browse our FAQ categories below.",
-          'bot'
-        )
-        setShowFAQs(true)
+        // Use FAQ-based response (fallback)
+        const bestAnswer = findBestAnswer(userMessage)
+        
+        if (bestAnswer) {
+          addMessage(bestAnswer.answer, 'bot', 'faq')
+          
+          if (bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
+            const relatedFAQs = FAQS.filter(faq => 
+              bestAnswer.relatedFAQs?.includes(faq.id)
+            )
+            
+            if (relatedFAQs.length > 0) {
+              const suggestions = relatedFAQs.map(faq => faq.question).join('\n• ')
+              addMessage(`Related topics you might find helpful:\n• ${suggestions}`, 'bot', 'suggestion')
+            }
+          }
+        } else {
+          addMessage(
+            "I'd be happy to help! While I search for the best answer, here are some popular topics you might be interested in. You can also try rephrasing your question or browse our FAQ categories below.",
+            'bot'
+          )
+          setShowFAQs(true)
+        }
       }
-      
+    } catch (error) {
+      console.error('Error getting response:', error)
+      addMessage(
+        "I'm having trouble connecting to my AI brain right now. Please try again in a moment, or browse our FAQ topics below for quick answers!",
+        'bot'
+      )
+      setShowFAQs(true)
+    } finally {
       setIsTyping(false)
-    }, 1000 + Math.random() * 1000)
+    }
   }
 
   const handleFAQClick = (faq: FAQ) => {
@@ -375,22 +478,47 @@ export function ChatBot() {
       {isOpen && (
         <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-card rounded-2xl shadow-2xl border border-border flex flex-col z-50 max-w-[calc(100vw-3rem)] modal-responsive">
           {/* Header */}
-          <div className="p-4 bg-primary text-white rounded-t-2xl flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
-                <Bot className="h-5 w-5 text-white" />
+          <div className="p-4 bg-primary text-white rounded-t-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center">
+                  {useAI ? (
+                    <Sparkles className="h-5 w-5 text-white" />
+                  ) : (
+                    <Bot className="h-5 w-5 text-white" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold">Culinary Assistant</h3>
+                  <p className="text-sm text-blue-100">
+                    {useAI ? 'AI-Powered by Google Gemini' : 'FAQ-Based Helper'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold">Culinary Assistant</h3>
-                <p className="text-sm text-blue-100">Always here to help!</p>
-              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-white hover:text-blue-100 transition-colors touch-target"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-white hover:text-blue-100 transition-colors touch-target"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            
+            {/* AI Toggle */}
+            <div className="flex items-center justify-between bg-white/10 rounded-lg px-3 py-2">
+              <span className="text-sm">AI Mode</span>
+              <button
+                onClick={() => setUseAI(!useAI)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  useAI ? 'bg-white' : 'bg-white/30'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-primary transition-transform ${
+                    useAI ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -412,6 +540,8 @@ export function ChatBot() {
                   className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
                     message.sender === 'user'
                       ? 'bg-primary text-white'
+                      : message.type === 'ai'
+                      ? 'bg-gradient-to-r from-purple-50 to-blue-50 text-purple-900 border border-purple-200'
                       : message.type === 'faq'
                       ? 'bg-blue-50 text-blue-900 border border-blue-200'
                       : message.type === 'suggestion'
@@ -419,6 +549,12 @@ export function ChatBot() {
                       : 'bg-muted text-foreground'
                   }`}
                 >
+                  {message.type === 'ai' && message.sender === 'bot' && (
+                    <div className="flex items-center space-x-1 mb-2">
+                      <Sparkles className="h-3 w-3 text-purple-600" />
+                      <span className="text-xs font-medium text-purple-600">AI Response</span>
+                    </div>
+                  )}
                   <p className="text-sm whitespace-pre-line leading-relaxed">
                     {message.content}
                   </p>
