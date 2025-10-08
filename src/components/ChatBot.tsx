@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensils, Clock, Thermometer, Users, BookOpen, Star, ArrowRight, Sparkles } from 'lucide-react'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Initialize Gemini AI
+// Gemini API Configuration
 const GEMINI_API_KEY = 'AIzaSyDyUg2FIWKve9YAP3bytJ2aWFZRQP4C970'
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`
 
 interface Message {
   id: string
@@ -252,27 +251,10 @@ export function ChatBot() {
   const [useAI, setUseAI] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatHistoryRef = useRef<Array<{ role: string; parts: string }>>([])
-  const modelRef = useRef<any>(null)
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
-
-  useEffect(() => {
-    // Initialize Gemini model
-    if (useAI && !modelRef.current) {
-      const model = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-      })
-      modelRef.current = model
-    }
-  }, [useAI])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -280,10 +262,6 @@ export function ChatBot() {
 
   const getGeminiResponse = async (userMessage: string): Promise<string> => {
     try {
-      if (!modelRef.current) {
-        throw new Error('Gemini model not initialized')
-      }
-
       // Create a culinary-focused system prompt
       const systemContext = `You are a professional culinary assistant helping students and instructors in a culinary education platform called ACWhisk. Your role is to:
 - Provide expert advice on cooking techniques, recipes, and food preparation
@@ -295,25 +273,49 @@ export function ChatBot() {
 
 Keep responses concise (2-3 paragraphs max), practical, and easy to understand. Use bullet points when listing steps or tips.`
 
-      // Add system context to the conversation
-      const prompt = `${systemContext}\n\nUser question: ${userMessage}`
-
-      const chat = modelRef.current.startChat({
-        history: chatHistoryRef.current.map(msg => ({
+      // Build conversation history for context
+      const contents = [
+        {
+          role: 'user',
+          parts: [{ text: systemContext }]
+        },
+        {
+          role: 'model',
+          parts: [{ text: 'I understand. I am a professional culinary assistant ready to help with cooking techniques, recipes, food safety, and culinary education. How can I assist you today?' }]
+        },
+        ...chatHistoryRef.current.map(msg => ({
           role: msg.role,
           parts: [{ text: msg.parts }]
         })),
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
+        {
+          role: 'user',
+          parts: [{ text: userMessage }]
+        }
+      ]
+
+      const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          contents: contents,
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          },
+        }),
       })
 
-      const result = await chat.sendMessage(userMessage)
-      const response = await result.response
-      const text = response.text()
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(`API Error: ${errorData.error?.message || response.statusText}`)
+      }
+
+      const data = await response.json()
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.'
 
       // Update chat history
       chatHistoryRef.current.push(
