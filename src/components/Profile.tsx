@@ -281,11 +281,11 @@ export function Profile({ user, onNavigate }: ProfileProps) {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{profile.name}</h2>
-              <p className="text-gray-600 capitalize">{profile.role}</p>
-              <p className="text-sm text-gray-500">{profile.email}</p>
+              <h2 className="text-xl font-semibold text-foreground">{profile.name}</h2>
+              <p className="text-muted-foreground capitalize">{profile.role}</p>
+              <p className="text-sm text-muted-foreground">{profile.email}</p>
               {editing && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Click the profile picture to change it
                 </p>
               )}
@@ -296,11 +296,11 @@ export function Profile({ user, onNavigate }: ProfileProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Personal Information */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
+              <h3 className="text-lg font-medium text-foreground mb-4">Personal Information</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Display Name
                   </label>
                   {editing ? (
@@ -308,15 +308,15 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 input-clean"
                     />
                   ) : (
-                    <p className="py-2 text-gray-900">{profile.name || 'Not specified'}</p>
+                    <p className="py-2 text-foreground">{profile.name || 'Not specified'}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Bio
                   </label>
                   {editing ? (
@@ -324,16 +324,16 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                       value={formData.bio}
                       onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 input-clean resize-none"
                       placeholder="Tell us about yourself..."
                     />
                   ) : (
-                    <p className="py-2 text-gray-900">{profile.bio || 'No bio available'}</p>
+                    <p className="py-2 text-foreground">{profile.bio || 'No bio available'}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Location
                   </label>
                   {editing ? (
@@ -341,16 +341,16 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                       type="text"
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 input-clean"
                       placeholder="City, Country"
                     />
                   ) : (
-                    <p className="py-2 text-gray-900">{profile.location || 'Not specified'}</p>
+                    <p className="py-2 text-foreground">{profile.location || 'Not specified'}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Skills & Interests
                   </label>
                   {editing ? (
@@ -358,7 +358,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                       type="text"
                       value={formData.skills}
                       onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 input-clean"
                       placeholder="Baking, Italian cuisine, Pastry..."
                     />
                   ) : (
@@ -368,19 +368,19 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                           {profile.skills.map((skill, index) => (
                             <span
                               key={index}
-                              className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                              className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
                             >
                               {skill}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-900">No skills specified</p>
+                        <p className="text-foreground">No skills specified</p>
                       )}
                     </div>
                   )}
                   {editing && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Separate skills with commas
                     </p>
                   )}
@@ -390,13 +390,13 @@ export function Profile({ user, onNavigate }: ProfileProps) {
 
             {/* Privacy Settings */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy Settings</h3>
+              <h3 className="text-lg font-medium text-foreground mb-4">Privacy Settings</h3>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">Profile Visibility</p>
-                    <p className="text-sm text-gray-600">Make your profile visible to other users</p>
+                    <p className="font-medium text-foreground">Profile Visibility</p>
+                    <p className="text-sm text-muted-foreground">Make your profile visible to other users</p>
                   </div>
                   {editing ? (
                     <input
@@ -409,13 +409,13 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                           profile_visible: e.target.checked
                         }
                       })}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                     />
                   ) : (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       profile.privacy_settings?.profile_visible 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-destructive text-destructive-foreground'
                     }`}>
                       {profile.privacy_settings?.profile_visible ? 'Public' : 'Private'}
                     </span>
@@ -424,8 +424,8 @@ export function Profile({ user, onNavigate }: ProfileProps) {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">Posts Visibility</p>
-                    <p className="text-sm text-gray-600">Show your posts to other users</p>
+                    <p className="font-medium text-foreground">Posts Visibility</p>
+                    <p className="text-sm text-muted-foreground">Show your posts to other users</p>
                   </div>
                   {editing ? (
                     <input
@@ -438,13 +438,13 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                           posts_visible: e.target.checked
                         }
                       })}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                     />
                   ) : (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       profile.privacy_settings?.posts_visible 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-destructive text-destructive-foreground'
                     }`}>
                       {profile.privacy_settings?.posts_visible ? 'Public' : 'Private'}
                     </span>
@@ -453,8 +453,8 @@ export function Profile({ user, onNavigate }: ProfileProps) {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">Photos Visibility</p>
-                    <p className="text-sm text-gray-600">Show your photos to other users</p>
+                    <p className="font-medium text-foreground">Photos Visibility</p>
+                    <p className="text-sm text-muted-foreground">Show your photos to other users</p>
                   </div>
                   {editing ? (
                     <input
@@ -467,13 +467,13 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                           photos_visible: e.target.checked
                         }
                       })}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                     />
                   ) : (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       profile.privacy_settings?.photos_visible 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-destructive text-destructive-foreground'
                     }`}>
                       {profile.privacy_settings?.photos_visible ? 'Public' : 'Private'}
                     </span>
@@ -482,16 +482,16 @@ export function Profile({ user, onNavigate }: ProfileProps) {
               </div>
 
               {/* Account Stats */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-3">Account Statistics</h4>
+              <div className="mt-8 pt-6 border-t border-border">
+                <h4 className="font-medium text-foreground mb-3">Account Statistics</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-900">{profile.followers?.length || 0}</p>
-                    <p className="text-gray-600">Followers</p>
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="font-semibold text-foreground">{profile.followers?.length || 0}</p>
+                    <p className="text-muted-foreground">Followers</p>
                   </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-900">{profile.following?.length || 0}</p>
-                    <p className="text-gray-600">Following</p>
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="font-semibold text-foreground">{profile.following?.length || 0}</p>
+                    <p className="text-muted-foreground">Following</p>
                   </div>
                 </div>
               </div>
