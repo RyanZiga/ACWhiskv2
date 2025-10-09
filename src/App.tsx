@@ -61,8 +61,7 @@ function App() {
       }
     } catch (error) {
       console.error('❌ Session check error:', error)
-      // Don't show user errors for session check failures
-      // Just proceed with unauthenticated state
+
     } finally {
       setLoading(false)
     }
