@@ -42,14 +42,14 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
       case 'search': return 'Search'
       case 'messages': return 'Messages'
       case 'profile': return 'Profile'
-      case 'account': return 'Account Settings'
+      case 'account': return 'Profile'
       case 'admin': return 'Admin Panel'
       case 'recipes': return 'Assignments'
       default: return 'ACWhisk'
     }
   }
 
-  // Close search results when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -64,7 +64,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Search users with debouncing
+
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
@@ -166,9 +166,9 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
             </p>
           </div>
 
-          {/* Right Actions */}
+
           <div className="flex items-center space-x-2 lg:space-x-4 relative z-10">
-            {/* Search Toggle */}
+
             <button
               onClick={(e) => {
                 e.preventDefault()
@@ -182,7 +182,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
               <Search className="h-5 w-5" />
             </button>
 
-            {/* Theme Toggle */}
+
             <button
               onClick={(e) => {
                 e.preventDefault()
@@ -196,12 +196,12 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
 
-            {/* Notifications */}
+
             <div className="relative">
               <Notifications user={user} />
             </div>
 
-            {/* User Avatar with Dropdown */}
+
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -221,20 +221,20 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
                 )}
               </button>
 
-              {/* Dropdown Menu */}
+
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-56 post-card rounded-xl shadow-lg z-50 py-2 dropdown-mobile">
-                  {/* User Info */}
+
                   <div className="px-4 py-3 border-b border-border">
                     <p className="font-medium text-foreground truncate">{user.name}</p>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
 
-                  {/* Menu Items */}
+
                   <div className="py-2">
                     <button
                       onClick={() => {
-                        onNavigate('profile')
+                        onNavigate('account')
                         setShowUserMenu(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
@@ -245,7 +245,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
 
                     <button
                       onClick={() => {
-                        onNavigate('account', user.id)
+                        onNavigate('profile', user.id)
                         setShowUserMenu(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
