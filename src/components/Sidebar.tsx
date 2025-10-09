@@ -25,7 +25,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       { name: 'Messages', id: 'messages', icon: MessageCircle }
     ]
 
-    // Add Admin Panel only for admins (replacing Dashboard)
+
     if (user.role === 'admin') {
       baseNavigation.splice(1, 0, { name: 'Admin Panel', id: 'admin', icon: Shield })
     }
@@ -37,7 +37,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo and Brand */}
+
       <div className="p-6 border-b border-sidebar-border">
         <button
           onClick={(e) => {
@@ -63,7 +63,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </button>
       </div>
 
-      {/* Navigation */}
+
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
           const Icon = item.icon
@@ -89,7 +89,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               {!isCollapsed && (
                 <span className="font-medium flex-1">{item.name}</span>
               )}
-              {/* Show unread messages badge */}
+
               {item.id === 'messages' && unreadMessagesCount > 0 && (
                 <span className="inline-flex items-center justify-center w-5 h-5 text-xs bg-red-500 text-white rounded-full font-medium">
                   {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
@@ -108,7 +108,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            onNavigate('account')
+            onNavigate('profile')
             setIsMobileOpen(false)
           }}
           className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary transition-all duration-200 touch-manipulation min-h-[48px]"
@@ -168,6 +168,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         <Menu className="h-5 w-5" />
       </button>
 
+
       {isMobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[55]"
@@ -184,7 +185,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         isMobileOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-full sidebar-gradient">
-          {/* Close Button */}
+
           <button
             onClick={(e) => {
               e.preventDefault()
