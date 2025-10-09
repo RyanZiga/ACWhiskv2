@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, MessageCircle, UserPlus, UserMinus, Grid, Users, Calendar, MapPin, Camera } from 'lucide-react'
+import { ArrowLeft, MessageCircle, UserPlus, UserMinus, Grid, Users, Calendar, MapPin, Camera, Award, ChefHat, Star, TrendingUp } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { isValidUUID } from '../utils/auth'
@@ -22,6 +22,13 @@ interface UserProfile {
   created_at: string
   followers: string[]
   following: string[]
+  portfolio?: {
+    specialty_dishes?: string[]
+    cooking_techniques?: string[]
+    achievements?: string[]
+    experience?: string
+    certifications?: string[]
+  }
 }
 
 interface Post {
@@ -49,6 +56,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isEditingPortfolio, setIsEditingPortfolio] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -59,7 +67,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
     try {
       setError(null)
       
-      // Validate userId before making API call
+
       if (!isValidUUID(userId)) {
         console.error('Invalid user ID:', userId)
         setError('Invalid user ID')
@@ -77,7 +85,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       if (response.ok) {
         const { profile: profileData } = await response.json()
         
-        // Ensure all required properties exist with default values
+
         const safeProfile: UserProfile = {
           id: profileData.id || userId,
           name: profileData.name || 'Unknown User',
@@ -88,7 +96,14 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
           avatar_url: profileData.avatar_url || '',
           created_at: profileData.created_at || new Date().toISOString(),
           followers: Array.isArray(profileData.followers) ? profileData.followers : [],
-          following: Array.isArray(profileData.following) ? profileData.following : []
+          following: Array.isArray(profileData.following) ? profileData.following : [],
+          portfolio: profileData.portfolio || {
+            specialty_dishes: [],
+            cooking_techniques: [],
+            achievements: [],
+            experience: '',
+            certifications: []
+          }
         }
         
         setProfile(safeProfile)
@@ -116,7 +131,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
       if (response.ok) {
         const { posts: postsData } = await response.json()
-        // Ensure posts is always an array
+
         const safePosts = Array.isArray(postsData) ? postsData.map((post: any) => ({
           ...post,
           images: Array.isArray(post.images) ? post.images : [],
@@ -164,7 +179,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
   }
 
   const startConversation = () => {
-    // Navigate to messages page with the target user
+
     onNavigate('messages', `user:${userId}`)
   }
 
@@ -344,6 +359,77 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                 </div>
               </div>
             )}
+
+            {/* Portfolio */}
+            {profile.portfolio && (
+              <div className="mt-4">
+                <h3 className="text-lg font-medium text-foreground mb-2">Portfolio</h3>
+                <div className="flex flex-col md:flex-row gap-4">
+                  {profile.portfolio.specialty_dishes && profile.portfolio.specialty_dishes.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-xl font-bold text-foreground">Specialty Dishes</h2>
+                      {profile.portfolio.specialty_dishes.map((dish, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
+                        >
+                          {dish}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {profile.portfolio.cooking_techniques && profile.portfolio.cooking_techniques.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-xl font-bold text-foreground">Cooking Techniques</h2>
+                      {profile.portfolio.cooking_techniques.map((technique, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
+                        >
+                          {technique}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {profile.portfolio.achievements && profile.portfolio.achievements.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-xl font-bold text-foreground">Achievements</h2>
+                      {profile.portfolio.achievements.map((achievement, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
+                        >
+                          {achievement}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {profile.portfolio.experience && (
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-xl font-bold text-foreground">Experience</h2>
+                      <p className="text-foreground text-sm">{profile.portfolio.experience}</p>
+                    </div>
+                  )}
+
+                  {profile.portfolio.certifications && profile.portfolio.certifications.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-xl font-bold text-foreground">Certifications</h2>
+                      {profile.portfolio.certifications.map((certification, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
+                        >
+                          {certification}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -373,6 +459,18 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
           >
             <Camera className="h-4 w-4" />
             <span>Photos</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('portfolio')}
+            className={`flex items-center space-x-2 py-3 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'portfolio'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Award className="h-4 w-4" />
+            <span>Portfolio</span>
           </button>
 
           {isOwnProfile && (
@@ -462,6 +560,151 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                 <h3 className="text-lg font-medium text-foreground mb-2">No photos yet</h3>
                 <p className="text-muted-foreground">
                   {isOwnProfile ? 'Share photos in your posts to see them here!' : `${profile.name} hasn't shared any photos yet.`}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'portfolio' && (
+          <div className="space-y-6">
+            {/* Portfolio Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-foreground">Culinary Portfolio</h2>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setIsEditingPortfolio(!isEditingPortfolio)}
+                  className="btn-gradient px-4 py-2 rounded-lg text-sm"
+                >
+                  {isEditingPortfolio ? 'Save Changes' : 'Edit Portfolio'}
+                </button>
+              )}
+            </div>
+
+            {/* Experience Section */}
+            {(profile.portfolio?.experience || isOwnProfile) && (
+              <div className="post-card p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Experience</h3>
+                </div>
+                {isEditingPortfolio ? (
+                  <textarea
+                    className="input-clean w-full p-3 min-h-[120px] resize-none"
+                    placeholder="Describe your culinary experience, journey, and expertise..."
+                    defaultValue={profile.portfolio?.experience || ''}
+                  />
+                ) : (
+                  <p className="text-foreground">
+                    {profile.portfolio?.experience || 'No experience added yet'}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Specialty Dishes */}
+            {((profile.portfolio?.specialty_dishes && profile.portfolio.specialty_dishes.length > 0) || isOwnProfile) && (
+              <div className="post-card p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <ChefHat className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Specialty Dishes</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {profile.portfolio?.specialty_dishes?.map((dish, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center space-x-2 p-3 bg-muted rounded-lg"
+                    >
+                      <Star className="h-4 w-4 text-accent flex-shrink-0" />
+                      <span className="text-foreground">{dish}</span>
+                    </div>
+                  ))}
+                  {(!profile.portfolio?.specialty_dishes || profile.portfolio.specialty_dishes.length === 0) && (
+                    <p className="text-muted-foreground col-span-full">
+                      {isOwnProfile ? 'Add your signature dishes' : 'No specialty dishes listed'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Cooking Techniques */}
+            {((profile.portfolio?.cooking_techniques && profile.portfolio.cooking_techniques.length > 0) || isOwnProfile) && (
+              <div className="post-card p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Award className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Mastered Techniques</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.portfolio?.cooking_techniques?.map((technique, index) => (
+                    <span
+                      key={index}
+                      className="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm font-medium"
+                    >
+                      {technique}
+                    </span>
+                  ))}
+                  {(!profile.portfolio?.cooking_techniques || profile.portfolio.cooking_techniques.length === 0) && (
+                    <p className="text-muted-foreground">
+                      {isOwnProfile ? 'Add cooking techniques you\'ve mastered' : 'No techniques listed'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Achievements & Certifications */}
+            {((profile.portfolio?.achievements && profile.portfolio.achievements.length > 0) || 
+              (profile.portfolio?.certifications && profile.portfolio.certifications.length > 0) || 
+              isOwnProfile) && (
+              <div className="post-card p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Star className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Achievements & Certifications</h3>
+                </div>
+                <div className="space-y-3">
+                  {profile.portfolio?.achievements?.map((achievement, index) => (
+                    <div
+                      key={`achievement-${index}`}
+                      className="flex items-start space-x-3 p-3 bg-muted rounded-lg"
+                    >
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-foreground">{achievement}</p>
+                    </div>
+                  ))}
+                  {profile.portfolio?.certifications?.map((cert, index) => (
+                    <div
+                      key={`cert-${index}`}
+                      className="flex items-start space-x-3 p-3 bg-accent/20 rounded-lg border border-accent"
+                    >
+                      <Award className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
+                      <p className="text-foreground font-medium">{cert}</p>
+                    </div>
+                  ))}
+                  {(!profile.portfolio?.achievements || profile.portfolio.achievements.length === 0) &&
+                   (!profile.portfolio?.certifications || profile.portfolio.certifications.length === 0) && (
+                    <p className="text-muted-foreground">
+                      {isOwnProfile ? 'Add your achievements and certifications' : 'No achievements or certifications listed'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isOwnProfile && 
+             (!profile.portfolio?.experience && 
+              (!profile.portfolio?.specialty_dishes || profile.portfolio.specialty_dishes.length === 0) &&
+              (!profile.portfolio?.cooking_techniques || profile.portfolio.cooking_techniques.length === 0) &&
+              (!profile.portfolio?.achievements || profile.portfolio.achievements.length === 0) &&
+              (!profile.portfolio?.certifications || profile.portfolio.certifications.length === 0)) && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Award className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">No portfolio yet</h3>
+                <p className="text-muted-foreground">
+                  {profile.name} hasn't built their culinary portfolio yet.
                 </p>
               </div>
             )}
