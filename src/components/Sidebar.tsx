@@ -15,7 +15,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
-  // Role-based navigation
+
   const getNavigationItems = () => {
     const baseNavigation = [
       { name: 'Feed', id: 'feed', icon: Home },
@@ -100,46 +100,10 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         })}
       </nav>
 
-      {/* User Profile & Settings */}
+
       <div className="p-4 border-t border-sidebar-border space-y-2">
 
-        {/* Profile */}
-        <button
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onNavigate('profile')
-            setIsMobileOpen(false)
-          }}
-          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 touch-manipulation min-h-[48px] ${
-            currentPage === 'profile'
-              ? 'bg-sidebar-accent text-sidebar-primary shadow-sm border border-sidebar-border'
-              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary'
-          }`}
-          type="button"
-        >
-          <div className="avatar-gradient w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
-            {user.avatar_url ? (
-              <ImageWithFallback
-                src={user.avatar_url}
-                alt={user.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-white text-sm font-medium">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 text-left">
-              <p className="font-medium truncate">{user.name}</p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{user.role}</p>
-            </div>
-          )}
-        </button>
 
-        {/* Account Settings */}
         <button
           onClick={(e) => {
             e.preventDefault()
@@ -170,7 +134,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </button>
       </div>
 
-      {/* Collapse Toggle (Desktop only) */}
+
       <div className="hidden lg:block p-4 border-t border-sidebar-border">
         <button
           onClick={(e) => {
@@ -190,7 +154,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
   return (
     <>
-      {/* Mobile Sidebar Toggle */}
+
       <button
         onClick={(e) => {
           e.preventDefault()
@@ -204,7 +168,6 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[55]"
@@ -216,7 +179,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         />
       )}
 
-      {/* Mobile Sidebar */}
+
       <div className={`lg:hidden fixed inset-y-0 left-0 z-[58] w-80 transform transition-transform duration-300 ${
         isMobileOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
@@ -238,7 +201,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </div>
       </div>
 
-      {/* Desktop Sidebar */}
+
       <div className={`hidden lg:block fixed inset-y-0 left-0 z-30 transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-80'
       }`}>
