@@ -20,18 +20,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      // Check for saved preference or system preference
+
       const savedTheme = localStorage.getItem('acwhisk-theme')
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       
       const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark)
       setIsDark(shouldBeDark)
       
-      // Apply theme to document
+
       document.documentElement.classList.toggle('dark', shouldBeDark)
     } catch (error) {
       console.warn('Theme initialization error:', error)
-      // Fallback to light theme
+
       setIsDark(false)
       document.documentElement.classList.remove('dark')
     }
@@ -42,10 +42,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const newTheme = !isDark
       setIsDark(newTheme)
       
-      // Save preference
+
       localStorage.setItem('acwhisk-theme', newTheme ? 'dark' : 'light')
       
-      // Apply to document
+   
       document.documentElement.classList.toggle('dark', newTheme)
     } catch (error) {
       console.warn('Theme toggle error:', error)
