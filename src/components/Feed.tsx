@@ -21,6 +21,7 @@ import {
   X,
   Trophy,
   Lightbulb,
+  ChevronLeft,
 } from "lucide-react";
 import { projectId } from "../utils/supabase/info";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -639,17 +640,22 @@ export function Feed({ user, onNavigate }: FeedProps) {
         } lg:hidden`}
       >
         <div className="header-gradient px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             <h1 className="text-xl font-semibold text-foreground">ACWhisk</h1>
-            <button
-              onClick={() => setShowMobileSidebar(true)}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </div>
+
+      {/* Floating Arrow Button for Mobile Sidebar */}
+      {!showMobileSidebar && (
+        <button
+          onClick={() => setShowMobileSidebar(true)}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 lg:hidden bg-primary text-primary-foreground p-3 rounded-l-lg shadow-lg hover:bg-primary/90 transition-all duration-300 hover:pr-4"
+          aria-label="Open sidebar"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex gap-6 relative">
@@ -1102,7 +1108,6 @@ export function Feed({ user, onNavigate }: FeedProps) {
         </>
       )}
 
-      {/* Create Post Modal */}
       {showCreatePost && (
         <CreatePostModal
           user={user}
@@ -1114,7 +1119,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
         />
       )}
 
-      {/* Edit Post Modal */}
+
       {editingPost && (
         <EditPostModal
           post={editingPost}
@@ -1129,7 +1134,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
+
       {showDeleteConfirm && (
         <DeleteConfirmModal
           postId={showDeleteConfirm}
@@ -1161,7 +1166,7 @@ function SidebarContent({
     <>
 
 
-      {/* Trending Recipes */}
+
       <div className="post-card p-4">
         <div className="flex items-center space-x-2 mb-4">
           <Trophy className="h-5 w-5 text-amber-500" />
@@ -1216,7 +1221,7 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Cooking Tips */}
+
       <div className="post-card p-4">
         <div className="flex items-center space-x-2 mb-4">
           <Lightbulb className="h-5 w-5 text-primary" />
