@@ -172,22 +172,22 @@ export function Feed({ user, onNavigate }: FeedProps) {
     loadFeed();
     loadTopRecipes();
 
-    // Real-time updates every 30 seconds
+
     const feedInterval = setInterval(() => {
       loadFeed();
     }, 30000);
 
-    // Update top recipes every 5 minutes
+
     const recipesInterval = setInterval(() => {
       loadTopRecipes();
     }, 300000);
 
-    // Handle scroll for blur header
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 100);
     };
 
-    // Close dropdowns when clicking outside
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('[data-dropdown]') && !target.closest('[data-dropdown-trigger]')) {
@@ -198,7 +198,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
     window.addEventListener("scroll", handleScroll);
     document.addEventListener("click", handleClickOutside);
 
-    // Change cooking tip every minute
+
     const tipInterval = setInterval(() => {
       setCurrentTip((prev) => (prev + 1) % cookingTips.length);
     }, 60000);
@@ -228,7 +228,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
         const { posts: feedPosts } = await response.json();
         setPosts(feedPosts);
       } else {
-        // Fallback to demo data with real-time simulation
+
         generateDemoPosts();
       }
     } catch (error) {
@@ -442,7 +442,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
       }
     } catch (error) {
       console.error("Error liking post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) =>
         prevPosts.map((post) => {
           if (post.id === postId) {
@@ -485,7 +485,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
       }
     } catch (error) {
       console.error("Error commenting on post:", error);
-      // Optimistic update for demo
+
       const newComment: Comment = {
         id: `comment_${Date.now()}`,
         content,
@@ -549,7 +549,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
   };
 
   const handleDeletePost = async (postId: string) => {
-    setActiveDropdown(null); // Close any open dropdowns
+    setActiveDropdown(null); 
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}`,
@@ -567,7 +567,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
       setShowDeleteConfirm(null);
     }
@@ -631,22 +631,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
 
   return (
     <div className="min-h-screen bg-theme-gradient">
-      {/* Sticky Header for Mobile */}
-      <div
-        className={`fixed top-16 left-0 right-0 z-40 transition-all duration-300 ${
-          scrolled
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-full opacity-0"
-        } lg:hidden`}
-      >
-        <div className="header-gradient px-4 py-3">
-          <div className="flex items-center justify-center">
-            <h1 className="text-xl font-semibold text-foreground">ACWhisk</h1>
-          </div>
-        </div>
-      </div>
 
-      {/* Floating Arrow Button for Mobile Sidebar */}
       {!showMobileSidebar && (
         <button
           onClick={() => setShowMobileSidebar(true)}
@@ -1108,6 +1093,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
         </>
       )}
 
+      {/* Create Post Modal */}
       {showCreatePost && (
         <CreatePostModal
           user={user}
@@ -1119,7 +1105,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
         />
       )}
 
-
+      {/* Edit Post Modal */}
       {editingPost && (
         <EditPostModal
           post={editingPost}
@@ -1134,7 +1120,7 @@ export function Feed({ user, onNavigate }: FeedProps) {
         />
       )}
 
-
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <DeleteConfirmModal
           postId={showDeleteConfirm}
@@ -1166,7 +1152,7 @@ function SidebarContent({
     <>
 
 
-
+      {/* Trending Recipes */}
       <div className="post-card p-4">
         <div className="flex items-center space-x-2 mb-4">
           <Trophy className="h-5 w-5 text-amber-500" />
@@ -1221,7 +1207,7 @@ function SidebarContent({
         </div>
       </div>
 
-
+      {/* Cooking Tips */}
       <div className="post-card p-4">
         <div className="flex items-center space-x-2 mb-4">
           <Lightbulb className="h-5 w-5 text-primary" />
