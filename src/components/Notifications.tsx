@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Bell, X, Heart, MessageCircle, UserPlus, ChefHat, Trophy, Award, Users, Share } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
+import { supabase } from '../utils/supabase/client'
 
 interface User {
   id: string
@@ -11,40 +12,101 @@ interface User {
 
 interface Notification {
   id: string
-  type: 'follow' | 'recipe_upload' | 'feed_post' | 'recipe_like' | 'post_like' | 'comment'
+  type: 'message' | 'follow' | 'recipe_upload' | 'feed_post' | 'recipe_like' | 'post_like' | 'comment'
   title: string
   message: string
   timestamp: Date
   read: boolean
-  user_id?: string
-  user_name?: string
-  user_avatar?: string
+  sender_id?: string
+  sender_name?: string
+  sender_avatar_url?: string
+  conversation_id?: string
   post_id?: string
   recipe_id?: string
-  data?: any
+  comment_id?: string
+  metadata?: any
 }
 
 interface NotificationsProps {
   user: User
+  onNavigate?: (page: string, id?: string) => void
 }
 
-export function Notifications({ user }: NotificationsProps) {
+export function Notifications({ user, onNavigate }: NotificationsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
+  const notificationChannelRef = useRef<any>(null)
 
   useEffect(() => {
     loadNotifications()
+    setupRealtimeSubscription()
     
-    // Set up real-time notifications polling
-    const interval = setInterval(() => {
-      loadNotifications()
-    }, 60000) // Check every minute
-
     return () => {
-      clearInterval(interval)
+      cleanupSubscription()
     }
   }, [user.id])
+
+  // Setup realtime subscription for new notifications
+  const setupRealtimeSubscription = () => {
+    try {
+      const channel = supabase
+        .channel('user-notifications-panel')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            const newNotification = payload.new as any
+            setNotifications(prev => [{
+              ...newNotification,
+              timestamp: new Date(newNotification.created_at)
+            }, ...prev])
+            
+            // Show browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(newNotification.title, {
+                body: newNotification.message,
+                icon: '/icon.png'
+              })
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            const updatedNotification = payload.new as any
+            setNotifications(prev => prev.map(notif =>
+              notif.id === updatedNotification.id
+                ? { ...updatedNotification, timestamp: new Date(updatedNotification.created_at) }
+                : notif
+            ))
+          }
+        )
+        .subscribe()
+
+      notificationChannelRef.current = channel
+    } catch (error) {
+      console.error('❌ Error setting up notification subscription:', error)
+    }
+  }
+
+  const cleanupSubscription = () => {
+    if (notificationChannelRef.current) {
+      supabase.removeChannel(notificationChannelRef.current)
+      notificationChannelRef.current = null
+    }
+  }
 
   const loadNotifications = async () => {
     try {
@@ -67,7 +129,7 @@ export function Notifications({ user }: NotificationsProps) {
         // Convert timestamp strings to Date objects
         const processedNotifications = userNotifications.map((notif: any) => ({
           ...notif,
-          timestamp: new Date(notif.timestamp)
+          timestamp: new Date(notif.created_at || notif.timestamp)
         }))
         setNotifications(processedNotifications)
       } else {
@@ -126,30 +188,33 @@ export function Notifications({ user }: NotificationsProps) {
     )
   }
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: Notification, onNavigate?: (page: string, id?: string) => void) => {
     markAsRead(notification.id)
+    setIsOpen(false)
     
     // Navigate based on notification type
     switch (notification.type) {
+      case 'message':
+        if (notification.conversation_id && onNavigate) {
+          onNavigate('messages', `conversation:${notification.conversation_id}`)
+        }
+        break
       case 'recipe_upload':
       case 'recipe_like':
       case 'comment':
-        if (notification.recipe_id) {
-          console.log('Navigate to recipe:', notification.recipe_id)
-          // In a real app, this would navigate to the recipe page
+        if (notification.recipe_id && onNavigate) {
+          onNavigate('recipe', notification.recipe_id)
         }
         break
       case 'feed_post':
       case 'post_like':
-        if (notification.post_id) {
-          console.log('Navigate to post:', notification.post_id)
-          // In a real app, this would navigate to the feed post
+        if (notification.post_id && onNavigate) {
+          onNavigate('post', notification.post_id)
         }
         break
       case 'follow':
-        if (notification.user_id) {
-          console.log('Navigate to user profile:', notification.user_id)
-          // In a real app, this would navigate to the user's profile
+        if (notification.sender_id && onNavigate) {
+          onNavigate('account', notification.sender_id)
         }
         break
     }
@@ -157,6 +222,8 @@ export function Notifications({ user }: NotificationsProps) {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'message':
+        return <MessageCircle className="h-4 w-4 text-primary" />
       case 'follow':
         return <UserPlus className="h-4 w-4 text-green-500" />
       case 'recipe_upload':
@@ -175,10 +242,12 @@ export function Notifications({ user }: NotificationsProps) {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
+      case 'message':
+        return 'bg-primary/10 border-primary/30'
       case 'follow':
         return 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
       case 'recipe_upload':
-        return 'bg-primary/10 border-primary/30'
+        return 'bg-purple-50 border-purple-200 dark:bg-purple-950 dark:border-purple-800'
       case 'feed_post':
         return 'bg-accent/10 border-accent/30'
       case 'recipe_like':
