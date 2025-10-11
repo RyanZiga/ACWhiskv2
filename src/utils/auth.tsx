@@ -43,7 +43,7 @@ export const Permissions = {
     canManageOwnContent: true
   },
   
-  // Instructor permissions (includes all student permissions + additional)
+
   instructor: {
     canCreateRecipes: true,
     canJoinForum: true,
@@ -59,7 +59,7 @@ export const Permissions = {
     canGradeStudents: true
   },
   
-  // Admin permissions (includes all permissions + system management)
+
   admin: {
     canCreateRecipes: true,
     canJoinForum: true,
@@ -82,7 +82,7 @@ export const Permissions = {
   }
 }
 
-// UUID validation utility
+
 export const isValidUUID = (uuid: string | null | undefined): boolean => {
   if (!uuid || typeof uuid !== 'string') return false
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -99,7 +99,7 @@ export class AuthService {
     return userPermissions && (userPermissions as any)[permission] === true
   }
 
-  // Get user role display name
+
   static getRoleDisplayName(role: string): string {
     const roleNames = {
       student: 'Student',
@@ -109,7 +109,7 @@ export class AuthService {
     return roleNames[role as keyof typeof roleNames] || 'Unknown'
   }
 
-  // Get role badge color
+
   static getRoleBadgeColor(role: string): string {
     const colors = {
       student: 'bg-blue-100 text-blue-800',
@@ -119,7 +119,7 @@ export class AuthService {
     return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
 
-  // Check if user can access a specific page
+
   static canAccessPage(user: User | null, page: string): boolean {
     if (!user) return false
     if (user.needs_onboarding) return false // Restrict access during onboarding
@@ -143,10 +143,10 @@ export class AuthService {
   // Sign up new user
   static async signup(email: string, password: string, name: string, role: string): Promise<AuthResult> {
     try {
-      // Validate email domain - TEMPORARILY DISABLED
-      // if (!this.validateEmailDomain(email)) {
-      //   return { success: false, error: 'Must be Asian College students' }
-      // }
+      // Validate email domain
+      if (!this.validateEmailDomain(email)) {
+        return { success: false, error: 'Sorry This app is only exclusive for Asian College Students' }
+      }
 
       // Validate role
       if (!this.isValidRole(role)) {
@@ -179,7 +179,7 @@ export class AuthService {
         }
       }
       
-      // Create user via server endpoint
+
       console.log('📤 Creating user account...')
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/signup`, {
         method: 'POST',
@@ -192,7 +192,7 @@ export class AuthService {
       
       if (response.ok) {
         console.log('✅ Signup successful, logging in...')
-        // Auto-login after successful signup
+
         return await this.login(email, password)
       } else {
         let errorMessage = 'Signup failed'
@@ -214,10 +214,18 @@ export class AuthService {
     }
   }
 
-  // Login user
+  // Login 
   static async login(email: string, password: string): Promise<AuthResult> {
     try {
       console.log('🔐 Starting login process...')
+      
+      // Validate email domain before attempting login
+      if (!this.validateEmailDomain(email)) {
+        return { 
+          success: false, 
+          error: 'Sorry This app is only exclusive for Asian College Students' 
+        }
+      }
       
       const { data: { session }, error } = await supabase.auth.signInWithPassword({
         email,
@@ -227,7 +235,7 @@ export class AuthService {
       if (error) {
         console.error('❌ Authentication error:', error)
         
-        // Provide user-friendly error messages
+
         let userMessage = error.message
         if (error.message.includes('Invalid login credentials')) {
           userMessage = 'Invalid email or password. Please check your credentials and try again.'
@@ -350,10 +358,9 @@ export class AuthService {
     }
   }
 
-  // Validate email domain - TEMPORARILY DISABLED
+  // Validate email domain
   static validateEmailDomain(email: string): boolean {
-    // return email.toLowerCase().endsWith('@asiancollege.edu.ph')
-    return true // Temporarily allow all email domains
+    return email.toLowerCase().endsWith('@asiancollege.edu.ph')
   }
 
   // Google Sign-In
@@ -401,16 +408,16 @@ export class AuthService {
       }
       
       if (session?.user?.email) {
-        // Validate email domain - TEMPORARILY DISABLED
-        // if (!this.validateEmailDomain(session.user.email)) {
-        //   console.error('❌ Invalid email domain:', session.user.email)
-        //   // Sign out the user since they don't have the right domain
-        //   await supabase.auth.signOut()
-        //   return { 
-        //     success: false, 
-        //     error: 'Must be Asian College students' 
-        //   }
-        // }
+        // Validate email domain
+        if (!this.validateEmailDomain(session.user.email)) {
+          console.error('❌ Invalid email domain:', session.user.email)
+          // Sign out the user since they don't have the right domain
+          await supabase.auth.signOut()
+          return { 
+            success: false, 
+            error: 'Sorry This app is only exclusive for Asian College Students' 
+          }
+        }
         
         // Check if user profile exists
         try {
