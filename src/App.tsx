@@ -15,15 +15,20 @@ import { Search } from './components/Search'
 import { ChatBot } from './components/ChatBot'
 import { Feed } from './components/Feed'
 import { Account } from './components/Account'
-import { Messages } from './components/MessagesRefactored.tsx'
+import { MessagesRefactored } from './components/MessagesRefactored'
 import { DebugPanel } from './components/DebugPanel'
+import { RoleOnboarding } from './components/RoleOnboarding'
+import { Notifications } from './components/Notifications'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { AuthService, User, AuthResult, Permissions } from './utils/auth'
+import { AuthService, User, AuthResult, Permissions, isValidUUID } from './utils/auth'
+import { projectId } from './utils/supabase/info'
 
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean, error?: string }>
   signup: (email: string, password: string, name: string, role: string) => Promise<{ success: boolean, error?: string }>
+  signInWithGoogle: () => Promise<{ success: boolean, error?: string }>
+  completeOnboarding: (role: string) => Promise<{ success: boolean, error?: string }>
   logout: () => Promise<void>
   loading: boolean
   hasPermission: (permission: keyof typeof Permissions.admin) => boolean
@@ -50,6 +55,34 @@ function App() {
 
   useEffect(() => {
     checkSession()
+    
+    // Listen for auth state changes (for Google OAuth callback)
+    const { data: { subscription } } = AuthService.supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        console.log('🔔 Auth state changed to SIGNED_IN')
+        const result = await AuthService.handleGoogleCallback()
+        if (result.success && result.user) {
+          setUser(result.user)
+          // Check if user needs onboarding
+          if (result.user.needs_onboarding) {
+            setCurrentPage('onboarding')
+          } else {
+            setCurrentPage('feed')
+          }
+        } else if (result.error) {
+          console.error('❌ Google auth error:', result.error)
+          // Don't set error state here as it will be handled by the login flow
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('🔔 Auth state changed to SIGNED_OUT')
+        setUser(null)
+        setCurrentPage('landing')
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const checkSession = async () => {
@@ -57,11 +90,17 @@ function App() {
       const result = await AuthService.checkSession()
       if (result.success && result.user) {
         setUser(result.user)
-        setCurrentPage('feed')
+        // Check if user needs onboarding
+        if (result.user.needs_onboarding) {
+          setCurrentPage('onboarding')
+        } else {
+          setCurrentPage('feed')
+        }
       }
     } catch (error) {
       console.error('❌ Session check error:', error)
-
+      // Don't show user errors for session check failures
+      // Just proceed with unauthenticated state
     } finally {
       setLoading(false)
     }
@@ -72,7 +111,12 @@ function App() {
       const result = await AuthService.login(email, password)
       if (result.success && result.user) {
         setUser(result.user)
-        setCurrentPage('feed')
+        // Check if user needs onboarding (shouldn't happen with email/password)
+        if (result.user.needs_onboarding) {
+          setCurrentPage('onboarding')
+        } else {
+          setCurrentPage('feed')
+        }
         return { success: true }
       } else {
         return { success: false, error: result.error }
@@ -105,6 +149,64 @@ function App() {
     }
   }
 
+  const signInWithGoogle = async () => {
+    try {
+      const result = await AuthService.signInWithGoogle()
+      return result
+    } catch (error) {
+      console.error('❌ Google sign-in error:', error)
+      return { 
+        success: false, 
+        error: `Google sign-in failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      }
+    }
+  }
+
+  const completeOnboarding = async (role: string) => {
+    try {
+      if (!user) {
+        return { success: false, error: 'No user found' }
+      }
+
+      // Update user profile with selected role on the server
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          role,
+          needs_onboarding: false
+        })
+      })
+
+      if (!response.ok) {
+        console.error('❌ Failed to update profile with role:', response.status)
+        return { success: false, error: 'Failed to save role selection' }
+      }
+
+      const { profile } = await response.json()
+      
+      // Update user with selected role
+      const updatedUser = { 
+        ...user, 
+        role: role as 'student' | 'instructor' | 'admin',
+        needs_onboarding: false 
+      }
+      
+      setUser(updatedUser)
+      setCurrentPage('feed')
+      return { success: true }
+    } catch (error) {
+      console.error('❌ Onboarding completion error:', error)
+      return { 
+        success: false, 
+        error: `Failed to complete onboarding: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      }
+    }
+  }
+
   const logout = async () => {
     await AuthService.logout()
     setUser(null)
@@ -128,10 +230,22 @@ function App() {
       setCurrentPostId(id)
     }
     if (page === 'account' && id) {
-      setCurrentUserId(id)
+      // Validate the user ID before setting it
+      if (isValidUUID(id)) {
+        setCurrentUserId(id)
+      } else {
+        console.error('Invalid user ID provided for account navigation:', id)
+        setCurrentUserId(null)
+      }
     }
     if (page === 'messages' && id && id.startsWith('user:')) {
-      setTargetUserId(id.replace('user:', ''))
+      const targetId = id.replace('user:', '')
+      if (isValidUUID(targetId)) {
+        setTargetUserId(targetId)
+      } else {
+        console.error('Invalid target user ID for messages:', targetId)
+        setTargetUserId(null)
+      }
     } else if (page === 'messages' && !id) {
       setTargetUserId(null)
     }
@@ -141,6 +255,8 @@ function App() {
     user,
     login,
     signup,
+    signInWithGoogle,
+    completeOnboarding,
     logout,
     loading,
     hasPermission,
@@ -152,7 +268,7 @@ function App() {
       <ThemeProvider>
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-transparent bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 rounded-full animate-spin mx-auto mb-4 relative">
+            <div className="w-16 h-16 border-4 border-transparent bg-gradient-to-r from-red-600 via-red-500 to-blue-500 rounded-full animate-spin mx-auto mb-4 relative">
               <div className="absolute inset-2 bg-background rounded-full"></div>
             </div>
             <p className="text-muted-foreground">Loading ACWhisk...</p>
@@ -166,7 +282,7 @@ function App() {
     <ThemeProvider>
       <AuthContext.Provider value={authValue}>
         <div className="min-h-screen bg-background">
-          {user && (
+          {user && !user.needs_onboarding && (
             <>
               <Sidebar 
                 user={user} 
@@ -179,9 +295,16 @@ function App() {
             </>
           )}
           
-          <main className={user ? 'lg:ml-80' : ''}>
+          <main className={user && !user.needs_onboarding ? 'lg:ml-80' : ''}>
             {currentPage === 'landing' && (
               <Landing onNavigate={navigateTo} />
+            )}
+
+            {currentPage === 'onboarding' && user && (
+              <RoleOnboarding 
+                user={user} 
+                onComplete={completeOnboarding}
+              />
             )}
             
             {currentPage === 'feed' && user && (
@@ -220,11 +343,32 @@ function App() {
             
             {currentPage === 'account' && user && (
               <div className="pt-0">
-                <Account 
-                  userId={currentUserId || user.id} 
-                  currentUser={user} 
-                  onNavigate={navigateTo} 
-                />
+                {(() => {
+                  const targetUserId = currentUserId || user.id
+                  if (!isValidUUID(targetUserId)) {
+                    console.error('Invalid user ID for account page:', targetUserId)
+                    return (
+                      <div className="flex items-center justify-center min-h-[400px]">
+                        <div className="text-center">
+                          <p className="text-muted-foreground mb-4">Invalid user profile</p>
+                          <button
+                            onClick={() => navigateTo('profile')}
+                            className="btn-gradient px-4 py-2 rounded-lg"
+                          >
+                            Go to My Profile
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <Account 
+                      userId={targetUserId} 
+                      currentUser={user} 
+                      onNavigate={navigateTo} 
+                    />
+                  )
+                })()}
               </div>
             )}
             
@@ -267,17 +411,17 @@ function App() {
             
             {currentPage === 'messages' && user && (
               <div className="pt-0">
-                <Messages 
+                <MessagesRefactored 
                   user={user} 
                   onNavigate={navigateTo}
                   onUnreadCountChange={setUnreadMessagesCount}
-                  targetUserId={targetUserId}
+                  targetUserId={targetUserId && isValidUUID(targetUserId) ? targetUserId : null}
                 />
               </div>
             )}
           </main>
           
-          {user && <ChatBot />}
+          {user && !user.needs_onboarding && <ChatBot />}
         </div>
       </AuthContext.Provider>
     </ThemeProvider>
