@@ -23,7 +23,7 @@ interface FAQ {
 }
 
 const FAQS: FAQ[] = [
-  // Cooking Techniques
+
   {
     id: 'knife-skills-basic',
     question: 'What are the basic knife skills every chef should know?',
@@ -57,7 +57,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['sauce-mother-sauces', 'fixing-broken-sauce']
   },
 
-  // Ingredients
+
   {
     id: 'seasoning-basics',
     question: 'When and how should I season my food?',
@@ -91,7 +91,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['smoke-points', 'oil-storage']
   },
 
-  // Equipment
+
   {
     id: 'essential-equipment',
     question: 'What are the essential tools every home cook should have?',
@@ -117,7 +117,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['cooking-temperatures', 'food-safety-temps']
   },
 
-  // Food Safety
+
   {
     id: 'food-safety-temps',
     question: 'What are the safe internal temperatures for different meats?',
@@ -143,7 +143,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['kitchen-sanitization', 'food-storage']
   },
 
-  // Baking
+
   {
     id: 'baking-measurements',
     question: 'Why is measuring by weight important in baking?',
@@ -169,7 +169,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['flour-types', 'mixing-techniques']
   },
 
-  // Recipe Development
+
   {
     id: 'recipe-scaling',
     question: 'How do I properly scale recipes up or down?',
@@ -195,7 +195,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['ingredient-functions', 'dietary-modifications']
   },
 
-  // Common Problems
+
   {
     id: 'fixing-broken-sauce',
     question: 'How do I fix a broken or separated sauce?',
@@ -251,6 +251,11 @@ export function ChatBot() {
   const [useAI, setUseAI] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatHistoryRef = useRef<Array<{ role: string; parts: string }>>([])
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [buttonPosition, setButtonPosition] = useState({ right: 24, bottom: 24 })
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
   useEffect(() => {
     scrollToBottom()
@@ -322,7 +327,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
       const data = await response.json()
       
-      // Check if we got a valid response
+
       if (!data.candidates || data.candidates.length === 0) {
         throw new Error('No response generated from AI')
       }
@@ -333,13 +338,13 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         throw new Error('Invalid response format from AI')
       }
 
-      // Update chat history
+
       chatHistoryRef.current.push(
         { role: 'user', parts: userMessage },
         { role: 'model', parts: text }
       )
 
-      // Keep only last 10 exchanges to manage context
+
       if (chatHistoryRef.current.length > 20) {
         chatHistoryRef.current = chatHistoryRef.current.slice(-20)
       }
@@ -347,7 +352,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       return text
     } catch (error) {
       console.error('Gemini API Error:', error)
-      // Return a more helpful error message
+
       if (error instanceof Error && error.message.includes('not found')) {
         throw new Error('AI model temporarily unavailable. Please try FAQ mode or try again later.')
       }
@@ -369,12 +374,12 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
   const findBestAnswer = (query: string): FAQ | null => {
     const lowerQuery = query.toLowerCase()
     
-    // Exact keyword match
+
     let bestMatch = FAQS.find(faq =>
       faq.keywords.some(keyword => lowerQuery.includes(keyword.toLowerCase()))
     )
 
-    // If no keyword match, try partial question match
+
     if (!bestMatch) {
       bestMatch = FAQS.find(faq =>
         faq.question.toLowerCase().includes(lowerQuery) ||
@@ -400,12 +405,12 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         const aiResponse = await getGeminiResponse(userMessage)
         addMessage(aiResponse, 'bot', 'ai')
         
-        // Optionally suggest related FAQs based on keywords
+
         const bestAnswer = findBestAnswer(userMessage)
         if (bestAnswer && bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
           const relatedFAQs = FAQS.filter(faq => 
             bestAnswer.relatedFAQs?.includes(faq.id)
-          ).slice(0, 3) // Limit to 3 suggestions
+          ).slice(0, 3) 
           
           if (relatedFAQs.length > 0) {
             const suggestions = relatedFAQs.map(faq => faq.question).join('\n• ')
@@ -499,19 +504,99 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     }
   }
 
+  // Handle drag start
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true)
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    setDragStart({ x: clientX, y: clientY })
+  }
+
+  // Handle drag move
+  useEffect(() => {
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging) return
+      
+      e.preventDefault()
+      const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX
+      const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
+      
+      const deltaX = dragStart.x - clientX
+      const deltaY = clientY - dragStart.y
+      
+      setButtonPosition(prev => {
+        const newRight = Math.max(16, Math.min(window.innerWidth - 72, prev.right + deltaX))
+        const newBottom = Math.max(16, Math.min(window.innerHeight - 72, prev.bottom + deltaY))
+        return { right: newRight, bottom: newBottom }
+      })
+      
+      setDragStart({ x: clientX, y: clientY })
+    }
+
+    const handleDragEnd = () => {
+      setIsDragging(false)
+    }
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleDragMove)
+      document.addEventListener('mouseup', handleDragEnd)
+      document.addEventListener('touchmove', handleDragMove, { passive: false })
+      document.addEventListener('touchend', handleDragEnd)
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove)
+      document.removeEventListener('mouseup', handleDragEnd)
+      document.removeEventListener('touchmove', handleDragMove)
+      document.removeEventListener('touchend', handleDragEnd)
+    }
+  }, [isDragging, dragStart])
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
   return (
     <>
-      {/* Chat Button */}
+      {/* Chat Button - Draggable */}
       <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 hover:scale-110 hover:bg-[#1877f2]"
+        ref={buttonRef}
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        onClick={(e) => {
+          if (!isDragging) {
+            setIsOpen(true)
+          }
+        }}
+        style={{
+          bottom: `${buttonPosition.bottom}px`,
+          right: `${buttonPosition.right}px`
+        }}
+        className={`fixed w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 hover:scale-110 hover:bg-[#1877f2] ${isDragging ? 'cursor-grabbing scale-110' : 'cursor-grab'}`}
       >
         <MessageCircle className="h-6 w-6" />
       </button>
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-card rounded-2xl shadow-2xl border border-border flex flex-col z-50 max-w-[calc(100vw-3rem)] modal-responsive">
+        <div 
+          className="fixed w-96 h-[600px] bg-card rounded-2xl shadow-2xl border border-border flex flex-col z-50 max-w-[calc(100vw-3rem)] max-h-[calc(100vh-8rem)] lg:max-h-[600px]"
+          style={{
+            bottom: isMobile ? '5rem' : `${buttonPosition.bottom + 72}px`,
+            right: isMobile ? '1.5rem' : `${buttonPosition.right}px`,
+            left: isMobile ? '1.5rem' : 'auto',
+            width: isMobile ? 'calc(100vw - 3rem)' : '24rem'
+          }}
+        >
           {/* Header */}
           <div className="p-4 bg-primary text-white rounded-t-2xl">
             <div className="flex items-center justify-between mb-3">
