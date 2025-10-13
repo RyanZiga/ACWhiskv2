@@ -63,7 +63,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
     onCollapseChange?.(newCollapsedState)
   }
 
-
+  // Search handler
   const handleSearch = async (query: string) => {
     setSearchQuery(query)
     
@@ -168,11 +168,11 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </button>
 
-
+              {/* Notifications */}
               <Notifications user={user} onNavigate={onNavigate} />
             </div>
 
-
+            {/* Search Area */}
             <div className="relative">
               <input
                 type="text"
@@ -201,7 +201,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 className="w-full px-3 py-2 input-clean text-sm"
               />
 
-
+              {/* Search Dropdown */}
               {showSearchDropdown && (
                 <div ref={searchDropdownRef} className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-lg overflow-hidden animate-slide-down z-50">
 
@@ -255,7 +255,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                           </div>
                         )}
 
-
+    
                         {searchResults.posts.length > 0 && (
                           <div className="border-b border-border">
                             <div className="px-3 py-2 bg-muted/50">
@@ -330,7 +330,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                           </div>
                         )}
 
-                        {/* No Results */}
+
                         {searchResults.users.length === 0 && 
                          searchResults.posts.length === 0 &&
                          searchResults.recipes.length === 0 &&
@@ -347,7 +347,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
             </div>
           </>
         ) : (
-          // Collapsed state - just show avatar
+
           <button
             onClick={() => onNavigate('account', user.id)}
             className="flex items-center justify-center hover:opacity-90 transition-opacity w-full"
@@ -396,7 +396,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               {!isCollapsed && (
                 <span className={`font-medium ${isActive ? 'text-white' : ''}`}>{item.name}</span>
               )}
-              {/* Show unread messages badge */}
+
               {!isCollapsed && item.id === 'messages' && unreadMessagesCount > 0 && (
                 <span className="ml-auto bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                   {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
@@ -407,7 +407,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         })}
       </nav>
 
-      {/* Bottom section - Dark Mode Toggle, Settings, Sign out */}
+
       <div className="p-4 border-t border-sidebar-border mt-auto space-y-1">
         <button
           onClick={(e) => {
@@ -445,7 +445,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            onNavigate('profile')
+            onNavigate('account')
           }}
           className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all duration-200 group touch-manipulation min-h-[52px] text-sidebar-foreground hover:bg-sidebar-accent/50"
           type="button"
@@ -476,7 +476,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
   return (
     <>
-      {/* Search Dropdown - Mobile Only */}
+
       {showSearchDropdown && (
         <>
           <div
@@ -494,7 +494,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   onChange={(e) => {
                     const value = e.target.value
                     setSearchQuery(value)
-                    // Clear results if empty, but don't trigger API call on every keystroke
+
                     if (value.trim().length === 0) {
                       setSearchResults({ users: [], posts: [], recipes: [] })
                       setSearchLoading(false)
@@ -606,7 +606,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                       </div>
                     )}
 
-                    {/* Assignments Results */}
+
                     {searchResults.recipes.length > 0 && (
                       <div className="border-b border-border">
                         <div className="px-4 py-2 bg-muted/50">
@@ -656,99 +656,145 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </>
       )}
 
-      {/* Profile Menu Dropdown - Mobile Only */}
+
       {isProfileMenuOpen && (
-        <div className="lg:hidden fixed bottom-20 right-4 z-50 profile-menu-container">
-          <div className="sidebar-gradient border border-sidebar-border rounded-2xl shadow-2xl overflow-hidden min-w-[200px] animate-slide-up">
-            <div className="py-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onNavigate('account', user.id)
-                  setIsProfileMenuOpen(false)
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
-                type="button"
-              >
-                <User className="h-5 w-5 text-sidebar-foreground/70" />
-                <span className="font-medium">Profile</span>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onNavigate('learning')
-                  setIsProfileMenuOpen(false)
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
-                type="button"
-              >
-                <BookOpen className="h-5 w-5 text-sidebar-foreground/70" />
-                <span className="font-medium">Learning</span>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toggleTheme()
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
-                type="button"
-              >
-                {isDark ? (
-                  <Moon className="h-5 w-5 text-sidebar-foreground/70" />
-                ) : (
-                  <Sun className="h-5 w-5 text-sidebar-foreground/70" />
-                )}
-                <span className="font-medium">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
-                <div className="ml-auto">
-                  <div className={`w-12 h-6 rounded-full transition-all duration-300 relative ${
+        <>
+          {/* Backdrop */}
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-fade-in"
+            onClick={() => setIsProfileMenuOpen(false)}
+          />
+          <div className="lg:hidden fixed bottom-24 right-4 left-4 z-50 profile-menu-container animate-scale-in">
+            <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
+              {/* User Info Header */}
+              <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden shadow-lg">
+                    {user.avatar_url ? (
+                      <ImageWithFallback
+                        src={user.avatar_url}
+                        alt={user.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-medium">
+                        {user.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground truncate">{user.name}</p>
+                    <UserRoleBadge role={user.role} size="sm" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="py-2">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onNavigate('account', user.id)
+                    setIsProfileMenuOpen(false)
+                  }}
+                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
+                  type="button"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="font-medium">Profile</span>
+                </button>
+                
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onNavigate('learning')
+                    setIsProfileMenuOpen(false)
+                  }}
+                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
+                  type="button"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <BookOpen className="h-5 w-5 text-accent" />
+                  </div>
+                  <span className="font-medium">Learning</span>
+                </button>
+
+                <div className="h-px bg-border/50 my-2 mx-4" />
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggleTheme()
+                  }}
+                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
+                  type="button"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    {isDark ? (
+                      <Moon className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Sun className="h-5 w-5 text-amber-500" />
+                    )}
+                  </div>
+                  <span className="font-medium flex-1">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+                  <div className={`w-11 h-6 rounded-full transition-all duration-300 relative ${
                     isDark 
                       ? 'bg-primary shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
                       : 'bg-gray-300 dark:bg-gray-600 shadow-inner'
                   }`}>
                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all duration-300 shadow-md ${
-                      isDark ? 'translate-x-6' : 'translate-x-0.5'
+                      isDark ? 'translate-x-5' : 'translate-x-0.5'
                     }`} />
                   </div>
-                </div>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onNavigate('profile')
-                  setIsProfileMenuOpen(false)
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
-                type="button"
-              >
-                <Settings className="h-5 w-5 text-sidebar-foreground/70" />
-                <span className="font-medium">Settings</span>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onLogout()
-                  setIsProfileMenuOpen(false)
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
-                type="button"
-              >
-                <LogOut className="h-5 w-5 text-sidebar-foreground/70" />
-                <span className="font-medium">Sign out</span>
-              </button>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onNavigate('profile')
+                    setIsProfileMenuOpen(false)
+                  }}
+                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
+                  type="button"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <Settings className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <span className="font-medium">Settings</span>
+                </button>
+
+                <div className="h-px bg-border/50 my-2 mx-4" />
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onLogout()
+                    setIsProfileMenuOpen(false)
+                  }}
+                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-destructive hover:bg-destructive/5 active:bg-destructive/10 transition-all duration-200 group"
+                  type="button"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <LogOut className="h-5 w-5 text-destructive" />
+                  </div>
+                  <span className="font-medium">Sign out</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe">
-        <div className="sidebar-gradient border-t border-sidebar-border rounded-[84px]">
-          <div className="flex items-center justify-around px-[20px] rounded-[-8px] rounded-[-56px] p-[7px]">
+        <div className="sidebar-gradient border-t border-sidebar-border">
+          <div className="flex items-center justify-around px-[0px] py-[5px]">
             {/* Feed */}
             <button
               onClick={(e) => {
@@ -766,15 +812,13 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               <div className="relative">
                 <Home className={`h-6 w-6 ${currentPage === 'feed' ? 'scale-110' : ''} transition-transform duration-200`} />
               </div>
-              <span className={`text-[11px] mt-1 ${currentPage === 'feed' ? 'font-semibold' : 'font-medium'}`}>
-                Feed
-              </span>
+              
               {currentPage === 'feed' && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
               )}
             </button>
 
-            {/* Assignments (for students/instructors) or Admin Panel (for admins) */}
+
             {user.role === 'admin' ? (
               <button
                 onClick={(e) => {
@@ -782,22 +826,28 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   e.stopPropagation()
                   onNavigate('admin')
                 }}
-                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                  currentPage === 'admin'
-                    ? 'text-primary'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-                }`}
+                className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 group"
                 type="button"
               >
-                <div className="relative">
-                  <Shield className={`h-6 w-6 ${currentPage === 'admin' ? 'scale-110' : ''} transition-transform duration-200`} />
+                <div className={`relative transition-all duration-300 ${
+                  currentPage === 'admin' ? 'scale-110 -translate-y-0.5' : 'scale-100 group-active:scale-95'
+                }`}>
+                  <Shield className={`h-6 w-6 transition-all duration-300 ${
+                    currentPage === 'admin' 
+                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                      : 'text-sidebar-foreground/60'
+                  }`} />
+                  {currentPage === 'admin' && (
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  )}
                 </div>
-                <span className={`text-[11px] mt-1 ${currentPage === 'admin' ? 'font-semibold' : 'font-medium'}`}>
+                <span className={`text-[10px] mt-1.5 transition-all duration-300 ${
+                  currentPage === 'admin' 
+                    ? 'font-semibold text-primary' 
+                    : 'font-medium text-sidebar-foreground/60'
+                }`}>
                   Admin
                 </span>
-                {currentPage === 'admin' && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-                )}
               </button>
             ) : (
               <button
@@ -806,38 +856,38 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   e.stopPropagation()
                   onNavigate('recipes')
                 }}
-                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                  currentPage === 'recipes'
-                    ? 'text-primary'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-                }`}
+                className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 group"
                 type="button"
               >
-                <div className="relative">
-                  <FileText className={`h-6 w-6 ${currentPage === 'recipes' ? 'scale-110' : ''} transition-transform duration-200`} />
+                <div className={`relative transition-all duration-300 ${
+                  currentPage === 'recipes' ? 'scale-110 -translate-y-0.5' : 'scale-100 group-active:scale-95'
+                }`}>
+                  <FileText className={`h-6 w-6 transition-all duration-300 ${
+                    currentPage === 'recipes' 
+                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                      : 'text-sidebar-foreground/60'
+                  }`} />
+                  {currentPage === 'recipes' && (
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  )}
                 </div>
-                <span className={`text-[11px] mt-1 ${currentPage === 'recipes' ? 'font-semibold' : 'font-medium'}`}>
-                  Assignments
-                </span>
-                {currentPage === 'recipes' && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-                )}
+                
               </button>
             )}
 
             
-            {/* Create Post Button */}
+
             <button
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 onCreatePost?.()
               }}
-              className="flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative"
+              className="flex flex-col items-center justify-center px-2 transition-all duration-300 touch-target relative z-10 group -mt-2"
               type="button"
             >
-              <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center shadow-lg -mt-6">
-                <Plus className="h-6 w-6 text-white" />
+              <div className="w-14 h-14 avatar-gradient rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(220,38,38,0.4)] dark:shadow-[0_4px_24px_rgba(239,68,68,0.5)] transition-all duration-300 group-hover:shadow-[0_6px_32px_rgba(220,38,38,0.5)] group-active:scale-95 group-hover:scale-105 border-4 border-card">
+                <Plus className="h-7 w-7 text-white transition-transform duration-300 group-active:rotate-90" />
               </div>
             </button>
             
@@ -848,22 +898,22 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 e.stopPropagation()
                 onNavigate('forum')
               }}
-              className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                currentPage === 'forum'
-                  ? 'text-primary'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-              }`}
+              className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 group"
               type="button"
             >
-              <div className="relative">
-                <MessageSquare className={`h-6 w-6 ${currentPage === 'forum' ? 'scale-110' : ''} transition-transform duration-200`} />
+              <div className={`relative transition-all duration-300 ${
+                currentPage === 'forum' ? 'scale-110 -translate-y-0.5' : 'scale-100 group-active:scale-95'
+              }`}>
+                <MessageSquare className={`h-6 w-6 transition-all duration-300 ${
+                  currentPage === 'forum' 
+                    ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                    : 'text-sidebar-foreground/60'
+                }`} />
+                {currentPage === 'forum' && (
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                )}
               </div>
-              <span className={`text-[11px] mt-1 ${currentPage === 'forum' ? 'font-semibold' : 'font-medium'}`}>
-                Forum
-              </span>
-              {currentPage === 'forum' && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-              )}
+              
             </button>
 
             {/* Menu */}
@@ -873,28 +923,30 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 e.stopPropagation()
                 setIsProfileMenuOpen(!isProfileMenuOpen)
               }}
-              className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-200 touch-target relative profile-menu-container ${
-                isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning'
-                  ? 'text-primary'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-              }`}
+              className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 profile-menu-container group"
               type="button"
             >
-              <div className="relative">
-                <Menu className={`h-6 w-6 ${(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') ? 'scale-110' : ''} transition-transform duration-200`} />
+              <div className={`relative transition-all duration-300 ${
+                (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') 
+                  ? 'scale-110 -translate-y-0.5' 
+                  : 'scale-100 group-active:scale-95'
+              }`}>
+                <Menu className={`h-6 w-6 transition-all duration-300 ${
+                  (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') 
+                    ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                    : 'text-sidebar-foreground/60'
+                }`} />
+                {(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') && (
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                )}
               </div>
-              <span className={`text-[11px] mt-1 ${(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') ? 'font-semibold' : 'font-medium'}`}>
-                Menu
-              </span>
-              {(currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-              )}
+              
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile More Menu Modal */}
+
       {isMobileOpen && (
         <>
           <div
@@ -903,10 +955,10 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           />
           <div className="lg:hidden fixed bottom-0 left-0 right-0 sidebar-gradient z-50 shadow-2xl rounded-t-3xl animate-slide-up pb-safe">
             <div className="p-6">
-              {/* Handle bar */}
+
               <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-6" />
               
-              {/* User Info */}
+
               <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-sidebar-border">
                 <div className="avatar-gradient w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
                   <User className="w-7 h-7 text-white" />
@@ -917,7 +969,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </div>
 
-              {/* More Options */}
+
               <div className="space-y-2">
                 {user.role === 'admin' && (
                   <button
