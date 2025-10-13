@@ -15,18 +15,18 @@ export function Landing({ onNavigate }: LandingProps) {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Beautiful sage green background pattern */}
+
       <div className="absolute inset-0">
-        {/* Floating sage green orbs */}
+
         <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-gradient-to-br from-primary/15 to-accent/10 animate-pulse blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full bg-gradient-to-br from-accent/15 to-primary/10 animate-pulse blur-3xl" style={{ animationDelay: "2s" }}></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-primary/8 to-accent/8 animate-pulse blur-3xl" style={{ animationDelay: "1s" }}></div>
         
-        {/* Additional floating elements */}
+
         <div className="absolute top-1/4 right-1/3 w-48 h-48 rounded-full bg-gradient-to-tr from-green-200/20 to-emerald-200/15 animate-pulse blur-2xl" style={{ animationDelay: "3s" }}></div>
         <div className="absolute bottom-1/3 left-1/4 w-64 h-64 rounded-full bg-gradient-to-bl from-teal-200/15 to-primary/10 animate-pulse blur-2xl" style={{ animationDelay: "4s" }}></div>
         
-        {/* Subtle animated lines */}
+
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-primary/30 to-transparent animate-pulse" style={{ animationDelay: "0.5s" }}></div>
           <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-transparent via-accent/30 to-transparent animate-pulse" style={{ animationDelay: "1.5s" }}></div>
@@ -35,9 +35,9 @@ export function Landing({ onNavigate }: LandingProps) {
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md mx-auto animate-fade-in">
-          {/* Clean Instagram-like Container */}
+
           <div className="post-card p-8 shadow-xl transform hover:scale-[1.02] transition-all duration-500 hover:shadow-2xl backdrop-blur-sm border border-border/50">
-            {/* Form Toggle */}
+
             <div className="flex bg-secondary rounded-xl p-1 mb-8">
               <button
                 onClick={() => setActiveForm("signin")}
@@ -111,7 +111,7 @@ function SignInForm({ onNavigate }: SignInFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Logo */}
+
       <div className="text-center mb-6">
         <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-primary/10 to-accent/10 px-6 py-3 rounded-full mb-4 border border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <div className="w-8 h-8 flex items-center justify-center p-1 bg-gradient-to-br from-primary to-accent rounded-full">
@@ -186,6 +186,8 @@ function SignInForm({ onNavigate }: SignInFormProps) {
       >
         {loading ? "Signing In..." : "Sign In"}
       </button>
+
+
     </form>
   );
 }
@@ -231,7 +233,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Logo */}
+
       <div className="text-center mb-6">
         <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-primary/10 to-accent/10 px-6 py-3 rounded-full mb-4 border border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <div className="w-8 h-8 flex items-center justify-center p-1 bg-gradient-to-br from-primary to-accent rounded-full">
@@ -283,6 +285,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
           >
             <option value="student">Student</option>
             <option value="instructor">Instructor</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
 
@@ -301,7 +304,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
               })
             }
             className="input-clean w-full px-4 py-3"
-            placeholder="Enter your email"
+            placeholder="Enter your email address"
           />
         </div>
 
@@ -338,6 +341,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
       >
         {loading ? "Creating Account..." : "Create Account"}
       </button>
+
     </form>
   );
 }

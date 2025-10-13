@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensils, Clock, Thermometer, Users, BookOpen, Star, ArrowRight, Sparkles } from 'lucide-react'
 
-
+// Gemini API Configuration
 const GEMINI_API_KEY = 'AIzaSyDyUg2FIWKve9YAP3bytJ2aWFZRQP4C970'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
@@ -23,7 +23,7 @@ interface FAQ {
 }
 
 const FAQS: FAQ[] = [
-
+  // Cooking Techniques
   {
     id: 'knife-skills-basic',
     question: 'What are the basic knife skills every chef should know?',
@@ -57,7 +57,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['sauce-mother-sauces', 'fixing-broken-sauce']
   },
 
-
+  // Ingredients
   {
     id: 'seasoning-basics',
     question: 'When and how should I season my food?',
@@ -91,7 +91,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['smoke-points', 'oil-storage']
   },
 
-
+  // Equipment
   {
     id: 'essential-equipment',
     question: 'What are the essential tools every home cook should have?',
@@ -117,7 +117,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['cooking-temperatures', 'food-safety-temps']
   },
 
-
+  // Food Safety
   {
     id: 'food-safety-temps',
     question: 'What are the safe internal temperatures for different meats?',
@@ -143,7 +143,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['kitchen-sanitization', 'food-storage']
   },
 
-
+  // Baking
   {
     id: 'baking-measurements',
     question: 'Why is measuring by weight important in baking?',
@@ -169,7 +169,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['flour-types', 'mixing-techniques']
   },
 
-
+  // Recipe Development
   {
     id: 'recipe-scaling',
     question: 'How do I properly scale recipes up or down?',
@@ -195,7 +195,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['ingredient-functions', 'dietary-modifications']
   },
 
-
+  // Common Problems
   {
     id: 'fixing-broken-sauce',
     question: 'How do I fix a broken or separated sauce?',
@@ -254,7 +254,10 @@ export function ChatBot() {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [buttonPosition, setButtonPosition] = useState({ right: 24, bottom: 24 })
+  const [buttonPosition, setButtonPosition] = useState({ 
+    right: 24, 
+    bottom: window.innerWidth < 768 ? 100 : 24 // Higher on mobile to avoid bottom navbar
+  })
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
   useEffect(() => {
@@ -327,7 +330,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
       const data = await response.json()
       
-
+      // Check if we got a valid response
       if (!data.candidates || data.candidates.length === 0) {
         throw new Error('No response generated from AI')
       }
@@ -338,13 +341,13 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         throw new Error('Invalid response format from AI')
       }
 
-
+      // Update chat history
       chatHistoryRef.current.push(
         { role: 'user', parts: userMessage },
         { role: 'model', parts: text }
       )
 
-
+      // Keep only last 10 exchanges to manage context
       if (chatHistoryRef.current.length > 20) {
         chatHistoryRef.current = chatHistoryRef.current.slice(-20)
       }
@@ -352,7 +355,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       return text
     } catch (error) {
       console.error('Gemini API Error:', error)
-
+      // Return a more helpful error message
       if (error instanceof Error && error.message.includes('not found')) {
         throw new Error('AI model temporarily unavailable. Please try FAQ mode or try again later.')
       }
@@ -374,12 +377,12 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
   const findBestAnswer = (query: string): FAQ | null => {
     const lowerQuery = query.toLowerCase()
     
-
+    // Exact keyword match
     let bestMatch = FAQS.find(faq =>
       faq.keywords.some(keyword => lowerQuery.includes(keyword.toLowerCase()))
     )
 
-
+    // If no keyword match, try partial question match
     if (!bestMatch) {
       bestMatch = FAQS.find(faq =>
         faq.question.toLowerCase().includes(lowerQuery) ||
@@ -405,12 +408,12 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         const aiResponse = await getGeminiResponse(userMessage)
         addMessage(aiResponse, 'bot', 'ai')
         
-
+        // Optionally suggest related FAQs based on keywords
         const bestAnswer = findBestAnswer(userMessage)
         if (bestAnswer && bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
           const relatedFAQs = FAQS.filter(faq => 
             bestAnswer.relatedFAQs?.includes(faq.id)
-          ).slice(0, 3) 
+          ).slice(0, 3) // Limit to 3 suggestions
           
           if (relatedFAQs.length > 0) {
             const suggestions = relatedFAQs.map(faq => faq.question).join('\n• ')
@@ -521,12 +524,18 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX
       const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
       
+      // Calculate deltas correctly for bottom/right positioning
+      // For right: drag right (increase X) should decrease right value (move away from right edge)
+      // For bottom: drag down (increase Y) should decrease bottom value (move away from bottom edge)
       const deltaX = dragStart.x - clientX
-      const deltaY = clientY - dragStart.y
+      const deltaY = dragStart.y - clientY
       
       setButtonPosition(prev => {
+        // Add delta to move in the correct direction
+        // Constrain to screen bounds with mobile navbar consideration
+        const minBottom = isMobile ? 90 : 16 // Keep above mobile navbar
         const newRight = Math.max(16, Math.min(window.innerWidth - 72, prev.right + deltaX))
-        const newBottom = Math.max(16, Math.min(window.innerHeight - 72, prev.bottom + deltaY))
+        const newBottom = Math.max(minBottom, Math.min(window.innerHeight - 72, prev.bottom + deltaY))
         return { right: newRight, bottom: newBottom }
       })
       
@@ -550,7 +559,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       document.removeEventListener('touchmove', handleDragMove)
       document.removeEventListener('touchend', handleDragEnd)
     }
-  }, [isDragging, dragStart])
+  }, [isDragging, dragStart, isMobile])
 
   // Handle window resize
   useEffect(() => {

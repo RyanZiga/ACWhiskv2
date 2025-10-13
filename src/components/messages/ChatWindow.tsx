@@ -50,7 +50,7 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -83,16 +83,16 @@ export function ChatWindow({
   const handleMessageChange = (value: string) => {
     setNewMessage(value)
     
-
+    // Handle typing indicator
     if (value.length > 0) {
       onTyping(true)
       
-
+      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
       }
       
-
+      // Set timeout to stop typing indicator
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false)
       }, 2000)

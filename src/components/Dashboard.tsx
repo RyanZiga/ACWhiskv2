@@ -7,6 +7,7 @@ import { RoleChecker } from './RoleChecker'
 import { StorageTestComponent } from './StorageTestComponent'
 import { UploadComparisonTest } from './UploadComparisonTest'
 import { RoleSwitcher } from './RoleSwitcher'
+import { isValidUUID } from '../utils/auth'
 
 interface User {
   id: string
@@ -103,6 +104,13 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const loadSubmissions = async () => {
     try {
+      // Validate user ID before making request
+      if (!isValidUUID(user.id)) {
+        console.error('Invalid user ID:', user.id)
+        setSubmissions([])
+        return
+      }
+
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/submissions?user_id=${user.id}`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,

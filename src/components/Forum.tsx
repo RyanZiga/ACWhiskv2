@@ -49,7 +49,7 @@ export function Forum({ user, onNavigate }: ForumProps) {
 
   const loadPosts = async () => {
     try {
-      const response = await fetch(`https://${projectId}.supabase.co/rest/v1/forum_posts?select=*,replies(*)`, {
+      const response = await fetch(`https://${projectId}.supabase.co/rest/v1/forum_posts?select=*&order=created_at.desc`, {
         headers: {
           'apikey': publicAnonKey,
           'Authorization': `Bearer ${user.access_token}`,
@@ -59,7 +59,12 @@ export function Forum({ user, onNavigate }: ForumProps) {
 
       if (response.ok) {
         const data = await response.json()
-        setPosts(data)
+        // Initialize replies as empty array for now
+        const postsWithReplies = data.map((post: any) => ({
+          ...post,
+          replies: []
+        }))
+        setPosts(postsWithReplies)
       }
     } catch (error) {
       console.error('Failed to load posts:', error)

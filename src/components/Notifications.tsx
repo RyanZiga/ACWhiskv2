@@ -283,7 +283,7 @@ export function Notifications({ user, onNavigate }: NotificationsProps) {
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-lg transition-colors touch-target"
+        className="relative text-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-lg transition-colors touch-target px-[13px] py-[7px]"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

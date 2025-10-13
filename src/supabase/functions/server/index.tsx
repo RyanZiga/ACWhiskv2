@@ -6,6 +6,15 @@ import * as kv from "./kv_store.tsx";
 
 const app = new Hono();
 
+// Health check endpoint
+app.get("/health", (c) => {
+  return c.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    service: "ACWhisk Messages Server"
+  });
+});
+
 app.use("*", logger(console.log));
 app.use(
   "*",
@@ -15,6 +24,22 @@ app.use(
     allowMethods: ["*"],
   }),
 );
+
+// Add timeout middleware
+app.use("*", async (c, next) => {
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Request timeout")), 25000)
+  );
+  
+  try {
+    await Promise.race([next(), timeoutPromise]);
+  } catch (error) {
+    if (error.message === "Request timeout") {
+      return c.json({ error: "Request timeout" }, 408);
+    }
+    throw error;
+  }
+});
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -33,6 +58,7 @@ async function initializeBuckets() {
     "make-c56dfc7a-assignments",
     "make-c56dfc7a-submissions",
     "make-c56dfc7a-assignment-files",
+    "make-c56dfc7a-stories",
   ];
 
   for (const bucketName of buckets) {
@@ -64,6 +90,13 @@ async function initializeBuckets() {
 // Initialize buckets on startup
 initializeBuckets();
 
+// UUID validation utility
+function isValidUUID(uuid: string | null | undefined): boolean {
+  if (!uuid || typeof uuid !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 // Auth helper function
 async function getUserFromToken(accessToken: string) {
   if (!accessToken) return null;
@@ -76,14 +109,21 @@ async function getUserFromToken(accessToken: string) {
 }
 
 // Helper function to ensure user profile has all required fields
-function ensureUserProfile(profile: any) {
+function ensureUserProfile(profile: any, fallbackId?: string) {
+  // Ensure we have a valid ID - check if profile.id exists and is a valid UUID
+  let userId = profile?.id;
+  if (!userId || userId === "" || !isValidUUID(userId)) {
+    userId = fallbackId || "";
+  }
+  
   return {
-    id: profile?.id || "",
+    id: userId,
     email: profile?.email || "",
     name: profile?.name || "",
-    role: profile?.role || "student",
+    role: profile?.role || null, // Allow null role for onboarding users
     status: profile?.status || "active",
     created_at: profile?.created_at || new Date().toISOString(),
+    needs_onboarding: profile?.needs_onboarding !== undefined ? profile.needs_onboarding : false,
     last_login: profile?.last_login || null,
     portfolio: profile?.portfolio || {},
     achievements: Array.isArray(profile?.achievements)
@@ -108,6 +148,72 @@ function ensureUserProfile(profile: any) {
     },
   };
 }
+
+// Google Sign up endpoint
+app.post("/make-server-c56dfc7a/google-signup", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    console.log("🔐 Google signup: Getting user from token...");
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      console.error("❌ Google signup: Unauthorized - no user from token");
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    console.log("✅ Google signup: User authenticated:", user.id, user.email);
+
+    const {
+      email,
+      name,
+      avatar_url,
+      needs_onboarding = true
+    } = await c.req.json();
+
+    console.log("📝 Google signup: Creating profile with data:", {
+      userId: user.id,
+      email: email || user.email,
+      name: name || user.user_metadata?.name || email?.split('@')[0],
+      needs_onboarding
+    });
+
+    // Store user profile in KV store without a role initially
+    const userProfile = ensureUserProfile({
+      id: user.id,
+      email: email || user.email,
+      name: name || user.user_metadata?.name || email?.split('@')[0],
+      role: null, // No role assigned yet
+      avatar_url: avatar_url || user.user_metadata?.avatar_url,
+      status: "active",
+      created_at: new Date().toISOString(),
+      needs_onboarding
+    }, user.id); // Pass user.id as fallback
+
+    console.log("🔍 Google signup: Profile after ensureUserProfile:", {
+      id: userProfile.id,
+      email: userProfile.email,
+      name: userProfile.name,
+      needs_onboarding: userProfile.needs_onboarding
+    });
+
+    // Validate the profile before storing
+    if (!userProfile.id || !isValidUUID(userProfile.id)) {
+      console.error("❌ Invalid user ID in Google signup profile:", userProfile.id);
+      return c.json({ error: "Invalid user profile data" }, 500);
+    }
+
+    await kv.set(`user:${user.id}`, userProfile);
+
+    console.log("✅ Google user profile created successfully:", userProfile.id);
+    return c.json({ profile: userProfile });
+  } catch (error) {
+    console.error("❌ Google signup error:", error);
+    return c.json(
+      { error: "Internal server error during Google signup" },
+      500,
+    );
+  }
+});
 
 // Sign up endpoint
 app.post("/make-server-c56dfc7a/signup", async (c) => {
@@ -142,7 +248,7 @@ app.post("/make-server-c56dfc7a/signup", async (c) => {
       role,
       status: "active",
       created_at: new Date().toISOString(),
-    });
+    }, data.user.id); // Pass user.id as fallback
 
     await kv.set(`user:${data.user.id}`, userProfile);
 
@@ -169,7 +275,21 @@ app.get("/make-server-c56dfc7a/profile", async (c) => {
     }
 
     const profile = await kv.get(`user:${user.id}`);
-    const safeProfile = ensureUserProfile(profile);
+    
+    if (!profile) {
+      // Profile doesn't exist, return 404 to trigger creation
+      console.log("❌ Profile not found for user:", user.id);
+      return c.json({ error: "Profile not found" }, 404);
+    }
+    
+    console.log("✅ Profile found for user:", user.id, "Profile data:", profile);
+    const safeProfile = ensureUserProfile(profile, user.id);
+    
+    // Double-check the profile has the correct user ID from auth
+    if (!safeProfile.id || safeProfile.id === "" || !isValidUUID(safeProfile.id)) {
+      console.log("⚠️ Fixing invalid profile ID. Current:", safeProfile.id, "Setting to:", user.id);
+      safeProfile.id = user.id;
+    }
     
     // Update last login time
     safeProfile.last_login = new Date().toISOString();
@@ -182,10 +302,183 @@ app.get("/make-server-c56dfc7a/profile", async (c) => {
   }
 });
 
+// Get all users (for suggestions) - MUST come before /users/:id
+app.get("/make-server-c56dfc7a/users/all", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Get all users
+    const allUsers = await kv.getByPrefix("user:");
+    const safeUsers = Array.isArray(allUsers) ? allUsers : [];
+
+    // Map to public profile format
+    const publicUsers = safeUsers
+      .filter((userProfile: any) => {
+        const safeProfile = ensureUserProfile(userProfile, userProfile?.id);
+        return safeProfile.id && isValidUUID(safeProfile.id);
+      })
+      .map((userProfile: any) => {
+        const safeProfile = ensureUserProfile(userProfile, userProfile?.id);
+        return {
+          id: safeProfile.id,
+          name: safeProfile.name,
+          role: safeProfile.role,
+          bio: safeProfile.bio,
+          avatar_url: safeProfile.avatar_url,
+          followers: safeProfile.followers,
+          following: safeProfile.following,
+        };
+      })
+      .slice(0, 100); // Limit to 100 users for performance
+
+    return c.json({ users: publicUsers });
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    return c.json({ error: "Error fetching users" }, 500);
+  }
+});
+
+// Get user's following list - MUST come before /users/:id
+app.get("/make-server-c56dfc7a/users/:id/following", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = c.req.param("id");
+    
+    if (!isValidUUID(userId)) {
+      return c.json({ error: "Invalid user ID" }, 400);
+    }
+
+    const userProfile = await kv.get(`user:${userId}`);
+    
+    if (!userProfile) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const safeProfile = ensureUserProfile(userProfile, userId);
+    
+    // Return following list with user details
+    const followingDetails = [];
+    for (const followingId of safeProfile.following) {
+      if (isValidUUID(followingId)) {
+        followingDetails.push({ following_id: followingId });
+      }
+    }
+
+    return c.json({ following: followingDetails });
+  } catch (error) {
+    console.error("Error fetching following list:", error);
+    return c.json({ error: "Error fetching following list" }, 500);
+  }
+});
+
+// Follow a user - MUST come before /users/:id
+app.post("/make-server-c56dfc7a/users/follow", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { target_user_id } = await c.req.json();
+    
+    if (!isValidUUID(target_user_id)) {
+      return c.json({ error: "Invalid user ID" }, 400);
+    }
+
+    const currentUserProfile = await kv.get(`user:${user.id}`);
+    const targetUserProfile = await kv.get(`user:${target_user_id}`);
+
+    if (!targetUserProfile) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const safeCurrentProfile = ensureUserProfile(currentUserProfile, user.id);
+    const safeTargetProfile = ensureUserProfile(targetUserProfile, target_user_id);
+
+    // Add to following/followers if not already following
+    if (!safeCurrentProfile.following.includes(target_user_id)) {
+      safeCurrentProfile.following.push(target_user_id);
+      safeTargetProfile.followers.push(user.id);
+    }
+
+    await kv.set(`user:${user.id}`, safeCurrentProfile);
+    await kv.set(`user:${target_user_id}`, safeTargetProfile);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error following user:", error);
+    return c.json({ error: "Error following user" }, 500);
+  }
+});
+
+// Unfollow a user - MUST come before /users/:id
+app.post("/make-server-c56dfc7a/users/unfollow", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { target_user_id } = await c.req.json();
+    
+    if (!isValidUUID(target_user_id)) {
+      return c.json({ error: "Invalid user ID" }, 400);
+    }
+
+    const currentUserProfile = await kv.get(`user:${user.id}`);
+    const targetUserProfile = await kv.get(`user:${target_user_id}`);
+
+    if (!targetUserProfile) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const safeCurrentProfile = ensureUserProfile(currentUserProfile, user.id);
+    const safeTargetProfile = ensureUserProfile(targetUserProfile, target_user_id);
+
+    // Remove from following/followers
+    safeCurrentProfile.following = safeCurrentProfile.following.filter(
+      (id: string) => id !== target_user_id
+    );
+    safeTargetProfile.followers = safeTargetProfile.followers.filter(
+      (id: string) => id !== user.id
+    );
+
+    await kv.set(`user:${user.id}`, safeCurrentProfile);
+    await kv.set(`user:${target_user_id}`, safeTargetProfile);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error unfollowing user:", error);
+    return c.json({ error: "Error unfollowing user" }, 500);
+  }
+});
+
 // Get user profile by ID
 app.get("/make-server-c56dfc7a/users/:id", async (c) => {
   try {
     const userId = c.req.param("id");
+    
+    // Validate the user ID is a proper UUID
+    if (!isValidUUID(userId)) {
+      console.error("Invalid user ID:", userId);
+      return c.json({ error: "Invalid user ID format" }, 400);
+    }
+    
     const profile = await kv.get(`user:${userId}`);
 
     if (!profile) {
@@ -193,7 +486,7 @@ app.get("/make-server-c56dfc7a/users/:id", async (c) => {
     }
 
     // Ensure profile has all required fields and return safe public profile
-    const safeProfile = ensureUserProfile(profile);
+    const safeProfile = ensureUserProfile(profile, userId);
     const publicProfile = {
       id: safeProfile.id,
       name: safeProfile.name,
@@ -230,22 +523,30 @@ app.get("/make-server-c56dfc7a/search/users", async (c) => {
     }
 
     const query = c.req.query("q")?.toLowerCase() || "";
-    const allUsers = await kv.getByPrefix("user:");
+    
+    if (!query || query.length < 2) {
+      return c.json({ users: [] });
+    }
 
-    const filteredUsers = allUsers
+    // Get all users but limit search for performance
+    const allUsers = await kv.getByPrefix("user:");
+    
+    // Limit processing to prevent timeouts
+    const limitedUsers = Array.isArray(allUsers) ? allUsers.slice(0, 1000) : [];
+
+    const filteredUsers = limitedUsers
       .filter((userProfile: any) => {
-        const safeProfile = ensureUserProfile(userProfile);
-        return (
-          safeProfile.name.toLowerCase().includes(query) ||
-          safeProfile.bio.toLowerCase().includes(query) ||
-          (safeProfile.skills &&
-            safeProfile.skills.some((skill: string) =>
-              skill.toLowerCase().includes(query),
-            ))
-        );
+        try {
+          const safeProfile = ensureUserProfile(userProfile, userProfile?.id);
+          // Only search by name for performance
+          return safeProfile.name.toLowerCase().includes(query);
+        } catch (err) {
+          return false;
+        }
       })
+      .slice(0, 20) // Limit results
       .map((userProfile: any) => {
-        const safeProfile = ensureUserProfile(userProfile);
+        const safeProfile = ensureUserProfile(userProfile, userProfile?.id);
         return {
           id: safeProfile.id,
           name: safeProfile.name,
@@ -279,11 +580,12 @@ app.put("/make-server-c56dfc7a/profile", async (c) => {
     const updates = await c.req.json();
     const currentProfile = await kv.get(`user:${user.id}`);
     const safeCurrentProfile =
-      ensureUserProfile(currentProfile);
+      ensureUserProfile(currentProfile, user.id);
 
     const updatedProfile = {
       ...safeCurrentProfile,
       ...updates,
+      id: user.id, // Ensure ID never gets overwritten
     };
     await kv.set(`user:${user.id}`, updatedProfile);
 
@@ -309,6 +611,13 @@ app.post(
       }
 
       const targetUserId = c.req.param("id");
+      
+      // Validate the target user ID is a proper UUID
+      if (!isValidUUID(targetUserId)) {
+        console.error("Invalid target user ID:", targetUserId);
+        return c.json({ error: "Invalid user ID format" }, 400);
+      }
+      
       const { action } = await c.req.json(); // 'follow' or 'unfollow'
 
       const currentUserProfile = await kv.get(
@@ -324,9 +633,11 @@ app.post(
 
       const safeCurrentProfile = ensureUserProfile(
         currentUserProfile,
+        user.id,
       );
       const safeTargetProfile = ensureUserProfile(
         targetUserProfile,
+        targetUserId,
       );
 
       if (action === "follow") {
@@ -524,6 +835,13 @@ app.get("/make-server-c56dfc7a/feed", async (c) => {
 app.get("/make-server-c56dfc7a/users/:id/posts", async (c) => {
   try {
     const userId = c.req.param("id");
+    
+    // Validate the user ID is a proper UUID
+    if (!isValidUUID(userId)) {
+      console.error("Invalid user ID:", userId);
+      return c.json({ error: "Invalid user ID format" }, 400);
+    }
+    
     const userPostIds =
       (await kv.get(`user_posts:${userId}`)) || [];
     const safeUserPostIds = Array.isArray(userPostIds)
@@ -798,29 +1116,41 @@ app.get("/make-server-c56dfc7a/conversations", async (c) => {
       : [];
     const conversations = [];
 
-    for (const convId of safeUserConversationIds) {
-      const conversation = await kv.get(
-        `conversation:${convId}`,
-      );
-      if (conversation) {
-        // Get participant info
-        const otherParticipantId =
-          conversation.participants.find(
-            (id: string) => id !== user.id,
-          );
-        const participantProfile = await kv.get(
-          `user:${otherParticipantId}`,
-        );
-        const safeParticipantProfile = ensureUserProfile(
-          participantProfile,
-        );
+    // Limit to prevent timeouts - only get last 50 conversations
+    const limitedConversationIds = safeUserConversationIds.slice(-50);
 
-        conversation.participant = {
-          id: safeParticipantProfile.id,
-          name: safeParticipantProfile.name,
-          avatar_url: safeParticipantProfile.avatar_url,
-        };
-        conversations.push(conversation);
+    for (const convId of limitedConversationIds) {
+      try {
+        const conversation = await kv.get(
+          `conversation:${convId}`,
+        );
+        if (conversation) {
+          // Get participant info
+          const otherParticipantId =
+            conversation.participants.find(
+              (id: string) => id !== user.id,
+            );
+          
+          if (otherParticipantId) {
+            const participantProfile = await kv.get(
+              `user:${otherParticipantId}`,
+            );
+            const safeParticipantProfile = ensureUserProfile(
+              participantProfile,
+              otherParticipantId
+            );
+
+            conversation.participant = {
+              id: safeParticipantProfile.id,
+              name: safeParticipantProfile.name,
+              avatar_url: safeParticipantProfile.avatar_url,
+            };
+            conversations.push(conversation);
+          }
+        }
+      } catch (convError) {
+        console.log(`Error loading conversation ${convId}:`, convError);
+        // Continue with other conversations
       }
     }
 
@@ -867,11 +1197,15 @@ app.post(
         conversation.messages = [];
       }
 
+      // Get sender profile for name
+      const senderProfile = await kv.get(`user:${user.id}`);
+      const safeSenderProfile = ensureUserProfile(senderProfile, user.id);
+      
       const message = {
         id: crypto.randomUUID(),
         content,
         sender_id: user.id,
-        sender_name: user.user_metadata.name,
+        sender_name: safeSenderProfile.name || user.user_metadata?.name || 'Unknown User',
         created_at: new Date().toISOString(),
       };
 
@@ -917,10 +1251,12 @@ app.get(
         return c.json({ error: "Unauthorized" }, 403);
       }
 
-      const messages = Array.isArray(conversation.messages)
-        ? conversation.messages
-        : [];
-      return c.json({ messages });
+      // Ensure messages array exists
+      if (!Array.isArray(conversation.messages)) {
+        conversation.messages = [];
+      }
+      
+      return c.json({ conversation });
     } catch (error) {
       console.log("Messages fetch error:", error);
       return c.json({ error: "Error fetching messages" }, 500);
@@ -1820,6 +2156,182 @@ app.get("/make-server-c56dfc7a/users/contacts", async (c) => {
   }
 });
 
+// ================== NOTIFICATION ENDPOINTS ==================
+
+// Get user notifications
+app.get("/make-server-c56dfc7a/notifications", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const limit = parseInt(c.req.query("limit") || "50");
+
+    // Call the Supabase function to get notifications
+    const { data: notifications, error } = await supabase
+      .rpc('get_user_notifications', { 
+        user_uuid: user.id,
+        limit_count: limit 
+      });
+
+    if (error) {
+      console.error("Error fetching notifications:", error);
+      return c.json({ error: "Error fetching notifications" }, 500);
+    }
+
+    return c.json({ notifications: notifications || [] });
+  } catch (error) {
+    console.error("Notification fetch error:", error);
+    return c.json({ error: "Error loading notifications" }, 500);
+  }
+});
+
+// Mark notification as read
+app.put("/make-server-c56dfc7a/notifications/:id", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const notificationId = c.req.param("id");
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId)
+      .eq('user_id', user.id); // Ensure user can only update their own notifications
+
+    if (error) {
+      console.error("Error updating notification:", error);
+      return c.json({ error: "Error updating notification" }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Notification update error:", error);
+    return c.json({ error: "Error updating notification" }, 500);
+  }
+});
+
+// Mark all notifications as read
+app.put("/make-server-c56dfc7a/notifications/mark-all-read", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
+
+    if (error) {
+      console.error("Error marking all notifications as read:", error);
+      return c.json({ error: "Error updating notifications" }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Notification bulk update error:", error);
+    return c.json({ error: "Error updating notifications" }, 500);
+  }
+});
+
+// Delete notification
+app.delete("/make-server-c56dfc7a/notifications/:id", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const notificationId = c.req.param("id");
+
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId)
+      .eq('user_id', user.id); // Ensure user can only delete their own notifications
+
+    if (error) {
+      console.error("Error deleting notification:", error);
+      return c.json({ error: "Error deleting notification" }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Notification delete error:", error);
+    return c.json({ error: "Error deleting notification" }, 500);
+  }
+});
+
+// Get unread notification count
+app.get("/make-server-c56dfc7a/notifications/unread-count", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { data: count, error } = await supabase
+      .rpc('get_unread_notification_count', { user_uuid: user.id });
+
+    if (error) {
+      console.error("Error fetching unread count:", error);
+      return c.json({ error: "Error fetching unread count" }, 500);
+    }
+
+    return c.json({ count: count || 0 });
+  } catch (error) {
+    console.error("Unread count error:", error);
+    return c.json({ error: "Error fetching unread count" }, 500);
+  }
+});
+
+// Mark conversation notifications as read
+app.put("/make-server-c56dfc7a/notifications/conversation/:conversationId", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("conversationId");
+
+    const { error } = await supabase
+      .rpc('mark_conversation_notifications_read', {
+        conv_uuid: conversationId,
+        user_uuid: user.id
+      });
+
+    if (error) {
+      console.error("Error marking conversation notifications as read:", error);
+      return c.json({ error: "Error updating notifications" }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Conversation notifications update error:", error);
+    return c.json({ error: "Error updating notifications" }, 500);
+  }
+});
+
 // ================== ASSIGNMENT ENDPOINTS ==================
 
 // Create assignment (instructors only)
@@ -2092,7 +2604,14 @@ app.get("/make-server-c56dfc7a/submissions", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const userId = c.req.query("user_id") || user.id;
+    const userIdParam = c.req.query("user_id");
+    const userId = userIdParam || user.id;
+
+    // Validate the user ID is a proper UUID
+    if (!isValidUUID(userId)) {
+      console.error("Invalid user ID:", userId);
+      return c.json({ error: "Invalid user ID format" }, 400);
+    }
     const submissions = await kv.getByPrefix("submission:");
     const safeSubmissions = Array.isArray(submissions) ? submissions : [];
 
@@ -2591,6 +3110,284 @@ app.get("/make-server-c56dfc7a/check-role", async (c) => {
   } catch (error) {
     console.log("Role check error:", error);
     return c.json({ error: "Error checking role" }, 500);
+  }
+});
+
+// Stories endpoints
+// Create story
+app.post("/make-server-c56dfc7a/stories/create", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      console.error("Stories: Unauthorized - no user from token");
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { type, media_url, text_content, background_color, duration } = await c.req.json();
+
+    // Get user profile for avatar
+    const userProfile = await kv.get(`user:${user.id}`);
+    const safeUserProfile = ensureUserProfile(userProfile, user.id);
+
+    const storyId = crypto.randomUUID();
+    const story = {
+      id: storyId,
+      user_id: user.id,
+      user_name: safeUserProfile.name,
+      user_avatar: safeUserProfile.avatar_url,
+      type, // 'image', 'video', or 'text'
+      media_url: media_url || '',
+      text_content: text_content || '',
+      background_color: background_color || '#8B5CF6',
+      duration: duration || 5,
+      views: [],
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+    };
+
+    await kv.set(`story:${storyId}`, story);
+
+    // Add to user's stories list
+    const userStories = (await kv.get(`user_stories:${user.id}`)) || [];
+    const safeUserStories = Array.isArray(userStories) ? userStories : [];
+    safeUserStories.unshift(storyId);
+    await kv.set(`user_stories:${user.id}`, safeUserStories);
+
+    console.log(`✅ Story created: ${storyId} by ${user.id}`);
+    return c.json({ story });
+  } catch (error) {
+    console.error("Story creation error:", error);
+    return c.json(
+      { error: `Story creation failed: ${error instanceof Error ? error.message : 'Unknown error'}` },
+      500
+    );
+  }
+});
+
+// Get stories list with following users
+app.get("/make-server-c56dfc7a/stories/list", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Get current user profile for following list
+    const currentUserProfile = await kv.get(`user:${user.id}`);
+    const safeCurrentProfile = ensureUserProfile(currentUserProfile, user.id);
+    const followingIds = Array.isArray(safeCurrentProfile.following) ? safeCurrentProfile.following : [];
+
+    // Get all active stories
+    const allStories = await kv.getByPrefix("story:");
+    const safeStories = Array.isArray(allStories) ? allStories : [];
+    
+    // Filter out expired stories
+    const now = new Date();
+    const activeStories = safeStories.filter((story: any) => {
+      const expiresAt = new Date(story.expires_at);
+      return expiresAt > now;
+    });
+
+    // Check if current user has a story
+    const userStories = activeStories.filter((story: any) => story.user_id === user.id);
+    const userHasStory = userStories.length > 0;
+
+    // Create a map of user stories
+    const storiesByUser = activeStories.reduce((acc: any, story: any) => {
+      if (!acc[story.user_id]) {
+        acc[story.user_id] = [];
+      }
+      acc[story.user_id].push(story);
+      return acc;
+    }, {});
+
+    // Build story groups for following users (whether they have stories or not)
+    const storyGroups = [];
+
+    // First add current user if they have stories
+    if (userHasStory) {
+      const userProfile = safeCurrentProfile;
+      const stories = storiesByUser[user.id] || [];
+      const hasUnviewed = stories.some((s: any) => !s.views.includes(user.id));
+      
+      storyGroups.push({
+        user_id: user.id,
+        user_name: userProfile.name,
+        user_avatar: userProfile.avatar_url || '',
+        stories: stories.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
+        has_unviewed: hasUnviewed,
+        has_story: true
+      });
+    }
+
+    // Then add following users
+    for (const followingId of followingIds) {
+      if (!isValidUUID(followingId)) continue;
+
+      const followingProfile = await kv.get(`user:${followingId}`);
+      if (!followingProfile) continue;
+
+      const safeFollowingProfile = ensureUserProfile(followingProfile, followingId);
+      const stories = storiesByUser[followingId] || [];
+      const hasStory = stories.length > 0;
+      const hasUnviewed = stories.some((s: any) => !s.views.includes(user.id));
+
+      storyGroups.push({
+        user_id: followingId,
+        user_name: safeFollowingProfile.name,
+        user_avatar: safeFollowingProfile.avatar_url || '',
+        stories: stories.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
+        has_unviewed: hasUnviewed,
+        has_story: hasStory
+      });
+    }
+
+    // Sort: users with unviewed stories first, then by most recent story
+    storyGroups.sort((a: any, b: any) => {
+      if (a.has_unviewed && !b.has_unviewed) return -1;
+      if (!a.has_unviewed && b.has_unviewed) return 1;
+      if (a.stories.length > 0 && b.stories.length > 0) {
+        return new Date(b.stories[0].created_at).getTime() - new Date(a.stories[0].created_at).getTime();
+      }
+      if (a.stories.length > 0) return -1;
+      if (b.stories.length > 0) return 1;
+      return 0;
+    });
+
+    return c.json({ 
+      story_groups: storyGroups,
+      user_has_story: userHasStory 
+    });
+  } catch (error) {
+    console.error("Stories list fetch error:", error);
+    return c.json({ error: "Error fetching stories" }, 500);
+  }
+});
+
+// Get all active stories
+app.get("/make-server-c56dfc7a/stories", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Get all stories
+    const allStories = await kv.getByPrefix("story:");
+    const safeStories = Array.isArray(allStories) ? allStories : [];
+    
+    // Filter out expired stories and group by user
+    const now = new Date();
+    const activeStories = safeStories.filter((story: any) => {
+      const expiresAt = new Date(story.expires_at);
+      return expiresAt > now;
+    });
+
+    // Group stories by user
+    const storiesByUser = activeStories.reduce((acc: any, story: any) => {
+      if (!acc[story.user_id]) {
+        acc[story.user_id] = {
+          user_id: story.user_id,
+          user_name: story.user_name,
+          user_avatar: story.user_avatar,
+          stories: [],
+        };
+      }
+      acc[story.user_id].stories.push(story);
+      return acc;
+    }, {});
+
+    // Convert to array and sort by most recent story
+    const groupedStories = Object.values(storiesByUser).sort((a: any, b: any) => {
+      const aLatest = new Date(a.stories[0].created_at).getTime();
+      const bLatest = new Date(b.stories[0].created_at).getTime();
+      return bLatest - aLatest;
+    });
+
+    return c.json({ stories: groupedStories });
+  } catch (error) {
+    console.error("Stories fetch error:", error);
+    return c.json({ error: "Error fetching stories" }, 500);
+  }
+});
+
+// View story (track view)
+app.post("/make-server-c56dfc7a/stories/:id/view", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const storyId = c.req.param("id");
+    const story = await kv.get(`story:${storyId}`);
+
+    if (!story) {
+      return c.json({ error: "Story not found" }, 404);
+    }
+
+    // Add view if not already viewed
+    if (!Array.isArray(story.views)) {
+      story.views = [];
+    }
+
+    if (!story.views.includes(user.id)) {
+      story.views.push(user.id);
+      await kv.set(`story:${storyId}`, story);
+    }
+
+    return c.json({ story });
+  } catch (error) {
+    console.error("Story view error:", error);
+    return c.json({ error: "Error viewing story" }, 500);
+  }
+});
+
+// Delete story
+app.delete("/make-server-c56dfc7a/stories/:id", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const storyId = c.req.param("id");
+    const story = await kv.get(`story:${storyId}`);
+
+    if (!story) {
+      return c.json({ error: "Story not found" }, 404);
+    }
+
+    if (story.user_id !== user.id) {
+      return c.json({ error: "Unauthorized - Not your story" }, 403);
+    }
+
+    // Remove from stories
+    await kv.del(`story:${storyId}`);
+
+    // Remove from user's stories list
+    const userStories = (await kv.get(`user_stories:${user.id}`)) || [];
+    const updatedUserStories = userStories.filter((id: string) => id !== storyId);
+    await kv.set(`user_stories:${user.id}`, updatedUserStories);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Story deletion error:", error);
+    return c.json({ error: "Error deleting story" }, 500);
   }
 });
 

@@ -67,7 +67,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
     try {
       setError(null)
       
-
+      // Validate userId before making API call
       if (!isValidUUID(userId)) {
         console.error('Invalid user ID:', userId)
         setError('Invalid user ID')
@@ -85,7 +85,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       if (response.ok) {
         const { profile: profileData } = await response.json()
         
-
+        // Ensure all required properties exist with default values
         const safeProfile: UserProfile = {
           id: profileData.id || userId,
           name: profileData.name || 'Unknown User',
@@ -131,7 +131,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
       if (response.ok) {
         const { posts: postsData } = await response.json()
-
+        // Ensure posts is always an array
         const safePosts = Array.isArray(postsData) ? postsData.map((post: any) => ({
           ...post,
           images: Array.isArray(post.images) ? post.images : [],
@@ -179,7 +179,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
   }
 
   const startConversation = () => {
-
+    // Navigate to messages page with the target user
     onNavigate('messages', `user:${userId}`)
   }
 

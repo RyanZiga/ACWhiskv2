@@ -6,7 +6,7 @@ import {
   Image, Video, Camera, Play, Send, ChevronRight, CheckCheck,
   XCircle, RotateCcw, FileImage, PlayCircle
 } from 'lucide-react'
-import { User } from '../utils/auth'
+import { User, isValidUUID } from '../utils/auth'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { getAuthenticatedClient } from '../utils/supabase/client'
 
@@ -118,6 +118,13 @@ export function Recipes({ user, onNavigate }: RecipesProps) {
 
   const loadSubmissions = async () => {
     try {
+      // Validate user ID before making request if filtering by student
+      if (user.role === 'student' && !isValidUUID(user.id)) {
+        console.error('Invalid user ID:', user.id)
+        setSubmissions([])
+        return
+      }
+
       const supabase = getAuthenticatedClient()
       
       // Get current session first
@@ -194,7 +201,7 @@ export function Recipes({ user, onNavigate }: RecipesProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-gradient flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading assignments...</p>
@@ -204,7 +211,7 @@ export function Recipes({ user, onNavigate }: RecipesProps) {
   }
 
   return (
-    <div className="min-h-screen bg-theme-gradient">
+    <div className="min-h-screen ">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

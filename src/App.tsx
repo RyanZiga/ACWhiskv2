@@ -27,7 +27,6 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean, error?: string }>
   signup: (email: string, password: string, name: string, role: string) => Promise<{ success: boolean, error?: string }>
-  signInWithGoogle: () => Promise<{ success: boolean, error?: string }>
   completeOnboarding: (role: string) => Promise<{ success: boolean, error?: string }>
   logout: () => Promise<void>
   loading: boolean
@@ -52,37 +51,11 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [targetUserId, setTargetUserId] = useState<string | null>(null)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const createPostRef = React.useRef<(() => void) | null>(null)
 
   useEffect(() => {
     checkSession()
-    
-    // Listen for auth state changes (for Google OAuth callback)
-    const { data: { subscription } } = AuthService.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        console.log('🔔 Auth state changed to SIGNED_IN')
-        const result = await AuthService.handleGoogleCallback()
-        if (result.success && result.user) {
-          setUser(result.user)
-          // Check if user needs onboarding
-          if (result.user.needs_onboarding) {
-            setCurrentPage('onboarding')
-          } else {
-            setCurrentPage('feed')
-          }
-        } else if (result.error) {
-          console.error('❌ Google auth error:', result.error)
-          // Don't set error state here as it will be handled by the login flow
-        }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('🔔 Auth state changed to SIGNED_OUT')
-        setUser(null)
-        setCurrentPage('landing')
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [])
 
   const checkSession = async () => {
@@ -145,19 +118,6 @@ function App() {
       return { 
         success: false, 
         error: `Signup failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
-      }
-    }
-  }
-
-  const signInWithGoogle = async () => {
-    try {
-      const result = await AuthService.signInWithGoogle()
-      return result
-    } catch (error) {
-      console.error('❌ Google sign-in error:', error)
-      return { 
-        success: false, 
-        error: `Google sign-in failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
       }
     }
   }
@@ -255,7 +215,6 @@ function App() {
     user,
     login,
     signup,
-    signInWithGoogle,
     completeOnboarding,
     logout,
     loading,
@@ -290,12 +249,13 @@ function App() {
                 onNavigate={navigateTo}
                 onLogout={logout}
                 unreadMessagesCount={unreadMessagesCount}
+                onCollapseChange={setIsSidebarCollapsed}
+                onCreatePost={() => createPostRef.current?.()}
               />
-              <TopHeader user={user} currentPage={currentPage} onNavigate={navigateTo} onLogout={logout} />
             </>
           )}
           
-          <main className={user && !user.needs_onboarding ? 'lg:ml-80' : ''}>
+          <main className={user && !user.needs_onboarding ? `transition-all duration-300 pb-24 lg:pb-0 ${isSidebarCollapsed ? 'lg:ml-28' : 'lg:ml-72'}` : ''}>
             {currentPage === 'landing' && (
               <Landing onNavigate={navigateTo} />
             )}
@@ -309,7 +269,7 @@ function App() {
             
             {currentPage === 'feed' && user && (
               <div className="pt-0">
-                <Feed user={user} onNavigate={navigateTo} />
+                <Feed user={user} onNavigate={navigateTo} unreadMessagesCount={unreadMessagesCount} onCreatePostRef={createPostRef} />
               </div>
             )}
             

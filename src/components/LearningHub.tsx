@@ -112,7 +112,7 @@ export function LearningHub({ user, onNavigate }: LearningHubProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-gradient">
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -124,7 +124,7 @@ export function LearningHub({ user, onNavigate }: LearningHubProps) {
   }
 
   return (
-    <div className="min-h-screen bg-theme-gradient">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

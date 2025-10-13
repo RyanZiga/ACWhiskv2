@@ -11,6 +11,7 @@ interface TopHeaderProps {
   currentPage: string
   onNavigate: (page: string, id?: string) => void
   onLogout?: () => void
+  isSidebarCollapsed?: boolean
 }
 
 interface SearchResult {
@@ -21,7 +22,7 @@ interface SearchResult {
   bio?: string
 }
 
-export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeaderProps) {
+export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCollapsed = false }: TopHeaderProps) {
   const { isDark, toggleTheme } = useTheme()
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -42,7 +43,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
       case 'search': return 'Search'
       case 'messages': return 'Messages'
       case 'profile': return 'Profile'
-      case 'account': return 'Account'
+      case 'account': return 'Profile'
       case 'admin': return 'Admin Panel'
       case 'recipes': return 'Assignments'
       default: return 'ACWhisk'
@@ -153,11 +154,11 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
   }
 
   return (
-    <header className="lg:ml-80 header-gradient sticky top-0 z-50">
-      <div className="px-6 py-4 rounded-[13px] bg-[rgba(226,232,240,0)]">
+    <header className={`header-gradient sticky top-0 z-50 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-80'}`}>
+      <div className="px-6 py-4 rounded-[13px] bg-[rgba(226,232,240,0)] pl-20 lg:pl-6">
         <div className="flex items-center justify-between">
           {/* Page Title */}
-          <div className="ml-16 lg:ml-0 flex-1 min-w-0">
+          <div className="ml-0 lg:ml-0 flex-1 min-w-0">
             <h1 className="text-xl lg:text-2xl font-bold text-foreground truncate">
               {getPageTitle()}
             </h1>
@@ -198,10 +199,10 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
 
             {/* Notifications */}
             <div className="relative">
-              <Notifications user={user} />
+              <Notifications user={user} onNavigate={onNavigate} />
             </div>
 
-
+            {/* User Avatar with Dropdown */}
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -221,20 +222,20 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
                 )}
               </button>
 
-
+              {/* Dropdown Menu */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-56 post-card rounded-xl shadow-lg z-50 py-2 dropdown-mobile">
-
+                  {/* User Info */}
                   <div className="px-4 py-3 border-b border-border">
                     <p className="font-medium text-foreground truncate">{user.name}</p>
                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   </div>
 
-
+                  {/* Menu Items */}
                   <div className="py-2">
                     <button
                       onClick={() => {
-                        onNavigate('account', user.id)
+                        onNavigate('profile')
                         setShowUserMenu(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
@@ -245,7 +246,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout }: TopHeader
 
                     <button
                       onClick={() => {
-                        onNavigate('profile', user.id)
+                        onNavigate('account', user.id)
                         setShowUserMenu(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"

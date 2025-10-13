@@ -58,7 +58,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md border-b border-gray-200 z-50">
+    <header className="fixed top-0 left-0 right-0 header-gradient z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -74,7 +74,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="font-bold text-xl text-gray-900 hidden sm:block group-hover:text-purple-600 transition-colors">
+              <span className="font-bold text-xl text-foreground hidden sm:block group-hover:text-primary transition-colors">
                 Acwhisk
               </span>
             </button>
@@ -88,8 +88,8 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                 onClick={() => onNavigate(item.id)}
                 className={`px-4 py-2 rounded-lg transition-all duration-200 relative ${
                   currentPage === item.id
-                    ? 'bg-purple-100 text-purple-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-primary/10 text-primary shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 {item.name}
@@ -107,8 +107,8 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
               onClick={() => onNavigate('search')}
               className={`p-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'search'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <Search className="h-5 w-5" />
@@ -124,8 +124,8 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
               onClick={() => onNavigate('messages')}
               className={`p-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'messages'
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,11 +139,11 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-200 ${
                   currentPage === 'profile' || showProfileMenu
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
                     {user.name.charAt(0).toUpperCase()}
                   </span>
@@ -162,22 +162,22 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                   />
                   
                   {/* Dropdown Menu */}
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-40 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-64 post-card shadow-xl z-40 overflow-hidden">
                     {/* User Info */}
-                    <div className="p-4 bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200">
+                    <div className="p-4 bg-muted border-b border-border">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center">
                           <span className="text-white font-medium">
                             {user.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                          <p className="text-sm text-gray-600">{user.email}</p>
+                          <h3 className="font-semibold text-foreground">{user.name}</h3>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 capitalize ${
-                            user.role === 'instructor' ? 'bg-blue-100 text-blue-700' :
-                            user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                            'bg-gray-100 text-gray-700'
+                            user.role === 'instructor' ? 'bg-primary text-primary-foreground' :
+                            user.role === 'admin' ? 'bg-accent text-accent-foreground' :
+                            'bg-muted text-muted-foreground'
                           }`}>
                             {user.role}
                           </span>
@@ -189,7 +189,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                     <div className="py-2">
                       <button
                         onClick={() => handleProfileNavigation('profile')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-foreground hover:bg-muted transition-colors"
                       >
                         <User className="h-4 w-4" />
                         <span>Profile Settings</span>
@@ -197,17 +197,17 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                       
                       <button
                         onClick={() => handleProfileNavigation('account')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-foreground hover:bg-muted transition-colors"
                       >
                         <Settings className="h-4 w-4" />
                         <span>Account Settings</span>
                       </button>
 
-                      <div className="border-t border-gray-200 my-2"></div>
+                      <div className="border-t border-border my-2"></div>
 
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Sign Out</span>
@@ -221,7 +221,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
             {/* Mobile menu button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
             >
               {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
