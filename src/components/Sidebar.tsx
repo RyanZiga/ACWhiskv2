@@ -445,7 +445,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            onNavigate('account')
+            onNavigate('profile')
           }}
           className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all duration-200 group touch-manipulation min-h-[52px] text-sidebar-foreground hover:bg-sidebar-accent/50"
           type="button"
