@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Bell, Search, Moon, Sun, X, Loader2, User as UserIcon, Settings, LogOut } from 'lucide-react'
+import { Search, X, Loader2, Send } from 'lucide-react'
 import { Notifications } from './Notifications'
 import { User } from '../utils/auth'
-import { useTheme } from '../contexts/ThemeContext'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { projectId } from '../utils/supabase/info'
+import logoImage from 'figma:asset/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png'
 
 interface TopHeaderProps {
   user: User
@@ -23,15 +23,12 @@ interface SearchResult {
 }
 
 export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCollapsed = false }: TopHeaderProps) {
-  const { isDark, toggleTheme } = useTheme()
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
-  const userMenuRef = useRef<HTMLDivElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
 
   const getPageTitle = () => {
@@ -50,14 +47,11 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
     }
   }
 
-  // Close search results when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false)
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false)
       }
     }
 
@@ -65,7 +59,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Search users with debouncing
+
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
@@ -154,18 +148,23 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
   }
 
   return (
-    <header className={`header-gradient sticky top-0 z-50 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-80'}`}>
-      <div className="px-6 py-4 rounded-[13px] bg-[rgba(226,232,240,0)] pl-20 lg:pl-6">
-        <div className="flex items-center justify-between">
-          {/* Page Title */}
-          <div className="ml-0 lg:ml-0 flex-1 min-w-0">
-            <h1 className="text-xl lg:text-2xl font-bold text-foreground truncate">
-              {getPageTitle()}
-            </h1>
-            <p className="text-xs lg:text-sm text-muted-foreground mt-1 truncate">
-              Welcome back, {user.name}
-            </p>
-          </div>
+    <header className={`z-40 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[5.5rem]' : 'lg:ml-[18rem]'}`}>
+      <div className="px-4 py-3 pl-4 lg:px-6 lg:py-4 lg:pl-8">
+        <div className="flex items-center justify-between gap-4">
+          {/* ACWhisk Logo */}
+          <button
+            onClick={() => onNavigate('feed')}
+            className="flex items-center space-x-2 group flex-shrink-0 rounded-xl px-3 py-2 -ml-2 lg:ml-0 lg:px-2 lg:py-0 transition-all duration-300 "
+          >
+            <ImageWithFallback
+              src={logoImage}
+              alt="ACWhisk Logo"
+              className="w-9 h-9 lg:w-10 lg:h-10 object-contain group-hover:scale-105 transition-transform duration-200 drop-shadow-[0_2px_4px_rgba(220,38,38,0.3)] dark:drop-shadow-[0_2px_4px_rgba(239,68,68,0.4)]"
+            />
+            <span className="font-bold text-lg lg:text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent drop-shadow-sm">
+              ACWhisk
+            </span>
+          </button>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-2 lg:space-x-4 relative z-10">
@@ -183,94 +182,20 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
               <Search className="h-5 w-5" />
             </button>
 
-            {/* Theme Toggle */}
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                toggleTheme()
-              }}
-              className="relative p-2 lg:p-3 text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              type="button"
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-
             {/* Notifications */}
             <div className="relative">
               <Notifications user={user} onNavigate={onNavigate} />
             </div>
 
-            {/* User Avatar with Dropdown */}
-            <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="w-8 h-8 lg:w-10 lg:h-10 avatar-gradient rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform cursor-pointer overflow-hidden"
-                aria-label="User menu"
-              >
-                {user.avatar_url ? (
-                  <ImageWithFallback
-                    src={user.avatar_url}
-                    alt={user.name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white text-sm lg:text-base font-medium">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </button>
-
-              {/* Dropdown Menu */}
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 post-card rounded-xl shadow-lg z-50 py-2 dropdown-mobile">
-                  {/* User Info */}
-                  <div className="px-4 py-3 border-b border-border">
-                    <p className="font-medium text-foreground truncate">{user.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                  </div>
-
-                  {/* Menu Items */}
-                  <div className="py-2">
-                    <button
-                      onClick={() => {
-                        onNavigate('profile')
-                        setShowUserMenu(false)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
-                    >
-                      <UserIcon className="h-4 w-4" />
-                      <span>Profile</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onNavigate('account', user.id)
-                        setShowUserMenu(false)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-secondary flex items-center space-x-3 transition-colors"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Settings</span>
-                    </button>
-
-                    <div className="border-t border-border my-2"></div>
-
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false)
-                        onLogout?.()
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center space-x-3 transition-colors"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Sign out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Messages */}
+            <button
+              onClick={() => onNavigate('messages')}
+              className="relative p-2 lg:p-3 text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              title="Messages"
+              type="button"
+            >
+              <Send className="h-5 w-5" />
+            </button>
           </div>
         </div>
 

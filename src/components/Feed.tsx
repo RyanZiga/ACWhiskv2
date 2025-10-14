@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Send,
   Clock,
   Star,
   Users,
@@ -27,13 +26,10 @@ import {
   Video,
   FileText,
   Image as ImageIcon,
-  Bell,
-  Search,
 } from "lucide-react";
 import { projectId } from "../utils/supabase/info";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { LinkifiedText } from "../utils/linkify";
-import { Notifications } from "./Notifications";
 import { UserRoleBadge } from "./UserRoleBadge";
 import { StoryCreator } from "./StoryCreator";
 import { StoryViewer } from "./StoryViewer";
@@ -224,6 +220,8 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
   const [userHasStory, setUserHasStory] = useState(false);
 
+
+
   // Expose create post function to parent
   useEffect(() => {
     if (onCreatePostRef) {
@@ -258,6 +256,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       if (!target.closest('[data-dropdown]') && !target.closest('[data-dropdown-trigger]')) {
         setActiveDropdown(null);
       }
+
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -279,6 +278,13 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
 
   const loadFeed = async () => {
     try {
+      if (!user.access_token) {
+        console.warn("No access token available, using demo data");
+        generateDemoPosts();
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/feed`,
         {
@@ -286,18 +292,30 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         },
       );
 
       if (response.ok) {
         const { posts: feedPosts } = await response.json();
-        setPosts(feedPosts);
+        setPosts(feedPosts || []);
       } else {
-        // Fallback to demo data with real-time simulation
+        const statusText = response.statusText || 'Unknown error';
+        console.warn(`Feed API returned ${response.status}: ${statusText}. Using demo data.`);
         generateDemoPosts();
       }
     } catch (error) {
-      console.error("Error loading feed:", error);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+          console.warn("Feed request timed out. Edge function may not be deployed. Using demo data.");
+        } else if (error.message.includes('Failed to fetch')) {
+          console.warn("Network error or Edge function not deployed. Using demo data.");
+        } else {
+          console.warn("Error loading feed:", error.message);
+        }
+      } else {
+        console.warn("Unknown error loading feed. Using demo data.");
+      }
       generateDemoPosts();
     } finally {
       setLoading(false);
@@ -306,6 +324,11 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
 
   const loadTopRecipes = async () => {
     try {
+      if (!user.access_token) {
+        generateTopRecipes();
+        return;
+      }
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/recipes/top-rated`,
         {
@@ -313,30 +336,36 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(10000),
         },
       );
 
       if (response.ok) {
         const { recipes } = await response.json();
-        setTopRecipes(recipes.slice(0, 5));
+        setTopRecipes(recipes?.slice(0, 5) || []);
       } else {
-        // Generate realistic top recipes
+        console.warn(`Recipes API returned ${response.status}. Using demo data.`);
         generateTopRecipes();
       }
     } catch (error) {
-      console.error("Error loading top recipes:", error);
+      if (error instanceof Error && !error.message.includes('AbortError')) {
+        console.warn("Error loading top recipes, using demo data:", error.message);
+      }
       generateTopRecipes();
     }
   };
 
   const loadStories = async () => {
     try {
+      if (!user.access_token) return;
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/stories/list`,
         {
           headers: {
             Authorization: `Bearer ${user.access_token}`,
           },
+          signal: AbortSignal.timeout(10000),
         }
       );
 
@@ -346,7 +375,9 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         setUserHasStory(data.user_has_story || false);
       }
     } catch (error) {
-      console.error("Error loading stories:", error);
+      if (error instanceof Error && !error.message.includes('AbortError')) {
+        console.warn("Error loading stories:", error.message);
+      }
     }
   };
 
@@ -368,11 +399,16 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     }
   };
 
-  const handleStoryClick = (index: number) => {
+  const handleStoryClick = (userId: string) => {
     // Filter out users with no stories
     const groupsWithStories = storyGroups.filter(group => group.stories && group.stories.length > 0);
     
     if (groupsWithStories.length === 0) return;
+    
+    // Find the index of the clicked user in the filtered array
+    const index = groupsWithStories.findIndex(group => group.user_id === userId);
+    
+    if (index === -1) return; // User not found
     
     setViewerStartIndex(index);
     setShowStoryViewer(true);
@@ -380,6 +416,8 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
 
   const loadSuggestedUsers = async () => {
     try {
+      if (!user.access_token) return;
+
       // Fetch all users
       const usersResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/all`,
@@ -388,13 +426,14 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(10000),
         },
       );
 
       if (usersResponse.ok) {
         const { users: allUsers } = await usersResponse.json();
-        // Filter out current user and limit to 5 suggestions
-        const suggestions = allUsers
+        // Filter out current user and limit to 3 suggestions
+        const suggestions = (allUsers || [])
           .filter((u: any) => u.id !== user.id)
           .slice(0, 3);
         setSuggestedUsers(suggestions);
@@ -408,15 +447,18 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(10000),
         },
       );
 
       if (followingResponse.ok) {
         const { following } = await followingResponse.json();
-        setFollowingUsers(new Set(following.map((f: any) => f.following_id)));
+        setFollowingUsers(new Set((following || []).map((f: any) => f.following_id)));
       }
     } catch (error) {
-      console.error("Error loading suggested users:", error);
+      if (error instanceof Error && !error.message.includes('AbortError')) {
+        console.warn("Error loading suggested users:", error.message);
+      }
     }
   };
 
@@ -851,33 +893,42 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     setSearchLoading(true);
 
     try {
-      // Search for users
-      const usersResponse = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/search?query=${encodeURIComponent(query)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${user.access_token}`,
-          },
-        }
-      );
+      // Search for users, posts, and assignments in parallel
+      const [usersResponse, postsResponse, assignmentsResponse] = await Promise.all([
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/search?query=${encodeURIComponent(query)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.access_token}`,
+            },
+          }
+        ),
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/search?query=${encodeURIComponent(query)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.access_token}`,
+            },
+          }
+        ),
+        fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/assignments/search?query=${encodeURIComponent(query)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.access_token}`,
+            },
+          }
+        )
+      ]);
 
       const users = usersResponse.ok ? (await usersResponse.json()).users || [] : [];
+      const searchPosts = postsResponse.ok ? (await postsResponse.json()).posts || [] : [];
+      const recipes = assignmentsResponse.ok ? (await assignmentsResponse.json()).assignments || [] : [];
 
-      // Filter posts by content or author name
-      const filteredPosts = posts.filter(
-        (post) =>
-          post.content.toLowerCase().includes(query.toLowerCase()) ||
-          post.author_name.toLowerCase().includes(query.toLowerCase()) ||
-          (post.recipe_data?.title && post.recipe_data.title.toLowerCase().includes(query.toLowerCase()))
-      );
-
-      // Extract recipes from filtered posts
-      const recipes = filteredPosts.filter((post) => post.type === "recipe");
-
-      setSearchResults({
-        users: users.slice(0, 5),
-        posts: filteredPosts.slice(0, 5),
-        recipes: recipes.slice(0, 5),
+      setSearchResults({ 
+        users: users.slice(0, 5), 
+        posts: searchPosts.slice(0, 5), 
+        recipes: recipes.slice(0, 5) 
       });
     } catch (error) {
       console.error("Search error:", error);
@@ -929,7 +980,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   return (
     <>
     <div className="min-h-screen">
-      {/* Floating Arrow Button for Mobile Sidebar */}
+
       {!showMobileSidebar && (
         <button
           onClick={() => setShowMobileSidebar(true)}
@@ -941,57 +992,17 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Mobile Only - ACWhisk Header with Search, Notifications and Messages */}
-        <div className="lg:hidden mb-4">
-          <div className="flex items-center justify-between">
-            {/* ACWhisk Logo - Left */}
-            <button
-              onClick={() => onNavigate('feed')}
-              className="flex items-center space-x-2 group"
-            >
-              <div className="avatar-gradient w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-200 shadow-lg">
-                <ChefHat className="w-6 h-6 text-white" />
-              </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                ACWhisk
-              </span>
-            </button>
 
-            {/* Action Icons - Right */}
-            <div className="flex items-center gap-1">
-              {/* Notifications Icon */}
-              <div className="relative">
-                <Notifications user={user} onNavigate={onNavigate} />
-              </div>
-
-              {/* Messages Icon */}
-              <button
-                onClick={() => onNavigate('messages')}
-                className="relative p-3 hover:bg-secondary rounded-xl transition-colors"
-                aria-label="Messages"
-              >
-                <Send className="h-6 w-6 text-foreground" />
-                {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Story Circles Section and User Header */}
         <div className="mb-6 flex gap-6 items-start">
-          {/* Story Circles - Full width on mobile, flex-1 on desktop */}
-          <div className="flex-1">
+
+          <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              {/* Story Circles */}
-              <div className="flex-1 overflow-x-auto scrollbar-hide">
-                <div className="flex space-x-4 pb-2 mt-[0px] mr-[80px] mb-[0px] ml-[0px]">
-                  {/* User's own story - add story button */}
+
+              <div className="overflow-x-auto scrollbar-hide w-full">
+                <div className="flex space-x-4 pb-2 pr-4">
+
                   <div
-                    onClick={() => userHasStory ? handleStoryClick(0) : setShowStoryCreator(true)}
+                    onClick={() => userHasStory ? handleStoryClick(user.id) : setShowStoryCreator(true)}
                     className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
                   >
                     <div className="relative">
@@ -1025,19 +1036,24 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                           )}
                         </div>
                       </div>
-                      {!userHasStory && (
-                        <div className="absolute bottom-0 right-0 w-5 h-5 lg:w-6 lg:h-6 bg-primary rounded-full flex items-center justify-center border-2 border-background">
-                          <Plus className="h-3 w-3 lg:h-4 lg:w-4 text-white" />
-                        </div>
-                      )}
+
+                      <div 
+                        className="absolute bottom-0 right-0 w-5 h-5 lg:w-6 lg:h-6 bg-primary rounded-full flex items-center justify-center border-2 border-background cursor-pointer hover:scale-110 transition-transform"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowStoryCreator(true);
+                        }}
+                      >
+                        <Plus className="h-3 w-3 lg:h-4 lg:w-4 text-white" />
+                      </div>
                     </div>
                     <span className="text-xs text-foreground mt-1 text-center max-w-[70px] truncate">
-                      {userHasStory ? 'Your Story' : 'Add Story'}
+                      Your Story
                     </span>
                   </div>
 
-                  {/* Other users' stories */}
-                  {storyGroups.map((group, index) => {
+
+                  {storyGroups.map((group) => {
                     if (group.user_id === user.id) return null;
                     
                     const hasStory = group.has_story && group.stories && group.stories.length > 0;
@@ -1046,7 +1062,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                     return (
                       <div
                         key={group.user_id}
-                        onClick={() => hasStory ? handleStoryClick(index) : onNavigate('account', group.user_id)}
+                        onClick={() => hasStory ? handleStoryClick(group.user_id) : onNavigate('account', group.user_id)}
                         className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
                       >
                         <div className="relative">
@@ -1094,35 +1110,14 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             </div>
           </div>
 
-          {/* User Header - Notification and Avatar - Hidden on Mobile */}
-          <div className="hidden lg:block w-80 flex-shrink:0;">
-            <div className="pb-[32px] pt-[24px] pr-[24px] pl-[24px]">
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onNavigate('feed')
-                }}
-                className="flex items-center space-x-3 group w-full touch-manipulation min-h-[48px]"
-                type="button"
-              >
-                <div className="avatar-gradient w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-200 shadow-lg">
-                  <ChefHat className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <span className="font-bold text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    ACWhisk
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
+
+
         </div>
 
         <div className="flex gap-6 relative">
-          {/* Main Feed */}
+
           <div className="flex-1 max-w-7xl mx-auto lg:mx-0">
-            {/* Create Post Section - Hidden on Mobile */}
+
             <div className="hidden lg:block post-card p-4 lg:p-6 mb-6">
               <div className="flex items-center space-x-3 lg:space-x-4 mb-4">
                 <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
@@ -1165,17 +1160,14 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
               </div>
             </div>
 
-            {/* Feed Filter Tabs */}
-          
 
-            {/* Feed Posts - Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {posts.map((post, index) => (
                 <div
                   key={post.id}
                   className="post-card overflow-hidden"
                 >
-                  {/* Post Content - Image or Colored Background */}
+
                   {post.images && post.images.length > 0 ? (
                     <div className="h-48 relative overflow-hidden group">
                       <ImageWithFallback
@@ -1192,7 +1184,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                     </div>
                   )}
 
-                  {/* Post Footer */}
+
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <button
@@ -1256,17 +1248,17 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                       </div>
                     </div>
 
-                    {/* Show content if it has images (since text-only shows in gradient) */}
+
                     {post.images && post.images.length > 0 && post.content && (
                       <p className="text-sm text-foreground mb-2 line-clamp-2">
                         {post.content}
                       </p>
                     )}
 
-                    {/* Comments Section */}
+
                     {showComments === post.id && (
                       <div className="border-t border-border pt-3 mt-3">
-                        {/* Comments List */}
+
                         {post.comments.length > 0 && (
                           <div className="space-y-3 mb-3 max-h-60 overflow-y-auto">
                             {post.comments.map((comment) => (
@@ -1298,7 +1290,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                           </div>
                         )}
 
-                        {/* Comment Input */}
+
                         <div className="flex items-center space-x-2">
                           <div className="w-6 h-6 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {user.avatar_url ? (
@@ -1345,7 +1337,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             </div>
           </div>
 
-          {/* Desktop Sidebar */}
+
           <div className="hidden lg:block w-80 space-y-4 sticky top-24 h-fit">
             <SidebarContent
               user={user}
@@ -1363,7 +1355,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         </div>
       </div>
 
-      {/* Mobile Sidebar */}
+
       {showMobileSidebar && (
         <>
           <div
@@ -1402,7 +1394,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         </>
       )}
 
-      {/* Create Post Modal */}
+
       {showCreatePost && (
         <CreatePostModal
           user={user}
@@ -1414,7 +1406,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         />
       )}
 
-      {/* Edit Post Modal */}
+
       {editingPost && (
         <EditPostModal
           post={editingPost}
@@ -1429,7 +1421,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         />
       )}
 
-      {/* Delete Confirmation Modal */}
+
       {showDeleteConfirm && (
         <DeleteConfirmModal
           postId={showDeleteConfirm}
@@ -1441,7 +1433,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         />
       )}
 
-      {/* Story Creator Modal */}
+
       {showStoryCreator && (
         <StoryCreator
           user={user}
@@ -1453,7 +1445,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         />
       )}
 
-      {/* Story Viewer Modal */}
+
       {showStoryViewer && storyGroups.length > 0 && (
         <StoryViewer
           storyGroups={storyGroups.filter(group => group.stories && group.stories.length > 0)}
@@ -1496,7 +1488,7 @@ function SidebarContent({
 }: SidebarContentProps) {
   return (
     <>
-      {/* Suggestions for you */}
+
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">
@@ -1704,7 +1696,7 @@ function CreatePostModal({
       }
     } catch (err) {
       console.error("Post creation error:", err);
-      // For demo, simulate success
+
       setTimeout(() => {
         onSuccess();
       }, 1000);
