@@ -63,7 +63,7 @@ function App() {
       const result = await AuthService.checkSession()
       if (result.success && result.user) {
         setUser(result.user)
-        // Check if user needs onboarding
+
         if (result.user.needs_onboarding) {
           setCurrentPage('onboarding')
         } else {
@@ -72,8 +72,7 @@ function App() {
       }
     } catch (error) {
       console.error('❌ Session check error:', error)
-      // Don't show user errors for session check failures
-      // Just proceed with unauthenticated state
+
     } finally {
       setLoading(false)
     }
@@ -84,7 +83,7 @@ function App() {
       const result = await AuthService.login(email, password)
       if (result.success && result.user) {
         setUser(result.user)
-        // Check if user needs onboarding (shouldn't happen with email/password)
+
         if (result.user.needs_onboarding) {
           setCurrentPage('onboarding')
         } else {
@@ -148,7 +147,7 @@ function App() {
 
       const { profile } = await response.json()
       
-      // Update user with selected role
+
       const updatedUser = { 
         ...user, 
         role: role as 'student' | 'instructor' | 'admin',
@@ -190,7 +189,7 @@ function App() {
       setCurrentPostId(id)
     }
     if (page === 'account' && id) {
-      // Validate the user ID before setting it
+      // Validate the user ID 
       if (isValidUUID(id)) {
         setCurrentUserId(id)
       } else {
@@ -252,10 +251,17 @@ function App() {
                 onCollapseChange={setIsSidebarCollapsed}
                 onCreatePost={() => createPostRef.current?.()}
               />
+              <TopHeader 
+                user={user}
+                currentPage={currentPage}
+                onNavigate={navigateTo}
+                onLogout={logout}
+                isSidebarCollapsed={isSidebarCollapsed}
+              />
             </>
           )}
           
-          <main className={user && !user.needs_onboarding ? `transition-all duration-300 pb-24 lg:pb-0 ${isSidebarCollapsed ? 'lg:ml-28' : 'lg:ml-72'}` : ''}>
+          <main className={user && !user.needs_onboarding ? `transition-all duration-300 pb-24 lg:pb-0 pt-0 ${isSidebarCollapsed ? 'lg:ml-[5.5rem]' : 'lg:ml-[18rem]'}` : ''}>
             {currentPage === 'landing' && (
               <Landing onNavigate={navigateTo} />
             )}
