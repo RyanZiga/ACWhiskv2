@@ -16,7 +16,6 @@ export interface User {
   avatar_url?: string
   followers?: string[]
   following?: string[]
-  needs_onboarding?: boolean
   privacy_settings?: {
     profile_visible: boolean
     posts_visible: boolean
@@ -122,7 +121,6 @@ export class AuthService {
   // Check if user can access a specific page
   static canAccessPage(user: User | null, page: string): boolean {
     if (!user) return false
-    if (user.needs_onboarding) return false // Restrict access during onboarding
     
     switch (page) {
       case 'admin':
