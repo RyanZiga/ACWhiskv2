@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ChefHat, X } from "lucide-react";
 import { useAuth } from "../App";
-import logoImage from "../assets/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png";
+import logoImage from "figma:asset/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png";
 
 interface LandingProps {
   onNavigate: (page: string) => void;
@@ -61,7 +61,7 @@ export function Landing({ onNavigate }: LandingProps) {
               </button>
             </div>
 
-            {/* Auth Form */}
+
             {activeForm === "signin" ? (
               <SignInForm onNavigate={onNavigate} />
             ) : (
@@ -187,7 +187,11 @@ function SignInForm({ onNavigate }: SignInFormProps) {
         {loading ? "Signing In..." : "Sign In"}
       </button>
 
-
+      <div className="mt-4 text-center">
+        <p className="text-xs text-muted-foreground">
+          Only @asiancollege.edu.ph accounts are allowed
+        </p>
+      </div>
     </form>
   );
 }
@@ -202,10 +206,21 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
     email: "",
     password: "",
     name: "",
-    role: "student",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+
+  const determineRole = (email: string): string => {
+    const lowerEmail = email.toLowerCase();
+
+    if (lowerEmail.includes("student@asiancollege.edu.ph")) {
+      return "student";
+    } else if (lowerEmail.endsWith("@asiancollege.edu.ph")) {
+      return "instructor";
+    }
+    return "student"; 
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,11 +228,12 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
     setError("");
 
     try {
+      const role = determineRole(formData.email);
       const result = await signup(
         formData.email,
         formData.password,
         formData.name,
-        formData.role,
+        role,
       );
       if (result.success) {
         onNavigate("feed");
@@ -233,7 +249,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-
+      {/* Logo */}
       <div className="text-center mb-6">
         <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-primary/10 to-accent/10 px-6 py-3 rounded-full mb-4 border border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
           <div className="w-8 h-8 flex items-center justify-center p-1 bg-gradient-to-br from-primary to-accent rounded-full">
@@ -274,23 +290,6 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
 
         <div>
           <label className="block text-foreground text-sm font-medium mb-2">
-            Role
-          </label>
-          <select
-            value={formData.role}
-            onChange={(e) =>
-              setFormData({ ...formData, role: e.target.value })
-            }
-            className="input-clean w-full px-4 py-3"
-          >
-            <option value="student">Student</option>
-            <option value="instructor">Instructor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-foreground text-sm font-medium mb-2">
             Email Address
           </label>
           <input
@@ -306,6 +305,13 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
             className="input-clean w-full px-4 py-3"
             placeholder="Enter your email address"
           />
+        <p className="text-xs text-muted-foreground mt-1">
+            {formData.email.toLowerCase().includes("student@asiancollege.edu.ph")
+              ? "You will be registered as a Student"
+              : formData.email.toLowerCase().endsWith("@asiancollege.edu.ph")
+              ? "You will be registered as an Instructor"
+              : "Use your @asiancollege.edu.ph email"}
+          </p>
         </div>
 
         <div>
@@ -342,6 +348,11 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
         {loading ? "Creating Account..." : "Create Account"}
       </button>
 
+      <div className="mt-4 text-center">
+        <p className="text-xs text-muted-foreground">
+          Only @asiancollege.edu.ph accounts are allowed
+        </p>
+      </div>
     </form>
   );
 }
