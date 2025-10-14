@@ -17,7 +17,6 @@ import { Feed } from './components/Feed'
 import { Account } from './components/Account'
 import { MessagesRefactored } from './components/MessagesRefactored'
 import { DebugPanel } from './components/DebugPanel'
-import { RoleOnboarding } from './components/RoleOnboarding'
 import { Notifications } from './components/Notifications'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthService, User, AuthResult, Permissions, isValidUUID } from './utils/auth'
@@ -27,7 +26,6 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean, error?: string }>
   signup: (email: string, password: string, name: string, role: string) => Promise<{ success: boolean, error?: string }>
-  completeOnboarding: (role: string) => Promise<{ success: boolean, error?: string }>
   logout: () => Promise<void>
   loading: boolean
   hasPermission: (permission: keyof typeof Permissions.admin) => boolean
@@ -63,12 +61,7 @@ function App() {
       const result = await AuthService.checkSession()
       if (result.success && result.user) {
         setUser(result.user)
-
-        if (result.user.needs_onboarding) {
-          setCurrentPage('onboarding')
-        } else {
-          setCurrentPage('feed')
-        }
+        setCurrentPage('feed')
       }
     } catch (error) {
       console.error('❌ Session check error:', error)
@@ -83,12 +76,7 @@ function App() {
       const result = await AuthService.login(email, password)
       if (result.success && result.user) {
         setUser(result.user)
-
-        if (result.user.needs_onboarding) {
-          setCurrentPage('onboarding')
-        } else {
-          setCurrentPage('feed')
-        }
+        setCurrentPage('feed')
         return { success: true }
       } else {
         return { success: false, error: result.error }
@@ -121,51 +109,6 @@ function App() {
     }
   }
 
-  const completeOnboarding = async (role: string) => {
-    try {
-      if (!user) {
-        return { success: false, error: 'No user found' }
-      }
-
-      // Update user profile with selected role on the server
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          role,
-          needs_onboarding: false
-        })
-      })
-
-      if (!response.ok) {
-        console.error('❌ Failed to update profile with role:', response.status)
-        return { success: false, error: 'Failed to save role selection' }
-      }
-
-      const { profile } = await response.json()
-      
-
-      const updatedUser = { 
-        ...user, 
-        role: role as 'student' | 'instructor' | 'admin',
-        needs_onboarding: false 
-      }
-      
-      setUser(updatedUser)
-      setCurrentPage('feed')
-      return { success: true }
-    } catch (error) {
-      console.error('❌ Onboarding completion error:', error)
-      return { 
-        success: false, 
-        error: `Failed to complete onboarding: ${error instanceof Error ? error.message : 'Unknown error'}` 
-      }
-    }
-  }
-
   const logout = async () => {
     await AuthService.logout()
     setUser(null)
@@ -189,7 +132,7 @@ function App() {
       setCurrentPostId(id)
     }
     if (page === 'account' && id) {
-      // Validate the user ID 
+
       if (isValidUUID(id)) {
         setCurrentUserId(id)
       } else {
@@ -214,7 +157,6 @@ function App() {
     user,
     login,
     signup,
-    completeOnboarding,
     logout,
     loading,
     hasPermission,
@@ -240,7 +182,7 @@ function App() {
     <ThemeProvider>
       <AuthContext.Provider value={authValue}>
         <div className="min-h-screen bg-background">
-          {user && !user.needs_onboarding && (
+          {user && (
             <>
               <Sidebar 
                 user={user} 
@@ -261,16 +203,9 @@ function App() {
             </>
           )}
           
-          <main className={user && !user.needs_onboarding ? `transition-all duration-300 pb-24 lg:pb-0 pt-0 ${isSidebarCollapsed ? 'lg:ml-[5.5rem]' : 'lg:ml-[18rem]'}` : ''}>
+          <main className={user ? `transition-all duration-300 pb-24 lg:pb-0 pt-0 ${isSidebarCollapsed ? 'lg:ml-[5.5rem]' : 'lg:ml-[18rem]'}` : ''}>
             {currentPage === 'landing' && (
               <Landing onNavigate={navigateTo} />
-            )}
-
-            {currentPage === 'onboarding' && user && (
-              <RoleOnboarding 
-                user={user} 
-                onComplete={completeOnboarding}
-              />
             )}
             
             {currentPage === 'feed' && user && (
@@ -387,7 +322,7 @@ function App() {
             )}
           </main>
           
-          {user && !user.needs_onboarding && <ChatBot />}
+          {user && <ChatBot />}
         </div>
       </AuthContext.Provider>
     </ThemeProvider>
