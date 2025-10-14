@@ -132,17 +132,19 @@
     @apply bg-background text-foreground;
   }
 
-
+  /* Mobile-specific optimizations */
   @media (max-width: 768px) {
     body {
-      font-size: 16px; 
+      font-size: 16px; /* Prevent zoom on iOS */
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
     }
   }
 }
 
-
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
 @layer base {
   :where(
     :not(:has([class*=" text-"]), :not(:has([class^="text-"])))
@@ -201,15 +203,15 @@ html {
   font-size: var(--font-size);
 }
 
-
+/* Mobile-first responsive utilities */
 @layer utilities {
-
+  /* Touch-friendly button sizes */
   .touch-target {
     min-height: 44px;
     min-width: 44px;
   }
 
-
+  /* Safe area insets for modern mobile devices */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -226,13 +228,13 @@ html {
     padding-right: env(safe-area-inset-right);
   }
 
-
+  /* Smooth scrolling for mobile */
   .scroll-smooth {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
   }
 
-
+  /* Line clamping for text overflow */
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -254,7 +256,17 @@ html {
     overflow: hidden;
   }
 
+  /* Hide scrollbar while maintaining scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, and Opera */
+  }
+
+  /* Mobile-optimized animations */
   @media (prefers-reduced-motion: no-preference) {
     .animate-fade-in {
       animation: fadeIn 0.6s ease-out;
@@ -289,7 +301,7 @@ html {
     }
   }
 
-
+  /* Remove animations for users who prefer reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in,
     .animate-slide-up,
@@ -300,7 +312,7 @@ html {
     }
   }
 
-
+  /* Responsive dropdown positioning */
   .dropdown-mobile {
     @media (max-width: 768px) {
       position: fixed !important;
@@ -313,7 +325,7 @@ html {
     }
   }
 
-
+  /* Modal responsiveness */
   .modal-responsive {
     @media (max-width: 768px) {
       margin: 1rem;
@@ -322,7 +334,7 @@ html {
     }
   }
 
-
+  /* Notification dropdown responsive */
   .notification-dropdown {
     @media (max-width: 768px) {
       position: fixed !important;
@@ -336,7 +348,7 @@ html {
     }
   }
 
-
+  /* Message interface responsive */
   .message-interface {
     @media (max-width: 768px) {
       height: calc(
@@ -347,7 +359,7 @@ html {
   }
 }
 
-
+/* Animation keyframes */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -434,9 +446,9 @@ html {
   }
 }
 
-
+/* Mobile-specific overrides */
 @media (max-width: 768px) {
-
+  /* Ensure clickable areas are large enough on mobile */
   button,
   input[type="button"],
   input[type="submit"],
@@ -445,7 +457,7 @@ html {
     min-width: 44px;
   }
 
-
+  /* Better focus states for mobile */
   button:focus-visible,
   input:focus-visible,
   textarea:focus-visible,
@@ -454,24 +466,24 @@ html {
     outline-offset: 2px;
   }
 
-
+  /* Prevent horizontal scrolling */
   body {
     overflow-x: hidden;
   }
 
-
+  /* Smooth scrolling containers */
   .overflow-y-auto,
   .overflow-auto {
     -webkit-overflow-scrolling: touch;
   }
 
-
+  /* Mobile notification adjustments */
   .notification-panel {
     border-radius: 0.75rem 0.75rem 0 0;
     max-height: 70vh;
   }
 
-
+  /* Mobile message adjustments */
   .message-bubble {
     max-width: 85%;
   }
@@ -481,7 +493,7 @@ html {
   }
 }
 
-
+/* Responsive font scaling */
 @media (max-width: 640px) {
   :root {
     --font-size: 14px;
@@ -525,24 +537,24 @@ html {
   }
 }
 
-
+/* High DPI displays optimization */
 @media (-webkit-min-device-pixel-ratio: 2),
   (min-resolution: 192dpi) {
-
+  /* Crisp rendering for high DPI */
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-
+/* Dark mode optimizations */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
   }
 }
 
-
+/* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -554,7 +566,7 @@ html {
   }
 }
 
-
+/* Print styles */
 @media print {
   * {
     background: transparent !important;
@@ -593,7 +605,7 @@ html {
   }
 }
 
-
+/* Theme utilities - Modern red and blue aesthetic */
 .bg-theme-gradient {
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
 }
@@ -649,7 +661,7 @@ html {
   background: linear-gradient(135deg, #dc2626 0%, #3b82f6 50%, #8b5cf6 100%);
 }
 
-
+/* Sidebar utility - red and blue aesthetic design */
 .sidebar-gradient {
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
@@ -662,7 +674,7 @@ html {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
-
+/* Header utility - red and blue aesthetic design */
 .header-gradient {
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid #e2e8f0;
@@ -675,7 +687,7 @@ html {
   border-bottom: 1px solid #334155;
 }
 
-
+/* Post card styles */
 .post-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -689,7 +701,7 @@ html {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-
+/* Input styles */
 .input-clean {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -715,7 +727,7 @@ html {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-
+/* Component-specific responsive utilities */
 @layer components {
   .notification-dropdown-mobile {
     @media (max-width: 768px) {
@@ -745,7 +757,7 @@ html {
     }
   }
 
-
+  /* Responsive sidebar utilities */
   .sidebar-collapsed {
     @media (min-width: 1024px) {
       width: 5rem;
@@ -758,7 +770,7 @@ html {
     }
   }
 
-
+  /* Main content responsive spacing */
   .main-content-collapsed {
     @media (min-width: 1024px) {
       margin-left: 5rem;
@@ -771,7 +783,7 @@ html {
     }
   }
 
-
+  /* Draggable element cursor */
   .draggable {
     cursor: grab;
     user-select: none;
