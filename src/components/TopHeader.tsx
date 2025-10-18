@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, X, Loader2, Send } from 'lucide-react'
+import { Search, X, Loader2 } from 'lucide-react'
 import { Notifications } from './Notifications'
 import { User } from '../utils/auth'
 import { ImageWithFallback } from './figma/ImageWithFallback'
@@ -166,9 +166,9 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
             </span>
           </button>
 
-          {/* Right Actions */}
+
           <div className="flex items-center space-x-2 lg:space-x-4 relative z-10">
-            {/* Search Toggle */}
+
             <button
               onClick={(e) => {
                 e.preventDefault()
@@ -186,20 +186,10 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
             <div className="relative">
               <Notifications user={user} onNavigate={onNavigate} />
             </div>
-
-            {/* Messages */}
-            <button
-              onClick={() => onNavigate('messages')}
-              className="relative p-2 lg:p-3 text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-all duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-              title="Messages"
-              type="button"
-            >
-              <Send className="h-5 w-5" />
-            </button>
           </div>
         </div>
 
-        {/* Search Bar (Expandable) */}
+
         {showSearch && (
           <div className="mt-4 transition-all duration-200" ref={searchRef}>
             <form onSubmit={handleSearchSubmit} className="relative">
@@ -227,7 +217,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
                 </button>
               </div>
 
-              {/* Search Results Dropdown */}
+
               {showResults && (
                 <div className="absolute top-full left-0 right-0 mt-2 post-card max-h-96 overflow-y-auto z-50 shadow-lg">
                   {isSearching ? (

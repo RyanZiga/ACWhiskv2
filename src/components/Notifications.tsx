@@ -36,16 +36,44 @@ export function Notifications({ user, onNavigate }: NotificationsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState<'right' | 'left'>('right')
   const notificationChannelRef = useRef<any>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     loadNotifications()
     setupRealtimeSubscription()
     
+    // Check if mobile on mount and on resize
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
     return () => {
       cleanupSubscription()
+      window.removeEventListener('resize', checkMobile)
     }
   }, [user.id])
+
+  // Check dropdown position when opening to prevent overflow
+  useEffect(() => {
+    if (isOpen && buttonRef.current && !isMobile) {
+      const buttonRect = buttonRef.current.getBoundingClientRect()
+      const dropdownWidth = 384 // w-96 = 24rem = 384px
+      const spaceOnRight = window.innerWidth - buttonRect.right
+      
+      // If not enough space on right, position on left
+      if (spaceOnRight < dropdownWidth && buttonRect.left > dropdownWidth) {
+        setDropdownPosition('left')
+      } else {
+        setDropdownPosition('right')
+      }
+    }
+  }, [isOpen, isMobile])
 
   // Setup realtime subscription for new notifications
   const setupRealtimeSubscription = () => {
@@ -282,6 +310,7 @@ export function Notifications({ user, onNavigate }: NotificationsProps) {
     <div className="relative">
       {/* Notification Bell */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="relative text-foreground hover:text-sidebar-primary hover:bg-sidebar-accent rounded-lg transition-colors touch-target px-[13px] py-[7px]"
       >
@@ -302,13 +331,15 @@ export function Notifications({ user, onNavigate }: NotificationsProps) {
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Notifications Panel - Mobile Responsive */}
-          <div className={`absolute z-40 post-card shadow-xl overflow-hidden ${
-            // Mobile: Full width with proper positioning
-            window.innerWidth < 768 
-              ? 'right-0 mt-2 w-screen max-w-sm max-h-[70vh]' 
-              : 'right-0 mt-2 w-96 max-h-96'
-          }`}>
+          {/* Notifications Panel - Mobile & Desktop Responsive */}
+          <div 
+            ref={dropdownRef}
+            className={`z-40 post-card shadow-xl overflow-hidden rounded-lg ${
+              isMobile 
+                ? 'fixed bottom-20 left-4 right-4 max-h-[calc(100vh-6rem-env(safe-area-inset-bottom))] animate-slide-up pb-safe' 
+                : `absolute mt-2 w-96 max-h-[min(32rem,calc(100vh-8rem))] animate-slide-down right-0`
+            }`}
+          >
             {/* Header */}
             <div className="p-4 border-b border-border bg-secondary">
               <div className="flex items-center justify-between">
@@ -328,7 +359,7 @@ export function Notifications({ user, onNavigate }: NotificationsProps) {
             </div>
 
             {/* Content */}
-            <div className="max-h-80 overflow-y-auto">
+            <div className={`overflow-y-auto ${isMobile ? 'max-h-[calc(100vh-16rem)]' : 'max-h-80'}`}>
               {loading ? (
                 <div className="p-8 text-center">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -342,7 +373,7 @@ export function Notifications({ user, onNavigate }: NotificationsProps) {
                       className={`p-4 hover:bg-secondary/50 transition-colors cursor-pointer border-l-4 ${
                         !notification.read ? getNotificationColor(notification.type) : 'border-l-transparent'
                       }`}
-                      onClick={() => handleNotificationClick(notification)}
+                      onClick={() => handleNotificationClick(notification, onNavigate)}
                     >
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0 mt-1">

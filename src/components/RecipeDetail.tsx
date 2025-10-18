@@ -59,7 +59,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
         const { recipe } = await response.json()
         setRecipe(recipe)
         
-        // Check if user has already rated this recipe
+
         const existingRating = recipe.ratings.find((r: any) => r.user_id === user.id)
         if (existingRating) {
           setUserRating(existingRating.rating)
@@ -176,7 +176,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
         </div>
       </div>
 
-      {/* Recipe Header */}
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
         {recipe.image_url && (
           <div className="h-64 md:h-80 relative">
@@ -216,7 +216,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
             </div>
           </div>
 
-          {/* Recipe Info */}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
             {recipe.prep_time && (
               <div className="flex items-center space-x-2">
@@ -251,9 +251,9 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
         </div>
       </div>
 
-      {/* Recipe Content */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Ingredients */}
+
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Ingredients</h2>
@@ -268,7 +268,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
           </div>
         </div>
 
-        {/* Instructions */}
+
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Instructions</h2>
@@ -286,7 +286,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
         </div>
       </div>
 
-      {/* Rating Section */}
+
       <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">Reviews & Ratings</h2>
@@ -300,7 +300,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
           )}
         </div>
 
-        {/* Rating Form */}
+
         {showRatingForm && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <div className="mb-4">
@@ -351,7 +351,7 @@ export function RecipeDetail({ recipeId, user, onNavigate }: RecipeDetailProps) 
           </div>
         )}
 
-        {/* Existing Reviews */}
+
         <div className="space-y-4">
           {recipe.ratings.map((rating, index) => (
             <div key={index} className="border-b border-gray-100 pb-4 last:border-b-0">

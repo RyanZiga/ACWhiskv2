@@ -72,7 +72,7 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
     }
   }
 
-  // Test endpoint when modal opens
+
   useEffect(() => {
     if (isOpen && user.access_token) {
       testUploadEndpoint()
@@ -89,7 +89,7 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
       hasAccessToken: !!user.access_token
     })
 
-    // Validate files before upload
+
     const allowedTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
       'video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov'
@@ -249,7 +249,7 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
         throw new Error(errorData.error || 'Failed to submit assignment')
       }
 
-      // Reset form
+
       setRecipeTitle('')
       setDescription('')
       setIngredients('')
@@ -311,7 +311,7 @@ export function SubmissionModal({ isOpen, onClose, assignment, user, onSubmissio
               </div>
             )}
 
-            {/* Debug Info - Remove after testing */}
+
             {process.env.NODE_ENV === 'development' && (
               <div className="mb-4 p-3 bg-muted/50 border border-border rounded-lg text-xs">
                 <div className="font-semibold mb-1 text-foreground">🔧 Debug Info:</div>

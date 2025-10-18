@@ -4,16 +4,10 @@ import { logger } from "npm:hono/logger";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as kv from "./kv_store.tsx";
 
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+
 const app = new Hono();
 
-// Health check endpoint
-app.get("/health", (c) => {
-  return c.json({ 
-    status: "ok", 
-    timestamp: new Date().toISOString(),
-    service: "ACWhisk Messages Server"
-  });
-});
 
 app.use("*", logger(console.log));
 app.use(
@@ -25,7 +19,7 @@ app.use(
   }),
 );
 
-// Add timeout middleware
+
 app.use("*", async (c, next) => {
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => reject(new Error("Request timeout")), 25000)
@@ -41,12 +35,263 @@ app.use("*", async (c, next) => {
   }
 });
 
+
+app.get("/health", (c) => {
+  return c.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    service: "ACWhisk Messages Server"
+  });
+});
+
+
+app.post("/make-server-c56dfc7a/send-verification", async (c) => {
+  try {
+    const { email } = await c.req.json();
+
+    if (!email) {
+      return c.json({ error: "Email is required" }, 400);
+    }
+
+    console.log("📧 Sending verification code to:", email);
+
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+
+    await kv.set(`verification:${email}`, {
+      code: verificationCode,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+    });
+
+    console.log("🔑 Generated verification code for:", email);
+
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "ACWhisk <ryan.ziga@medprohealth.net>",
+        to: [email],
+        subject: "Verify your ACWhisk account",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #7c9885;">Welcome to ACWhisk!</h2>
+            <p>Thank you for signing up. Please use the verification code below to complete your registration:</p>
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+              <h1 style="color: #7c9885; font-size: 32px; letter-spacing: 8px; margin: 0;">${verificationCode}</h1>
+            </div>
+            <p>This code will expire in 10 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #999; font-size: 12px;">ACWhisk - Your Culinary Community Platform</p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("❌ Resend API error:", error);
+      return c.json({ error: "Failed to send verification email" }, 500);
+    }
+
+    console.log("✅ Verification email sent successfully");
+    return c.json({ success: true, message: "Verification code sent" });
+  } catch (error) {
+    console.error("❌ Send verification error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+
+app.post("/make-server-c56dfc7a/verify-code", async (c) => {
+  try {
+    const { email, code } = await c.req.json();
+
+    if (!email || !code) {
+      return c.json({ error: "Email and code are required" }, 400);
+    }
+
+    console.log("🔍 Verifying code for:", email);
+
+    const storedData = await kv.get(`verification:${email}`);
+
+    if (!storedData) {
+      console.log("❌ No verification code found for:", email);
+      return c.json({ error: "Invalid or expired verification code" }, 400);
+    }
+
+
+    if (storedData.code !== code) {
+      console.log("❌ Code mismatch for:", email);
+      return c.json({ error: "Invalid verification code" }, 400);
+    }
+
+
+    if (Date.now() > storedData.expiresAt) {
+      console.log("❌ Expired verification code for:", email);
+      await kv.del(`verification:${email}`);
+      return c.json({ error: "Verification code has expired" }, 400);
+    }
+
+
+    await kv.del(`verification:${email}`);
+
+    console.log("✅ Verification successful for:", email);
+    return c.json({ success: true, message: "Email verified successfully" });
+  } catch (error) {
+    console.error("❌ Verify code error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+
+app.post("/make-server-c56dfc7a/send-reset-code", async (c) => {
+  try {
+    const { email } = await c.req.json();
+
+    if (!email) {
+      return c.json({ error: "Email is required" }, 400);
+    }
+
+    console.log("🔐 Sending password reset code to:", email);
+
+
+    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+    const userExists = users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
+
+    if (!userExists) {
+      console.log("❌ User not found:", email);
+
+      return c.json({ success: true, message: "If this email exists, a reset code has been sent" });
+    }
+
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+
+    await kv.set(`password_reset:${email}`, {
+      code: resetCode,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 15 * 60 * 1000 
+    });
+
+    console.log("🔑 Generated password reset code for:", email);
+
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "ACWhisk <ryan.ziga@medprohealth.net>",
+        to: [email],
+        subject: "Reset your ACWhisk password",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #7c9885;">Password Reset Request</h2>
+            <p>You requested to reset your password. Please use the verification code below:</p>
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+              <h1 style="color: #7c9885; font-size: 32px; letter-spacing: 8px; margin: 0;">${resetCode}</h1>
+            </div>
+            <p>This code will expire in 15 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't request this password reset, please ignore this email and your password will remain unchanged.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #999; font-size: 12px;">ACWhisk - Your Culinary Community Platform</p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("❌ Resend API error:", error);
+      return c.json({ error: "Failed to send reset email" }, 500);
+    }
+
+    console.log("✅ Password reset email sent successfully");
+    return c.json({ success: true, message: "Reset code sent to your email" });
+  } catch (error) {
+    console.error("❌ Send reset code error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+
+app.post("/make-server-c56dfc7a/reset-password", async (c) => {
+  try {
+    const { email, code, newPassword } = await c.req.json();
+
+    if (!email || !code || !newPassword) {
+      return c.json({ error: "Email, code, and new password are required" }, 400);
+    }
+
+    console.log("🔍 Verifying reset code for:", email);
+
+    const storedData = await kv.get(`password_reset:${email}`);
+
+    if (!storedData) {
+      console.log("❌ No reset code found for:", email);
+      return c.json({ error: "Invalid or expired reset code" }, 400);
+    }
+
+
+    if (storedData.code !== code) {
+      console.log("❌ Reset code mismatch for:", email);
+      return c.json({ error: "Invalid reset code" }, 400);
+    }
+
+
+    if (Date.now() > storedData.expiresAt) {
+      console.log("❌ Expired reset code for:", email);
+      await kv.del(`password_reset:${email}`);
+      return c.json({ error: "Reset code has expired" }, 400);
+    }
+
+
+    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+    const user = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+      console.log("❌ User not found:", email);
+      return c.json({ error: "User not found" }, 404);
+    }
+
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      user.id,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      console.error("❌ Password update error:", updateError);
+      return c.json({ error: "Failed to update password" }, 500);
+    }
+
+
+    await kv.del(`password_reset:${email}`);
+
+    console.log("✅ Password reset successful for:", email);
+    return c.json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    console.error("❌ Reset password error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-// Initialize storage buckets
+
 async function initializeBuckets() {
   const buckets = [
     "make-c56dfc7a-recipes",
@@ -108,9 +353,9 @@ async function getUserFromToken(accessToken: string) {
   return user;
 }
 
-// Helper function to ensure user profile has all required fields
+
 function ensureUserProfile(profile: any, fallbackId?: string) {
-  // Ensure we have a valid ID - check if profile.id exists and is a valid UUID
+
   let userId = profile?.id;
   if (!userId || userId === "" || !isValidUUID(userId)) {
     userId = fallbackId || "";
@@ -120,10 +365,9 @@ function ensureUserProfile(profile: any, fallbackId?: string) {
     id: userId,
     email: profile?.email || "",
     name: profile?.name || "",
-    role: profile?.role || null, // Allow null role for onboarding users
+    role: profile?.role || null,
     status: profile?.status || "active",
     created_at: profile?.created_at || new Date().toISOString(),
-    needs_onboarding: profile?.needs_onboarding !== undefined ? profile.needs_onboarding : false,
     last_login: profile?.last_login || null,
     portfolio: profile?.portfolio || {},
     achievements: Array.isArray(profile?.achievements)
@@ -149,7 +393,7 @@ function ensureUserProfile(profile: any, fallbackId?: string) {
   };
 }
 
-// Google Sign up endpoint
+
 app.post("/make-server-c56dfc7a/google-signup", async (c) => {
   try {
     const accessToken = c.req.header("Authorization")?.split(" ")[1];
@@ -166,37 +410,33 @@ app.post("/make-server-c56dfc7a/google-signup", async (c) => {
     const {
       email,
       name,
-      avatar_url,
-      needs_onboarding = true
+      avatar_url
     } = await c.req.json();
 
     console.log("📝 Google signup: Creating profile with data:", {
       userId: user.id,
       email: email || user.email,
-      name: name || user.user_metadata?.name || email?.split('@')[0],
-      needs_onboarding
+      name: name || user.user_metadata?.name || email?.split('@')[0]
     });
 
-    // Store user profile in KV store without a role initially
+
     const userProfile = ensureUserProfile({
       id: user.id,
       email: email || user.email,
       name: name || user.user_metadata?.name || email?.split('@')[0],
-      role: null, // No role assigned yet
+      role: null,
       avatar_url: avatar_url || user.user_metadata?.avatar_url,
       status: "active",
-      created_at: new Date().toISOString(),
-      needs_onboarding
-    }, user.id); // Pass user.id as fallback
+      created_at: new Date().toISOString()
+    }, user.id); 
 
     console.log("🔍 Google signup: Profile after ensureUserProfile:", {
       id: userProfile.id,
       email: userProfile.email,
-      name: userProfile.name,
-      needs_onboarding: userProfile.needs_onboarding
+      name: userProfile.name
     });
 
-    // Validate the profile before storing
+
     if (!userProfile.id || !isValidUUID(userProfile.id)) {
       console.error("❌ Invalid user ID in Google signup profile:", userProfile.id);
       return c.json({ error: "Invalid user profile data" }, 500);
@@ -522,7 +762,7 @@ app.get("/make-server-c56dfc7a/search/users", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const query = c.req.query("q")?.toLowerCase() || "";
+    const query = c.req.query("q")?.toLowerCase() || c.req.query("query")?.toLowerCase() || "";
     
     if (!query || query.length < 2) {
       return c.json({ users: [] });
@@ -684,14 +924,14 @@ app.post("/make-server-c56dfc7a/posts", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const { content, images = [] } = await c.req.json();
+    const { content, images = [], type, recipe_data } = await c.req.json();
     const postId = crypto.randomUUID();
 
     // Get user profile to include avatar
     const userProfile = await kv.get(`user:${user.id}`);
     const safeUserProfile = ensureUserProfile(userProfile);
 
-    const post = {
+    const post: any = {
       id: postId,
       content,
       images: Array.isArray(images) ? images : [],
@@ -702,7 +942,14 @@ app.post("/make-server-c56dfc7a/posts", async (c) => {
       created_at: new Date().toISOString(),
       likes: [],
       comments: [],
+      ratings: [],
     };
+
+    // Add recipe-specific fields if this is a recipe post
+    if (type === "recipe" && recipe_data) {
+      post.type = "recipe";
+      post.recipe_data = recipe_data;
+    }
 
     await kv.set(`post:${postId}`, post);
 
@@ -957,6 +1204,71 @@ app.post(
     }
   },
 );
+
+// Rate a recipe post
+app.post("/make-server-c56dfc7a/posts/:id/rate", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const postId = c.req.param("id");
+    const { rating } = await c.req.json();
+
+    // Validate rating
+    if (typeof rating !== "number" || rating < 1 || rating > 5) {
+      return c.json({ error: "Rating must be between 1 and 5" }, 400);
+    }
+
+    const post = await kv.get(`post:${postId}`);
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Only allow rating recipe posts
+    if (post.type !== "recipe") {
+      return c.json({ error: "Can only rate recipe posts" }, 400);
+    }
+
+    // Ensure ratings array exists
+    if (!Array.isArray(post.ratings)) {
+      post.ratings = [];
+    }
+
+    // Get user profile for name
+    const userProfile = await kv.get(`user:${user.id}`);
+    const userName = userProfile?.name || user.user_metadata?.name || "Anonymous";
+
+    // Remove existing rating from this user if any
+    post.ratings = post.ratings.filter((r: any) => r.user_id !== user.id);
+
+    // Add new rating
+    const newRating = {
+      user_id: user.id,
+      user_name: userName,
+      rating,
+      created_at: new Date().toISOString(),
+    };
+
+    post.ratings.push(newRating);
+
+    // Update average rating in recipe_data
+    if (post.recipe_data && post.ratings.length > 0) {
+      const sum = post.ratings.reduce((acc: number, r: any) => acc + r.rating, 0);
+      post.recipe_data.rating = sum / post.ratings.length;
+    }
+
+    await kv.set(`post:${postId}`, post);
+
+    return c.json({ post });
+  } catch (error) {
+    console.log("Post rating error:", error);
+    return c.json({ error: "Error rating post" }, 500);
+  }
+});
 
 // Get top-rated recipes
 app.get(
@@ -2067,7 +2379,7 @@ app.get("/make-server-c56dfc7a/users/search", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const query = c.req.query("q")?.toLowerCase() || "";
+    const query = c.req.query("query")?.toLowerCase() || "";
     const includeFollowInfo = c.req.query("include_follow_info") === "true";
 
     const allUsers = await kv.getByPrefix("user:") || [];
@@ -2109,6 +2421,95 @@ app.get("/make-server-c56dfc7a/users/search", async (c) => {
   } catch (error) {
     console.log("Error searching users:", error);
     return c.json({ error: "Error searching users" }, 500);
+  }
+});
+
+// Search posts
+app.get("/make-server-c56dfc7a/posts/search", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const query = c.req.query("query")?.toLowerCase() || "";
+    
+    if (query.trim().length < 2) {
+      return c.json({ posts: [] });
+    }
+
+    const allPosts = await kv.getByPrefix("post:") || [];
+    
+    const filteredPosts = allPosts
+      .filter((post: any) => 
+        post.content?.toLowerCase().includes(query) ||
+        post.author?.name?.toLowerCase().includes(query)
+      )
+      .map((post: any) => ({
+        id: post.id,
+        content: post.content,
+        author: post.author,
+        created_at: post.created_at,
+        images: Array.isArray(post.images) ? post.images : [],
+        likes: Array.isArray(post.likes) ? post.likes.length : 0,
+        comments: Array.isArray(post.comments) ? post.comments.length : 0
+      }))
+      .sort((a: any, b: any) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      .slice(0, 10); // Limit to 10 results
+
+    return c.json({ posts: filteredPosts });
+  } catch (error) {
+    console.log("Error searching posts:", error);
+    return c.json({ error: "Error searching posts" }, 500);
+  }
+});
+
+// Search assignments
+app.get("/make-server-c56dfc7a/assignments/search", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const query = c.req.query("query")?.toLowerCase() || "";
+    
+    if (query.trim().length < 2) {
+      return c.json({ assignments: [] });
+    }
+
+    const allAssignments = await kv.getByPrefix("assignment:") || [];
+    
+    const filteredAssignments = allAssignments
+      .filter((assignment: any) => 
+        assignment.title?.toLowerCase().includes(query) ||
+        assignment.description?.toLowerCase().includes(query) ||
+        assignment.created_by?.name?.toLowerCase().includes(query)
+      )
+      .map((assignment: any) => ({
+        id: assignment.id,
+        title: assignment.title,
+        description: assignment.description,
+        created_by: assignment.created_by,
+        due_date: assignment.due_date,
+        created_at: assignment.created_at,
+        status: assignment.status
+      }))
+      .sort((a: any, b: any) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      .slice(0, 10); // Limit to 10 results
+
+    return c.json({ assignments: filteredAssignments });
+  } catch (error) {
+    console.log("Error searching assignments:", error);
+    return c.json({ error: "Error searching assignments" }, 500);
   }
 });
 

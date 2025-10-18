@@ -15,17 +15,17 @@ export function StorageTestComponent({ user }: StorageTestProps) {
     setStatus(`Testing upload to ${bucketName}...`)
 
     try {
-      // Get authenticated client
+
       const supabase = getAuthenticatedClient(user.access_token!)
 
-      // Create a tiny test file
+
       const testContent = `Test file uploaded at ${new Date().toISOString()}`
       const testFile = new Blob([testContent], { type: 'text/plain' })
       const fileName = `${user.id}/test-${Date.now()}.txt`
 
       console.log(`Uploading to bucket: ${bucketName}, file: ${fileName}`)
 
-      // Upload file
+
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, testFile, {
@@ -42,7 +42,7 @@ export function StorageTestComponent({ user }: StorageTestProps) {
       console.log('Upload successful:', data)
       setStatus(`✅ Upload successful to ${bucketName}!`)
 
-      // Try to create a signed URL
+
       const { data: urlData, error: urlError } = await supabase.storage
         .from(bucketName)
         .createSignedUrl(fileName, 60)

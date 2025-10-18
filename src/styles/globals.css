@@ -603,6 +603,125 @@ html {
   .no-print {
     display: none !important;
   }
+  
+  /* Hide header actions during print */
+  .bg-card.border-b.sticky {
+    position: static !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  
+  .bg-card.border-b.sticky button {
+    display: none !important;
+  }
+  
+  /* Portfolio specific print styles */
+  #portfolio-content {
+    background: white !important;
+  }
+  
+  #portfolio-content * {
+    background: transparent !important;
+    color: black !important;
+    border-color: #ccc !important;
+  }
+  
+  /* Keep some backgrounds for readability */
+  #portfolio-content .bg-card,
+  #portfolio-content .bg-secondary {
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+  }
+}
+
+/* PDF Export Compatibility - Force RGB colors for html2canvas */
+.pdf-export-mode {
+  background-color: #ffffff !important;
+}
+
+.pdf-export-mode * {
+  /* Override all CSS variables with RGB values */
+  --background: #f8fafc !important;
+  --foreground: #1a1f2e !important;
+  --card: #ffffff !important;
+  --card-foreground: #1a1f2e !important;
+  --primary: #dc2626 !important;
+  --primary-foreground: #ffffff !important;
+  --secondary: #dbeafe !important;
+  --secondary-foreground: #1e40af !important;
+  --muted: #f1f5f9 !important;
+  --muted-foreground: #64748b !important;
+  --accent: #3b82f6 !important;
+  --accent-foreground: #ffffff !important;
+  --border: #e2e8f0 !important;
+}
+
+.pdf-export-mode .bg-card {
+  background-color: #ffffff !important;
+}
+
+.pdf-export-mode .bg-secondary {
+  background-color: #dbeafe !important;
+}
+
+.pdf-export-mode .bg-background {
+  background-color: #f8fafc !important;
+}
+
+.pdf-export-mode .bg-primary\/10 {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+.pdf-export-mode .bg-primary\/5 {
+  background-color: rgba(220, 38, 38, 0.05) !important;
+}
+
+.pdf-export-mode .bg-accent\/5 {
+  background-color: rgba(59, 130, 246, 0.05) !important;
+}
+
+.pdf-export-mode .text-foreground {
+  color: #1a1f2e !important;
+}
+
+.pdf-export-mode .text-muted-foreground {
+  color: #64748b !important;
+}
+
+.pdf-export-mode .text-primary {
+  color: #dc2626 !important;
+}
+
+.pdf-export-mode .border-border {
+  border-color: #e2e8f0 !important;
+}
+
+.pdf-export-mode .avatar-gradient {
+  background: linear-gradient(135deg, #dc2626 0%, #3b82f6 50%, #8b5cf6 100%) !important;
+}
+
+.pdf-export-mode .bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)) !important;
+}
+
+.pdf-export-mode .from-primary\/10 {
+  --tw-gradient-from: rgba(220, 38, 38, 0.1) !important;
+  --tw-gradient-to: rgba(220, 38, 38, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.pdf-export-mode .to-accent\/10 {
+  --tw-gradient-to: rgba(59, 130, 246, 0.1) !important;
+}
+
+.pdf-export-mode .from-primary\/5 {
+  --tw-gradient-from: rgba(220, 38, 38, 0.05) !important;
+  --tw-gradient-to: rgba(220, 38, 38, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.pdf-export-mode .to-accent\/5 {
+  --tw-gradient-to: rgba(59, 130, 246, 0.05) !important;
 }
 
 /* Theme utilities - Modern red and blue aesthetic */

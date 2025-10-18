@@ -258,7 +258,7 @@ export function Recipes({ user, onNavigate }: RecipesProps) {
             }`}
           >
             <FileText className="h-4 w-4 inline mr-2" />
-            Submissions
+            My Submissions
           </button>
           {(user.role === 'instructor' || user.role === 'admin') && (
             <button

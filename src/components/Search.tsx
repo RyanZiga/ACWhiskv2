@@ -225,7 +225,7 @@ export function Search({ user, onNavigate }: SearchProps) {
           />
         </div>
 
- 
+        {/* Search Type Filters */}
         <div className="flex flex-wrap gap-2">
           {searchTypes.map(type => {
             const Icon = type.icon
@@ -290,7 +290,7 @@ export function Search({ user, onNavigate }: SearchProps) {
         </div>
       )}
 
-      {/* Search Results */}
+
       {query && (
         <div>
           <div className="flex items-center justify-between mb-4">

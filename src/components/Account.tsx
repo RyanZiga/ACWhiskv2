@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, MessageCircle, UserPlus, UserMinus, Grid, Users, Calendar, MapPin, Camera, Award, ChefHat, Star, TrendingUp } from 'lucide-react'
-import { projectId } from '../utils/supabase/info'
+import { ArrowLeft, MessageCircle, UserPlus, UserMinus, Grid, Users, Calendar, MapPin, Camera, Award, ChefHat, Star, TrendingUp, ExternalLink, Briefcase, GraduationCap } from 'lucide-react'
+import { projectId, publicAnonKey } from '../utils/supabase/info'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { isValidUUID } from '../utils/auth'
 
@@ -22,13 +22,19 @@ interface UserProfile {
   created_at: string
   followers: string[]
   following: string[]
-  portfolio?: {
-    specialty_dishes?: string[]
-    cooking_techniques?: string[]
-    achievements?: string[]
-    experience?: string
-    certifications?: string[]
-  }
+}
+
+interface PortfolioData {
+  id: string
+  user_id: string
+  bio: string
+  tagline: string
+  specialties: string[]
+  skills: string[]
+  experience: any[]
+  education: any[]
+  achievements: any[]
+  certifications: any[]
 }
 
 interface Post {
@@ -56,18 +62,25 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isEditingPortfolio, setIsEditingPortfolio] = useState(false)
+  const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null)
+  const [portfolioLoading, setPortfolioLoading] = useState(false)
 
   useEffect(() => {
     loadProfile()
     loadUserPosts()
   }, [userId])
 
+  useEffect(() => {
+    if (activeTab === 'portfolio') {
+      loadPortfolio()
+    }
+  }, [activeTab, userId])
+
   const loadProfile = async () => {
     try {
       setError(null)
       
-      // Validate userId before making API call
+
       if (!isValidUUID(userId)) {
         console.error('Invalid user ID:', userId)
         setError('Invalid user ID')
@@ -85,7 +98,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       if (response.ok) {
         const { profile: profileData } = await response.json()
         
-        // Ensure all required properties exist with default values
+   
         const safeProfile: UserProfile = {
           id: profileData.id || userId,
           name: profileData.name || 'Unknown User',
@@ -96,14 +109,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
           avatar_url: profileData.avatar_url || '',
           created_at: profileData.created_at || new Date().toISOString(),
           followers: Array.isArray(profileData.followers) ? profileData.followers : [],
-          following: Array.isArray(profileData.following) ? profileData.following : [],
-          portfolio: profileData.portfolio || {
-            specialty_dishes: [],
-            cooking_techniques: [],
-            achievements: [],
-            experience: '',
-            certifications: []
-          }
+          following: Array.isArray(profileData.following) ? profileData.following : []
         }
         
         setProfile(safeProfile)
@@ -120,6 +126,30 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
     }
   }
 
+  const loadPortfolio = async () => {
+    setPortfolioLoading(true)
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/rest/v1/make_c56dfc7a_portfolios?user_id=eq.${userId}`,
+        {
+          headers: {
+            'apikey': publicAnonKey,
+            'Authorization': `Bearer ${currentUser.access_token}`,
+          },
+        }
+      )
+      const data = await response.json()
+      
+      if (data && data.length > 0) {
+        setPortfolioData(data[0])
+      }
+    } catch (error) {
+      console.error('Error fetching portfolio:', error)
+    } finally {
+      setPortfolioLoading(false)
+    }
+  }
+
   const loadUserPosts = async () => {
     try {
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/${userId}/posts`, {
@@ -131,7 +161,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
       if (response.ok) {
         const { posts: postsData } = await response.json()
-        // Ensure posts is always an array
+
         const safePosts = Array.isArray(postsData) ? postsData.map((post: any) => ({
           ...post,
           images: Array.isArray(post.images) ? post.images : [],
@@ -142,7 +172,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       }
     } catch (error) {
       console.error('Error loading user posts:', error)
-      setPosts([]) // Set empty array on error
+      setPosts([]) 
     }
   }
 
@@ -179,7 +209,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
   }
 
   const startConversation = () => {
-    // Navigate to messages page with the target user
+
     onNavigate('messages', `user:${userId}`)
   }
 
@@ -359,77 +389,6 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                 </div>
               </div>
             )}
-
-            {/* Portfolio */}
-            {profile.portfolio && (
-              <div className="mt-4">
-                <h3 className="text-lg font-medium text-foreground mb-2">Portfolio</h3>
-                <div className="flex flex-col md:flex-row gap-4">
-                  {profile.portfolio.specialty_dishes && profile.portfolio.specialty_dishes.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <h2 className="text-xl font-bold text-foreground">Specialty Dishes</h2>
-                      {profile.portfolio.specialty_dishes.map((dish, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
-                        >
-                          {dish}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {profile.portfolio.cooking_techniques && profile.portfolio.cooking_techniques.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <h2 className="text-xl font-bold text-foreground">Cooking Techniques</h2>
-                      {profile.portfolio.cooking_techniques.map((technique, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
-                        >
-                          {technique}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {profile.portfolio.achievements && profile.portfolio.achievements.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <h2 className="text-xl font-bold text-foreground">Achievements</h2>
-                      {profile.portfolio.achievements.map((achievement, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
-                        >
-                          {achievement}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {profile.portfolio.experience && (
-                    <div className="flex flex-col gap-2">
-                      <h2 className="text-xl font-bold text-foreground">Experience</h2>
-                      <p className="text-foreground text-sm">{profile.portfolio.experience}</p>
-                    </div>
-                  )}
-
-                  {profile.portfolio.certifications && profile.portfolio.certifications.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <h2 className="text-xl font-bold text-foreground">Certifications</h2>
-                      {profile.portfolio.certifications.map((certification, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-accent text-accent-foreground rounded-full text-sm"
-                        >
-                          {certification}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -568,144 +527,166 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
 
         {activeTab === 'portfolio' && (
           <div className="space-y-6">
-            {/* Portfolio Header */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">Culinary Portfolio</h2>
-              {isOwnProfile && (
-                <button
-                  onClick={() => setIsEditingPortfolio(!isEditingPortfolio)}
-                  className="btn-gradient px-4 py-2 rounded-lg text-sm"
-                >
-                  {isEditingPortfolio ? 'Save Changes' : 'Edit Portfolio'}
-                </button>
-              )}
-            </div>
-
-            {/* Experience Section */}
-            {(profile.portfolio?.experience || isOwnProfile) && (
-              <div className="post-card p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Experience</h3>
-                </div>
-                {isEditingPortfolio ? (
-                  <textarea
-                    className="input-clean w-full p-3 min-h-[120px] resize-none"
-                    placeholder="Describe your culinary experience, journey, and expertise..."
-                    defaultValue={profile.portfolio?.experience || ''}
-                  />
-                ) : (
-                  <p className="text-foreground">
-                    {profile.portfolio?.experience || 'No experience added yet'}
-                  </p>
-                )}
+            {portfolioLoading ? (
+              <div className="text-center py-12">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="mt-2 text-muted-foreground">Loading portfolio...</p>
               </div>
-            )}
-
-            {/* Specialty Dishes */}
-            {((profile.portfolio?.specialty_dishes && profile.portfolio.specialty_dishes.length > 0) || isOwnProfile) && (
-              <div className="post-card p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <ChefHat className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Specialty Dishes</h3>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {profile.portfolio?.specialty_dishes?.map((dish, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-2 p-3 bg-muted rounded-lg"
+            ) : portfolioData ? (
+              <>
+                {/* Portfolio Preview Card */}
+                <div className="post-card p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-foreground">Professional Portfolio</h2>
+                    <button
+                      onClick={() => onNavigate('portfolio', userId)}
+                      className="flex items-center space-x-2 btn-gradient px-4 py-2 rounded-lg text-sm"
                     >
-                      <Star className="h-4 w-4 text-accent flex-shrink-0" />
-                      <span className="text-foreground">{dish}</span>
+                      <ExternalLink className="h-4 w-4" />
+                      <span>View Full Portfolio</span>
+                    </button>
+                  </div>
+
+                  {/* Tagline & Bio */}
+                  {(portfolioData.tagline || portfolioData.bio) && (
+                    <div className="mb-6">
+                      {portfolioData.tagline && (
+                        <p className="text-lg text-primary font-medium mb-2">{portfolioData.tagline}</p>
+                      )}
+                      {portfolioData.bio && (
+                        <p className="text-muted-foreground">{portfolioData.bio}</p>
+                      )}
                     </div>
-                  ))}
-                  {(!profile.portfolio?.specialty_dishes || profile.portfolio.specialty_dishes.length === 0) && (
-                    <p className="text-muted-foreground col-span-full">
-                      {isOwnProfile ? 'Add your signature dishes' : 'No specialty dishes listed'}
-                    </p>
                   )}
-                </div>
-              </div>
-            )}
 
-            {/* Cooking Techniques */}
-            {((profile.portfolio?.cooking_techniques && profile.portfolio.cooking_techniques.length > 0) || isOwnProfile) && (
-              <div className="post-card p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Award className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Mastered Techniques</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.portfolio?.cooking_techniques?.map((technique, index) => (
-                    <span
-                      key={index}
-                      className="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm font-medium"
-                    >
-                      {technique}
-                    </span>
-                  ))}
-                  {(!profile.portfolio?.cooking_techniques || profile.portfolio.cooking_techniques.length === 0) && (
-                    <p className="text-muted-foreground">
-                      {isOwnProfile ? 'Add cooking techniques you\'ve mastered' : 'No techniques listed'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Achievements & Certifications */}
-            {((profile.portfolio?.achievements && profile.portfolio.achievements.length > 0) || 
-              (profile.portfolio?.certifications && profile.portfolio.certifications.length > 0) || 
-              isOwnProfile) && (
-              <div className="post-card p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Star className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Achievements & Certifications</h3>
-                </div>
-                <div className="space-y-3">
-                  {profile.portfolio?.achievements?.map((achievement, index) => (
-                    <div
-                      key={`achievement-${index}`}
-                      className="flex items-start space-x-3 p-3 bg-muted rounded-lg"
-                    >
-                      <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                      <p className="text-foreground">{achievement}</p>
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="text-center p-4 bg-secondary rounded-lg">
+                      <ChefHat className="h-6 w-6 text-primary mx-auto mb-2" />
+                      <div className="font-semibold text-foreground">{portfolioData.specialties?.length || 0}</div>
+                      <div className="text-xs text-muted-foreground">Specialties</div>
                     </div>
-                  ))}
-                  {profile.portfolio?.certifications?.map((cert, index) => (
-                    <div
-                      key={`cert-${index}`}
-                      className="flex items-start space-x-3 p-3 bg-accent/20 rounded-lg border border-accent"
-                    >
-                      <Award className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
-                      <p className="text-foreground font-medium">{cert}</p>
+                    <div className="text-center p-4 bg-secondary rounded-lg">
+                      <Star className="h-6 w-6 text-primary mx-auto mb-2" />
+                      <div className="font-semibold text-foreground">{portfolioData.skills?.length || 0}</div>
+                      <div className="text-xs text-muted-foreground">Skills</div>
                     </div>
-                  ))}
-                  {(!profile.portfolio?.achievements || profile.portfolio.achievements.length === 0) &&
-                   (!profile.portfolio?.certifications || profile.portfolio.certifications.length === 0) && (
-                    <p className="text-muted-foreground">
-                      {isOwnProfile ? 'Add your achievements and certifications' : 'No achievements or certifications listed'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+                    <div className="text-center p-4 bg-secondary rounded-lg">
+                      <Briefcase className="h-6 w-6 text-primary mx-auto mb-2" />
+                      <div className="font-semibold text-foreground">{portfolioData.experience?.length || 0}</div>
+                      <div className="text-xs text-muted-foreground">Experiences</div>
+                    </div>
+                    <div className="text-center p-4 bg-secondary rounded-lg">
+                      <Award className="h-6 w-6 text-primary mx-auto mb-2" />
+                      <div className="font-semibold text-foreground">{portfolioData.certifications?.length || 0}</div>
+                      <div className="text-xs text-muted-foreground">Certifications</div>
+                    </div>
+                  </div>
 
-            {/* Empty State */}
-            {!isOwnProfile && 
-             (!profile.portfolio?.experience && 
-              (!profile.portfolio?.specialty_dishes || profile.portfolio.specialty_dishes.length === 0) &&
-              (!profile.portfolio?.cooking_techniques || profile.portfolio.cooking_techniques.length === 0) &&
-              (!profile.portfolio?.achievements || profile.portfolio.achievements.length === 0) &&
-              (!profile.portfolio?.certifications || profile.portfolio.certifications.length === 0)) && (
+                  {/* Specialties Preview */}
+                  {portfolioData.specialties && portfolioData.specialties.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-semibold text-foreground mb-3 flex items-center space-x-2">
+                        <ChefHat className="h-5 w-5 text-primary" />
+                        <span>Culinary Specialties</span>
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {portfolioData.specialties.slice(0, 6).map((specialty, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
+                          >
+                            {specialty}
+                          </span>
+                        ))}
+                        {portfolioData.specialties.length > 6 && (
+                          <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
+                            +{portfolioData.specialties.length - 6} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Skills Preview */}
+                  {portfolioData.skills && portfolioData.skills.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-semibold text-foreground mb-3 flex items-center space-x-2">
+                        <Star className="h-5 w-5 text-primary" />
+                        <span>Skills & Techniques</span>
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {portfolioData.skills.slice(0, 6).map((skill, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-accent/10 text-accent rounded-full text-sm"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                        {portfolioData.skills.length > 6 && (
+                          <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
+                            +{portfolioData.skills.length - 6} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Experience */}
+                  {portfolioData.experience && portfolioData.experience.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-semibold text-foreground mb-3 flex items-center space-x-2">
+                        <Briefcase className="h-5 w-5 text-primary" />
+                        <span>Recent Experience</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {portfolioData.experience.slice(0, 2).map((exp: any, index: number) => (
+                          <div key={index} className="p-3 bg-muted rounded-lg">
+                            <div className="font-medium text-foreground">{exp.title}</div>
+                            <div className="text-sm text-muted-foreground">{exp.organization}</div>
+                          </div>
+                        ))}
+                        {portfolioData.experience.length > 2 && (
+                          <p className="text-sm text-muted-foreground">
+                            +{portfolioData.experience.length - 2} more experiences
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* View Full Portfolio CTA */}
+                  <div className="text-center pt-4 border-t border-border">
+                    <button
+                      onClick={() => onNavigate('portfolio', userId)}
+                      className="btn-gradient px-6 py-3 rounded-lg"
+                    >
+                      View Complete Portfolio
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                   <Award className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">No portfolio yet</h3>
-                <p className="text-muted-foreground">
-                  {profile.name} hasn't built their culinary portfolio yet.
+                <h3 className="text-lg font-medium text-foreground mb-2">No Portfolio Yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  {isOwnProfile 
+                    ? 'Build your professional culinary portfolio to showcase your skills and experience.'
+                    : `${profile.name} hasn't created their portfolio yet.`
+                  }
                 </p>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => onNavigate('portfolio')}
+                    className="btn-gradient px-6 py-3 rounded-lg"
+                  >
+                    Create Portfolio
+                  </button>
+                )}
               </div>
             )}
           </div>

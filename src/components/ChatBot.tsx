@@ -249,6 +249,7 @@ export function ChatBot() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [useAI, setUseAI] = useState(true)
+  const [showHelpPopup, setShowHelpPopup] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatHistoryRef = useRef<Array<{ role: string; parts: string }>>([])
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -264,13 +265,34 @@ export function ChatBot() {
     scrollToBottom()
   }, [messages])
 
+
+  useEffect(() => {
+    const showPopup = () => {
+
+      if (!isOpen) {
+        setShowHelpPopup(true)
+  
+        setTimeout(() => {
+          setShowHelpPopup(false)
+        }, 10000)
+      }
+    }
+
+
+    const timer = setInterval(() => {
+      showPopup()
+    }, 5 * 60 * 1000) 
+
+    return () => clearInterval(timer)
+  }, [isOpen])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const getGeminiResponse = async (userMessage: string): Promise<string> => {
     try {
-      // Create a culinary-focused system prompt
+
       const systemContext = `You are a professional culinary assistant helping students and instructors in a culinary education platform called ACWhisk. Your role is to:
 - Provide expert advice on cooking techniques, recipes, and food preparation
 - Help with food safety and proper kitchen practices
@@ -281,7 +303,7 @@ export function ChatBot() {
 
 Keep responses concise (2-3 paragraphs max), practical, and easy to understand. Use bullet points when listing steps or tips.`
 
-      // Build conversation history for context
+
       const contents = [
         {
           role: 'user',
@@ -330,7 +352,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
       const data = await response.json()
       
-      // Check if we got a valid response
+
       if (!data.candidates || data.candidates.length === 0) {
         throw new Error('No response generated from AI')
       }
@@ -341,13 +363,13 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         throw new Error('Invalid response format from AI')
       }
 
-      // Update chat history
+
       chatHistoryRef.current.push(
         { role: 'user', parts: userMessage },
         { role: 'model', parts: text }
       )
 
-      // Keep only last 10 exchanges to manage context
+
       if (chatHistoryRef.current.length > 20) {
         chatHistoryRef.current = chatHistoryRef.current.slice(-20)
       }
@@ -355,7 +377,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       return text
     } catch (error) {
       console.error('Gemini API Error:', error)
-      // Return a more helpful error message
+
       if (error instanceof Error && error.message.includes('not found')) {
         throw new Error('AI model temporarily unavailable. Please try FAQ mode or try again later.')
       }
@@ -377,12 +399,12 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
   const findBestAnswer = (query: string): FAQ | null => {
     const lowerQuery = query.toLowerCase()
     
-    // Exact keyword match
+
     let bestMatch = FAQS.find(faq =>
       faq.keywords.some(keyword => lowerQuery.includes(keyword.toLowerCase()))
     )
 
-    // If no keyword match, try partial question match
+
     if (!bestMatch) {
       bestMatch = FAQS.find(faq =>
         faq.question.toLowerCase().includes(lowerQuery) ||
@@ -404,16 +426,16 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
     try {
       if (useAI) {
-        // Use Gemini AI for response
+    
         const aiResponse = await getGeminiResponse(userMessage)
         addMessage(aiResponse, 'bot', 'ai')
         
-        // Optionally suggest related FAQs based on keywords
+
         const bestAnswer = findBestAnswer(userMessage)
         if (bestAnswer && bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
           const relatedFAQs = FAQS.filter(faq => 
             bestAnswer.relatedFAQs?.includes(faq.id)
-          ).slice(0, 3) // Limit to 3 suggestions
+          ).slice(0, 3)
           
           if (relatedFAQs.length > 0) {
             const suggestions = relatedFAQs.map(faq => faq.question).join('\n• ')
@@ -421,7 +443,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
           }
         }
       } else {
-        // Use FAQ-based response (fallback)
+
         const bestAnswer = findBestAnswer(userMessage)
         
         if (bestAnswer) {
@@ -448,7 +470,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     } catch (error) {
       console.error('Error getting response:', error)
       
-      // Fallback to FAQ mode automatically
+
       const bestAnswer = findBestAnswer(userMessage)
       if (bestAnswer) {
         addMessage(
@@ -462,7 +484,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
           'bot'
         )
         setShowFAQs(true)
-        // Auto-switch to FAQ mode
+
         setUseAI(false)
       }
     } finally {
@@ -478,7 +500,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     setTimeout(() => {
       addMessage(faq.answer, 'bot', 'faq')
       
-      // Add related FAQs
+
       if (faq.relatedFAQs && faq.relatedFAQs.length > 0) {
         const relatedFAQs = FAQS.filter(f => faq.relatedFAQs?.includes(f.id))
         if (relatedFAQs.length > 0) {
@@ -507,7 +529,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     }
   }
 
-  // Handle drag start
+
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true)
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
@@ -515,7 +537,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     setDragStart({ x: clientX, y: clientY })
   }
 
-  // Handle drag move
+ 
   useEffect(() => {
     const handleDragMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return
@@ -524,16 +546,13 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX
       const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
       
-      // Calculate deltas correctly for bottom/right positioning
-      // For right: drag right (increase X) should decrease right value (move away from right edge)
-      // For bottom: drag down (increase Y) should decrease bottom value (move away from bottom edge)
+
       const deltaX = dragStart.x - clientX
       const deltaY = dragStart.y - clientY
       
       setButtonPosition(prev => {
-        // Add delta to move in the correct direction
-        // Constrain to screen bounds with mobile navbar consideration
-        const minBottom = isMobile ? 90 : 16 // Keep above mobile navbar
+
+        const minBottom = isMobile ? 90 : 16 
         const newRight = Math.max(16, Math.min(window.innerWidth - 72, prev.right + deltaX))
         const newBottom = Math.max(minBottom, Math.min(window.innerHeight - 72, prev.bottom + deltaY))
         return { right: newRight, bottom: newBottom }
@@ -561,7 +580,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     }
   }, [isDragging, dragStart, isMobile])
 
-  // Handle window resize
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)
@@ -576,6 +595,48 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
   return (
     <>
+      {/* Help Popup Notification */}
+      {showHelpPopup && !isOpen && (
+        <div
+          style={{
+            bottom: `${buttonPosition.bottom + 72}px`,
+            right: `${buttonPosition.right}px`
+          }}
+          className="fixed z-50 animate-in slide-in-from-bottom-5 fade-in duration-300"
+        >
+          <div className="bg-card border border-border rounded-xl shadow-2xl p-4 max-w-xs relative">
+            <button
+              onClick={() => setShowHelpPopup(false)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-secondary hover:bg-destructive hover:text-destructive-foreground rounded-full flex items-center justify-center transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                <HelpCircle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-foreground mb-1">Need help?</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  I'm here to assist you with cooking techniques, recipes, and more!
+                </p>
+                <button
+                  onClick={() => {
+                    setShowHelpPopup(false)
+                    setIsOpen(true)
+                  }}
+                  className="w-full bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Ask me anything
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chat Button - Draggable */}
       <button
         ref={buttonRef}
@@ -584,13 +645,14 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         onClick={(e) => {
           if (!isDragging) {
             setIsOpen(true)
+            setShowHelpPopup(false)
           }
         }}
         style={{
           bottom: `${buttonPosition.bottom}px`,
           right: `${buttonPosition.right}px`
         }}
-        className={`fixed w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 hover:scale-110 hover:bg-[#1877f2] ${isDragging ? 'cursor-grabbing scale-110' : 'cursor-grab'}`}
+        className={`fixed w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 hover:scale-110 hover:bg-[#1877f2] ${isDragging ? 'cursor-grabbing scale-110' : 'cursor-grab'} ${showHelpPopup ? 'ring-4 ring-primary/30 animate-pulse' : ''}`}
       >
         <MessageCircle className="h-6 w-6" />
       </button>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Heart,
   MessageCircle,
@@ -26,6 +27,7 @@ import {
   Video,
   FileText,
   Image as ImageIcon,
+  Send,
 } from "lucide-react";
 import { projectId } from "../utils/supabase/info";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -33,6 +35,8 @@ import { LinkifiedText } from "../utils/linkify";
 import { UserRoleBadge } from "./UserRoleBadge";
 import { StoryCreator } from "./StoryCreator";
 import { StoryViewer } from "./StoryViewer";
+import { StarRating } from "./StarRating";
+import { RecipeDetailModal } from "./RecipeDetailModal";
 
 interface User {
   id: string;
@@ -50,6 +54,13 @@ interface Comment {
   created_at: string;
 }
 
+interface Rating {
+  user_id: string;
+  user_name: string;
+  rating: number;
+  created_at: string;
+}
+
 interface Post {
   id: string;
   content: string;
@@ -61,6 +72,7 @@ interface Post {
   created_at: string;
   likes: string[];
   comments: Comment[];
+  ratings?: Rating[];
   type?: "recipe" | "post";
   recipe_data?: {
     title: string;
@@ -69,6 +81,8 @@ interface Post {
     servings: number;
     rating: number;
     tags: string[];
+    ingredients?: string;
+    instructions?: string;
   };
 }
 
@@ -208,21 +222,32 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   const [scrolled, setScrolled] = useState(false);
   const [currentTip, setCurrentTip] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const dropdownButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [followLoading, setFollowLoading] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<"all" | "following" | "newest" | "popular">("all");
 
-  // Stories state
+
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
   const [showStoryCreator, setShowStoryCreator] = useState(false);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
   const [userHasStory, setUserHasStory] = useState(false);
+  
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ users: any[], posts: any[], recipes: any[] }>({ users: [], posts: [], recipes: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+  
+
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  
+
+  const [selectedRecipe, setSelectedRecipe] = useState<Post | null>(null);
 
 
-
-  // Expose create post function to parent
   useEffect(() => {
     if (onCreatePostRef) {
       onCreatePostRef.current = () => setShowCreatePost(true);
@@ -235,22 +260,22 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     loadSuggestedUsers();
     loadStories();
 
-    // Real-time updates every 30 seconds
+
     const feedInterval = setInterval(() => {
       loadFeed();
     }, 30000);
 
-    // Update top recipes every 5 minutes
+
     const recipesInterval = setInterval(() => {
       loadTopRecipes();
     }, 300000);
 
-    // Handle scroll for blur header
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 100);
     };
 
-    // Close dropdowns when clicking outside
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('[data-dropdown]') && !target.closest('[data-dropdown-trigger]')) {
@@ -262,7 +287,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     window.addEventListener("scroll", handleScroll);
     document.addEventListener("click", handleClickOutside);
 
-    // Change cooking tip every minute
+
     const tipInterval = setInterval(() => {
       setCurrentTip((prev) => (prev + 1) % cookingTips.length);
     }, 60000);
@@ -292,7 +317,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(10000), // 10 second timeout
+          signal: AbortSignal.timeout(10000),
         },
       );
 
@@ -392,7 +417,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           },
         }
       );
-      // Reload stories to update view status
+
       loadStories();
     } catch (error) {
       console.error("Error marking story as viewed:", error);
@@ -400,15 +425,15 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   };
 
   const handleStoryClick = (userId: string) => {
-    // Filter out users with no stories
+
     const groupsWithStories = storyGroups.filter(group => group.stories && group.stories.length > 0);
     
     if (groupsWithStories.length === 0) return;
     
-    // Find the index of the clicked user in the filtered array
+
     const index = groupsWithStories.findIndex(group => group.user_id === userId);
     
-    if (index === -1) return; // User not found
+    if (index === -1) return; 
     
     setViewerStartIndex(index);
     setShowStoryViewer(true);
@@ -418,7 +443,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     try {
       if (!user.access_token) return;
 
-      // Fetch all users
+
       const usersResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/all`,
         {
@@ -432,14 +457,14 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
 
       if (usersResponse.ok) {
         const { users: allUsers } = await usersResponse.json();
-        // Filter out current user and limit to 3 suggestions
+
         const suggestions = (allUsers || [])
           .filter((u: any) => u.id !== user.id)
           .slice(0, 3);
         setSuggestedUsers(suggestions);
       }
 
-      // Fetch current user's following list
+
       const followingResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/${user.id}/following`,
         {
@@ -465,7 +490,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   const handleFollowToggle = async (targetUserId: string) => {
     const isFollowing = followingUsers.has(targetUserId);
     
-    // Add to loading state
+
     setFollowLoading(prev => new Set([...prev, targetUserId]));
 
     try {
@@ -483,7 +508,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       );
 
       if (response.ok) {
-        // Update following state
+
         setFollowingUsers(prev => {
           const newSet = new Set(prev);
           if (isFollowing) {
@@ -499,7 +524,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     } catch (error) {
       console.error(`Error ${isFollowing ? 'unfollowing' : 'following'} user:`, error);
     } finally {
-      // Remove from loading state
+
       setFollowLoading(prev => {
         const newSet = new Set(prev);
         newSet.delete(targetUserId);
@@ -549,6 +574,30 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             "italian",
             "comfort-food",
           ],
+          ingredients: `1 1/2 cups Arborio rice
+4 cups vegetable or chicken stock, warmed
+1/2 cup dry white wine
+1 lb mixed wild mushrooms (shiitake, oyster, cremini), sliced
+1 medium onion, finely diced
+3 cloves garlic, minced
+1/2 cup Parmesan cheese, grated
+3 tbsp butter
+2 tbsp olive oil
+Fresh thyme, chopped
+Salt and pepper to taste
+Fresh parsley for garnish`,
+          instructions: `Heat stock in a pot and keep warm on low heat
+In a large pan, heat olive oil and 1 tbsp butter over medium heat
+Sauté mushrooms until golden, season with salt and pepper, then set aside
+In the same pan, sauté onion until translucent, about 3-4 minutes
+Add garlic and cook for 1 minute until fragrant
+Add rice and toast for 2 minutes, stirring constantly
+Pour in white wine and stir until absorbed
+Add stock one ladle at a time, stirring frequently and waiting for liquid to absorb before adding more
+Continue for about 20-25 minutes until rice is creamy and al dente
+Stir in mushrooms, remaining butter, Parmesan, and thyme
+Season with salt and pepper to taste
+Garnish with fresh parsley and serve immediately`,
         },
       },
       {
@@ -579,6 +628,28 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             "quinoa",
             "vegetarian",
           ],
+          ingredients: `1 cup quinoa, rinsed
+2 cups vegetable broth
+1 cup cherry tomatoes, halved
+1 cucumber, diced
+1/2 red onion, thinly sliced
+1/2 cup kalamata olives, pitted
+1/2 cup feta cheese, crumbled
+1 bell pepper, roasted and sliced
+2 cups mixed greens
+1/4 cup tahini
+2 tbsp lemon juice
+1 clove garlic, minced
+Olive oil, salt, and pepper`,
+          instructions: `Cook quinoa in vegetable broth according to package directions, about 15 minutes
+While quinoa cooks, prepare vegetables and set aside
+Make dressing by whisking tahini, lemon juice, garlic, and 2-3 tbsp water until smooth
+Season dressing with salt and pepper
+Fluff cooked quinoa with a fork and let cool slightly
+In bowls, layer mixed greens and quinoa
+Top with tomatoes, cucumber, onion, olives, bell pepper, and feta
+Drizzle with tahini dressing
+Serve immediately or refrigerate for meal prep`,
         },
       },
       {
@@ -604,6 +675,24 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           servings: 4,
           rating: 4.9,
           tags: ["pasta", "italian", "fresh", "homemade"],
+          ingredients: `2 cups all-purpose flour, plus extra for dusting
+3 large eggs
+1/2 tsp salt
+1 tbsp olive oil
+Semolina flour for dusting
+Water as needed`,
+          instructions: `Mound flour on a clean work surface and make a well in the center
+Crack eggs into the well and add salt and olive oil
+Using a fork, beat eggs gently and begin to incorporate flour from the edges
+Continue mixing until a rough dough forms
+Knead dough for 8-10 minutes until smooth and elastic
+Wrap in plastic wrap and rest for 30 minutes at room temperature
+Divide dough into 4 pieces and flatten each slightly
+Roll out each piece using a pasta machine or rolling pin until very thin
+Dust with semolina and fold dough loosely, then cut into fettuccine strips
+Unravel pasta and dust with more semolina to prevent sticking
+Cook in boiling salted water for 2-3 minutes until al dente
+Toss with your favorite sauce and serve immediately`,
         },
       },
       {
@@ -629,6 +718,25 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           servings: 2,
           rating: 4.7,
           tags: ["dessert", "chocolate", "cake"],
+          ingredients: `4 oz dark chocolate (70% cocoa), chopped
+1/2 cup unsalted butter
+2 large eggs
+2 egg yolks
+1/4 cup granulated sugar
+Pinch of salt
+2 tbsp all-purpose flour
+Butter and cocoa powder for ramekins
+Vanilla ice cream for serving`,
+          instructions: `Preheat oven to 425°F (220°C)
+Butter four 6-oz ramekins and dust with cocoa powder
+Melt chocolate and butter together in a double boiler, stirring until smooth
+In a bowl, whisk eggs, egg yolks, sugar, and salt until thick and pale
+Fold melted chocolate mixture into egg mixture
+Gently fold in flour until just combined
+Divide batter evenly among prepared ramekins
+Bake for 12-14 minutes until edges are firm but centers are still soft
+Let cool for 1 minute, then carefully invert onto plates
+Serve immediately with vanilla ice cream`,
         },
       },
     ];
@@ -734,7 +842,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       }
     } catch (error) {
       console.error("Error liking post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) =>
         prevPosts.map((post) => {
           if (post.id === postId) {
@@ -777,7 +885,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       }
     } catch (error) {
       console.error("Error commenting on post:", error);
-      // Optimistic update for demo
+
       const newComment: Comment = {
         id: `comment_${Date.now()}`,
         content,
@@ -827,7 +935,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       }
     } catch (error) {
       console.error("Error editing post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === editingPost.id
@@ -841,7 +949,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   };
 
   const handleDeletePost = async (postId: string) => {
-    setActiveDropdown(null); // Close any open dropdowns
+    setActiveDropdown(null);
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}`,
@@ -859,10 +967,67 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
       setShowDeleteConfirm(null);
     }
+  };
+
+  const handleRateRecipe = async (postId: string, rating: number) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}/rate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ rating }),
+        },
+      );
+
+      if (response.ok) {
+        const { post } = await response.json();
+        setPosts((prevPosts) =>
+          prevPosts.map((p) => (p.id === postId ? post : p)),
+        );
+      }
+    } catch (error) {
+      console.error("Error rating recipe:", error);
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) => {
+          if (post.id === postId) {
+            const newRating: Rating = {
+              user_id: user.id,
+              user_name: user.name,
+              rating,
+              created_at: new Date().toISOString(),
+            };
+            const existingRatings = post.ratings || [];
+            const filteredRatings = existingRatings.filter(r => r.user_id !== user.id);
+            return {
+              ...post,
+              ratings: [...filteredRatings, newRating],
+            };
+          }
+          return post;
+        }),
+      );
+    }
+  };
+
+  const calculateAverageRating = (ratings?: Rating[]): number => {
+    if (!ratings || ratings.length === 0) return 0;
+    const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+    return sum / ratings.length;
+  };
+
+  const getUserRating = (ratings?: Rating[]): number => {
+    if (!ratings) return 0;
+    const userRating = ratings.find(r => r.user_id === user.id);
+    return userRating ? userRating.rating : 0;
   };
 
 
@@ -893,7 +1058,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     setSearchLoading(true);
 
     try {
-      // Search for users, posts, and assignments in parallel
+
       const [usersResponse, postsResponse, assignmentsResponse] = await Promise.all([
         fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/search?query=${encodeURIComponent(query)}`,
@@ -980,7 +1145,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   return (
     <>
     <div className="min-h-screen">
-
+      {/* Floating Arrow Button for Mobile Sidebar */}
       {!showMobileSidebar && (
         <button
           onClick={() => setShowMobileSidebar(true)}
@@ -992,15 +1157,15 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-
+        {/* Story Circles Section and User Header */}
         <div className="mb-6 flex gap-6 items-start">
-
+          {/* Story Circles - Full width on mobile, flex-1 on desktop */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-
+              {/* Story Circles */}
               <div className="overflow-x-auto scrollbar-hide w-full">
                 <div className="flex space-x-4 pb-2 pr-4">
-
+                  {/* User's own story - add story button */}
                   <div
                     onClick={() => userHasStory ? handleStoryClick(user.id) : setShowStoryCreator(true)}
                     className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
@@ -1036,7 +1201,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                           )}
                         </div>
                       </div>
-
+                      {/* Always show add button - allows adding more stories */}
                       <div 
                         className="absolute bottom-0 right-0 w-5 h-5 lg:w-6 lg:h-6 bg-primary rounded-full flex items-center justify-center border-2 border-background cursor-pointer hover:scale-110 transition-transform"
                         onClick={(e) => {
@@ -1052,7 +1217,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                     </span>
                   </div>
 
-
+                  {/* Other users' stories */}
                   {storyGroups.map((group) => {
                     if (group.user_id === user.id) return null;
                     
@@ -1115,9 +1280,9 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         </div>
 
         <div className="flex gap-6 relative">
-
+          {/* Main Feed */}
           <div className="flex-1 max-w-7xl mx-auto lg:mx-0">
-
+            {/* Create Post Section - Hidden on Mobile */}
             <div className="hidden lg:block post-card p-4 lg:p-6 mb-6">
               <div className="flex items-center space-x-3 lg:space-x-4 mb-4">
                 <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
@@ -1161,13 +1326,24 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             </div>
 
 
+          
+
+            {/* Feed Posts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {posts.map((post, index) => (
                 <div
                   key={post.id}
-                  className="post-card overflow-hidden"
-                >
+                  className="post-card overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => {
 
+                    if (post.type === "recipe" && post.recipe_data) {
+                      setSelectedRecipe(post);
+                    } else {
+                      setSelectedPost(post);
+                    }
+                  }}
+                >
+                  {/* Post Content  */}
                   {post.images && post.images.length > 0 ? (
                     <div className="h-48 relative overflow-hidden group">
                       <ImageWithFallback
@@ -1184,7 +1360,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                     </div>
                   )}
 
-
+                  {/* Post Footer */}
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <button
@@ -1218,6 +1394,55 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                       </button>
 
                       <div className="flex items-center space-x-3">
+
+                        {post.author_id === user.id && (
+                          <div className="relative">
+                            <button
+                              ref={(el) => {
+                                dropdownButtonRefs.current[post.id] = el;
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (activeDropdown === post.id) {
+                                  setActiveDropdown(null);
+                                  setDropdownPosition(null);
+                                } else {
+                                  const button = dropdownButtonRefs.current[post.id];
+                                  if (button) {
+                                    const rect = button.getBoundingClientRect();
+                                    const dropdownWidth = 192; 
+                                    const dropdownHeight = 120; 
+                                    
+
+                                    let left = rect.right + window.scrollX - dropdownWidth;
+                                    let top = rect.bottom + window.scrollY + 8;
+                                    
+  
+                                    if (left < 10) {
+                                      left = 10;
+                                    }
+                                    
+
+                                    if (left + dropdownWidth > window.innerWidth - 10) {
+                                      left = window.innerWidth - dropdownWidth - 10;
+                                    }
+                                    
+
+                                    if (top + dropdownHeight > window.innerHeight + window.scrollY - 10) {
+                                      top = rect.top + window.scrollY - dropdownHeight - 8;
+                                    }
+                                    
+                                    setDropdownPosition({ top, left });
+                                  }
+                                  setActiveDropdown(post.id);
+                                }
+                              }}
+                              className="p-1 hover:bg-secondary rounded-full transition-colors"
+                            >
+                              <MoreHorizontal className="h-4 w-4 text-foreground" />
+                            </button>
+                          </div>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1331,13 +1556,54 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
                         </div>
                       </div>
                     )}
+
+                    {/* Rating Section */}
+                    {post.type === "recipe" && (
+                      <div className="mt-3 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Average Rating</p>
+                            <StarRating
+                              rating={calculateAverageRating(post.ratings)}
+                              size="sm"
+                              showCount
+                              count={post.ratings?.length || 0}
+                            />
+                          </div>
+                          {post.recipe_data && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRecipe(post);
+                              }}
+                              className="text-xs text-primary hover:underline font-medium"
+                            >
+                              View Recipe →
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {getUserRating(post.ratings) > 0 ? "Your Rating" : "Rate this recipe"}
+                          </p>
+                          <StarRating
+                            rating={getUserRating(post.ratings)}
+                            size="sm"
+                            interactive
+                            userRating={getUserRating(post.ratings)}
+                            onRate={(rating) => handleRateRecipe(post.id, rating)}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-
+          {/* Desktop Sidebar */}
           <div className="hidden lg:block w-80 space-y-4 sticky top-24 h-fit">
             <SidebarContent
               user={user}
@@ -1355,7 +1621,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         </div>
       </div>
 
-
+      {/* Mobile Sidebar */}
       {showMobileSidebar && (
         <>
           <div
@@ -1394,14 +1660,20 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         </>
       )}
 
-
+      {/* Create Post Modal */}
       {showCreatePost && (
         <CreatePostModal
           user={user}
           onClose={() => setShowCreatePost(false)}
-          onSuccess={() => {
+          onSuccess={(newPost) => {
             setShowCreatePost(false);
-            loadFeed();
+            if (newPost) {
+
+              setPosts(prev => [newPost, ...prev]);
+            } else {
+
+              loadFeed();
+            }
           }}
         />
       )}
@@ -1445,7 +1717,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         />
       )}
 
-
+      {/* Story Viewer Modal */}
       {showStoryViewer && storyGroups.length > 0 && (
         <StoryViewer
           storyGroups={storyGroups.filter(group => group.stories && group.stories.length > 0)}
@@ -1455,6 +1727,161 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           onClose={() => setShowStoryViewer(false)}
           onStoryView={handleStoryView}
         />
+      )}
+
+      {/* Post Detail Modal */}
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          user={user}
+          onClose={() => setSelectedPost(null)}
+          onLike={handleLike}
+          onComment={(postId, content) => {
+            const newComment: Comment = {
+              id: `comment_${Date.now()}`,
+              content,
+              author_id: user.id,
+              author_name: user.name,
+              created_at: new Date().toISOString(),
+            };
+            setPosts((prevPosts) =>
+              prevPosts.map((post) =>
+                post.id === postId
+                  ? {
+                      ...post,
+                      comments: [...post.comments, newComment],
+                    }
+                  : post,
+              ),
+            );
+            setSelectedPost((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    comments: [...prev.comments, newComment],
+                  }
+                : null,
+            );
+          }}
+          onRate={(postId, rating) => {
+            handleRateRecipe(postId, rating);
+
+            const newRating: Rating = {
+              user_id: user.id,
+              user_name: user.name,
+              rating,
+              created_at: new Date().toISOString(),
+            };
+            setSelectedPost((prev) => {
+              if (!prev || prev.id !== postId) return prev;
+              const existingRatings = prev.ratings || [];
+              const filteredRatings = existingRatings.filter(r => r.user_id !== user.id);
+              return {
+                ...prev,
+                ratings: [...filteredRatings, newRating],
+              };
+            });
+          }}
+          onNavigate={onNavigate}
+        />
+      )}
+
+      {/* Recipe Detail Modal */}
+      {selectedRecipe && (
+        <RecipeDetailModal
+          post={selectedRecipe}
+          user={user}
+          onClose={() => setSelectedRecipe(null)}
+          onRate={(rating) => {
+            handleRateRecipe(selectedRecipe.id, rating);
+
+            const newRating: Rating = {
+              user_id: user.id,
+              user_name: user.name,
+              rating,
+              created_at: new Date().toISOString(),
+            };
+            setSelectedRecipe((prev) => {
+              if (!prev || prev.id !== selectedRecipe.id) return prev;
+              const existingRatings = prev.ratings || [];
+              const filteredRatings = existingRatings.filter(r => r.user_id !== user.id);
+              return {
+                ...prev,
+                ratings: [...filteredRatings, newRating],
+              };
+            });
+          }}
+          onComment={(postId, content) => {
+            const newComment: Comment = {
+              id: `comment_${Date.now()}`,
+              content,
+              author_id: user.id,
+              author_name: user.name,
+              created_at: new Date().toISOString(),
+            };
+            setPosts((prevPosts) =>
+              prevPosts.map((post) =>
+                post.id === postId
+                  ? {
+                      ...post,
+                      comments: [...post.comments, newComment],
+                    }
+                  : post,
+              ),
+            );
+            setSelectedRecipe((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    comments: [...prev.comments, newComment],
+                  }
+                : null,
+            );
+          }}
+          onLike={handleLike}
+          onNavigate={onNavigate}
+        />
+      )}
+
+
+      {activeDropdown && dropdownPosition && createPortal(
+        <div
+          className="fixed w-48 post-card shadow-lg rounded-lg overflow-hidden z-50"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const post = posts.find(p => p.id === activeDropdown);
+              if (post) {
+                setEditingPost(post);
+                setEditContent(post.content);
+              }
+              setActiveDropdown(null);
+              setDropdownPosition(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center space-x-2"
+          >
+            <Edit className="h-4 w-4" />
+            <span>Edit Post</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(activeDropdown);
+              setActiveDropdown(null);
+              setDropdownPosition(null);
+            }}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center space-x-2 text-red-500"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Delete Post</span>
+          </button>
+        </div>,
+        document.body
       )}
     </div>
     </>
@@ -1488,7 +1915,7 @@ function SidebarContent({
 }: SidebarContentProps) {
   return (
     <>
-
+      {/* Suggestions for you */}
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">
@@ -1616,7 +2043,7 @@ function SidebarContent({
 interface CreatePostModalProps {
   user: User;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (post?: Post) => void;
 }
 
 function CreatePostModal({
@@ -1624,10 +2051,20 @@ function CreatePostModal({
   onClose,
   onSuccess,
 }: CreatePostModalProps) {
+  const [postType, setPostType] = useState<"post" | "recipe">("post");
   const [content, setContent] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+
+  const [recipeTitle, setRecipeTitle] = useState("");
+  const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Easy");
+  const [cookingTime, setCookingTime] = useState("");
+  const [servings, setServings] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [tags, setTags] = useState("");
 
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -1642,7 +2079,20 @@ function CreatePostModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && images.length === 0) return;
+    
+
+    if (postType === "recipe") {
+      if (!recipeTitle.trim()) {
+        setError("Recipe title is required");
+        return;
+      }
+      if (!content.trim() && !ingredients.trim() && !instructions.trim()) {
+        setError("Please add some description, ingredients, or instructions");
+        return;
+      }
+    } else {
+      if (!content.trim() && images.length === 0) return;
+    }
 
     setLoading(true);
     setError("");
@@ -1650,7 +2100,7 @@ function CreatePostModal({
     try {
       const imageUrls: string[] = [];
 
-      // Upload images
+
       for (const image of images) {
         const formData = new FormData();
         formData.append("file", image);
@@ -1672,7 +2122,26 @@ function CreatePostModal({
         }
       }
 
-      // Create post
+
+      const postPayload: any = {
+        content: content.trim(),
+        images: imageUrls,
+      };
+      
+      if (postType === "recipe") {
+        postPayload.type = "recipe";
+        postPayload.recipe_data = {
+          title: recipeTitle.trim(),
+          difficulty,
+          cooking_time: parseInt(cookingTime) || 30,
+          servings: parseInt(servings) || 2,
+          rating: 0,
+          tags: tags.split(',').map(t => t.trim()).filter(t => t),
+          ingredients: ingredients.trim(),
+          instructions: instructions.trim(),
+        };
+      }
+      
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts`,
         {
@@ -1681,15 +2150,13 @@ function CreatePostModal({
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            content: content.trim(),
-            images: imageUrls,
-          }),
+          body: JSON.stringify(postPayload),
         },
       );
 
       if (response.ok) {
-        onSuccess();
+        const { post: createdPost } = await response.json();
+        onSuccess(createdPost);
       } else {
         const { error } = await response.json();
         setError(error || "Failed to create post");
@@ -1697,8 +2164,36 @@ function CreatePostModal({
     } catch (err) {
       console.error("Post creation error:", err);
 
+      const newPost: Post = {
+        id: `post_${Date.now()}`,
+        content: content.trim(),
+        images: [], 
+        author_id: user.id,
+        author_name: user.name,
+        author_role: user.role,
+        author_avatar: user.avatar_url,
+        created_at: new Date().toISOString(),
+        likes: [],
+        comments: [],
+        ratings: [],
+      };
+      
+      if (postType === "recipe") {
+        newPost.type = "recipe";
+        newPost.recipe_data = {
+          title: recipeTitle.trim(),
+          difficulty,
+          cooking_time: parseInt(cookingTime) || 30,
+          servings: parseInt(servings) || 2,
+          rating: 0,
+          tags: tags.split(',').map(t => t.trim()).filter(t => t),
+          ingredients: ingredients.trim(),
+          instructions: instructions.trim(),
+        };
+      }
+      
       setTimeout(() => {
-        onSuccess();
+        onSuccess(newPost);
       }, 1000);
     } finally {
       setLoading(false);
@@ -1711,7 +2206,7 @@ function CreatePostModal({
         <div className="sticky top-0 bg-card border-b border-border p-4 lg:p-6 rounded-t-lg">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">
-              Create New Post
+              Create New {postType === "recipe" ? "Recipe" : "Post"}
             </h2>
             <button
               type="button"
@@ -1757,12 +2252,155 @@ function CreatePostModal({
             </div>
           </div>
 
+
+          <div className="mb-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPostType("post")}
+              className={`flex-1 py-2 px-4 rounded-lg transition-all text-sm font-medium ${
+                postType === "post"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span>Regular Post</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPostType("recipe")}
+              className={`flex-1 py-2 px-4 rounded-lg transition-all text-sm font-medium ${
+                postType === "recipe"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <ChefHat className="h-4 w-4" />
+                <span>Recipe</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Recipe-specific fields */}
+          {postType === "recipe" && (
+            <div className="space-y-3 mb-4 p-3 bg-secondary/30 rounded-lg">
+              {/* Recipe Title */}
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Recipe Title *
+                </label>
+                <input
+                  type="text"
+                  value={recipeTitle}
+                  onChange={(e) => setRecipeTitle(e.target.value)}
+                  placeholder="e.g., Classic Spaghetti Carbonara"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  required={postType === "recipe"}
+                />
+              </div>
+
+              {/* Difficulty, Time, Servings Row */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Difficulty
+                  </label>
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
+                    className="w-full px-2 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Time (min)
+                  </label>
+                  <input
+                    type="number"
+                    value={cookingTime}
+                    onChange={(e) => setCookingTime(e.target.value)}
+                    placeholder="30"
+                    min="1"
+                    className="w-full px-2 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">
+                    Servings
+                  </label>
+                  <input
+                    type="number"
+                    value={servings}
+                    onChange={(e) => setServings(e.target.value)}
+                    placeholder="4"
+                    min="1"
+                    className="w-full px-2 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Ingredients */}
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Ingredients (one per line)
+                </label>
+                <textarea
+                  value={ingredients}
+                  onChange={(e) => setIngredients(e.target.value)}
+                  placeholder="2 cups flour&#10;1 cup sugar&#10;3 eggs"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Instructions (one step per line)
+                </label>
+                <textarea
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder="Preheat oven to 350°F&#10;Mix dry ingredients&#10;Add wet ingredients"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="italian, pasta, comfort-food"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Description/Content */}
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="What's cooking? Share your recipe or cooking experience..."
+            placeholder={
+              postType === "recipe"
+                ? "Share your cooking tips and story behind this recipe..."
+                : "What's cooking? Share your thoughts..."
+            }
             className="w-full p-3 border-0 resize-none focus:outline-none text-sm placeholder-muted-foreground bg-transparent text-foreground"
-            rows={4}
+            rows={postType === "recipe" ? 3 : 4}
           />
 
           {/* Image Preview */}
@@ -1804,12 +2442,13 @@ function CreatePostModal({
             <button
               type="submit"
               disabled={
-                (!content.trim() && images.length === 0) ||
-                loading
+                postType === "recipe"
+                  ? !recipeTitle.trim() || loading
+                  : (!content.trim() && images.length === 0) || loading
               }
               className="px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm font-semibold"
             >
-              {loading ? "Sharing..." : "Share"}
+              {loading ? "Sharing..." : postType === "recipe" ? "Share Recipe" : "Share"}
             </button>
           </div>
 
@@ -1909,6 +2548,367 @@ function DeleteConfirmModal({ postId, onConfirm, onCancel }: DeleteConfirmModalP
           >
             Delete
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface PostDetailModalProps {
+  post: Post;
+  user: User;
+  onClose: () => void;
+  onLike: (postId: string) => void;
+  onComment: (postId: string, content: string) => void;
+  onRate: (postId: string, rating: number) => void;
+  onNavigate: (view: string, userId?: string) => void;
+}
+
+function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNavigate }: PostDetailModalProps) {
+  const [commentText, setCommentText] = useState("");
+
+  const handleComment = () => {
+    if (commentText.trim()) {
+      onComment(post.id, commentText);
+      setCommentText("");
+    }
+  };
+
+  const ratings = post.ratings || [];
+  const averageRating = ratings.length > 0
+    ? ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length
+    : 0;
+  const userRating = ratings.find(r => r.user_id === user.id)?.rating || 0;
+
+  const parseIngredients = (text?: string): string[] => {
+    if (!text) return [];
+    return text.split('\n').filter(line => line.trim());
+  };
+
+  const parseInstructions = (text?: string): string[] => {
+    if (!text) return [];
+    return text.split('\n').filter(line => line.trim());
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Easy":
+        return "text-green-500 bg-green-500/10";
+      case "Medium":
+        return "text-yellow-500 bg-yellow-500/10";
+      case "Hard":
+        return "text-red-500 bg-red-500/10";
+      default:
+        return "text-muted-foreground bg-secondary";
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-6xl max-h-[90vh] bg-background rounded-lg overflow-hidden flex flex-col lg:flex-row"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        {/* Left Side - Image */}
+        <div className="lg:w-3/5 bg-black flex items-center justify-center">
+          {post.images && post.images.length > 0 ? (
+            <ImageWithFallback
+              src={post.images[0]}
+              alt={post.recipe_data?.title || "Post image"}
+              className="w-full h-full object-contain max-h-[90vh]"
+            />
+          ) : (
+            <div className="w-full h-64 lg:h-full flex items-center justify-center p-8">
+              <p className="text-white text-center text-lg">
+                {post.content}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side - Details and Comments */}
+        <div className="lg:w-2/5 flex flex-col max-h-[90vh] lg:max-h-none">
+          {/* Post Header */}
+          <div className="p-4 border-b border-border">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate("account", post.author_id);
+                onClose();
+              }}
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            >
+              <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
+                {post.author_avatar ? (
+                  <ImageWithFallback
+                    src={post.author_avatar}
+                    alt={post.author_name}
+                    className="w-full h-full object-cover"
+                    fallback={
+                      <span className="text-white text-sm">
+                        {post.author_name.charAt(0).toUpperCase()}
+                      </span>
+                    }
+                  />
+                ) : (
+                  <span className="text-white text-sm">
+                    {post.author_name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-foreground">{post.author_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Post Content & Recipe Data */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Recipe Title */}
+            {post.recipe_data?.title && (
+              <div>
+                <h2 className="text-xl font-semibold text-foreground mb-2">
+                  {post.recipe_data.title}
+                </h2>
+              </div>
+            )}
+
+            {/* Post Description */}
+            {post.content && (
+              <div>
+                <p className="text-foreground whitespace-pre-wrap">
+                  <LinkifiedText text={post.content} />
+                </p>
+              </div>
+            )}
+
+            {/* Recipe Metadata */}
+            {post.recipe_data && (
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="p-2 bg-secondary/30 rounded-lg text-center">
+                  <Clock className="h-4 w-4 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Time</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {post.recipe_data.cooking_time} min
+                  </p>
+                </div>
+                <div className="p-2 bg-secondary/30 rounded-lg text-center">
+                  <Users className="h-4 w-4 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Servings</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {post.recipe_data.servings}
+                  </p>
+                </div>
+                <div className="p-2 bg-secondary/30 rounded-lg text-center">
+                  <ChefHat className="h-4 w-4 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Difficulty</p>
+                  <p
+                    className={`text-xs font-medium px-2 py-0.5 rounded ${getDifficultyColor(
+                      post.recipe_data.difficulty
+                    )}`}
+                  >
+                    {post.recipe_data.difficulty}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tags */}
+            {post.recipe_data?.tags && post.recipe_data.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {post.recipe_data.tags.map((tag, index) => (
+                  <span 
+                    key={index}
+                    className="px-2 py-1 bg-primary/10 text-primary rounded text-xs"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Ingredients */}
+            {post.recipe_data?.ingredients && (
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Ingredients
+                </h3>
+                <ul className="space-y-1.5">
+                  {parseIngredients(post.recipe_data.ingredients).map((ingredient, index) => (
+                    <li
+                      key={index}
+                      className="flex items-start gap-2 text-sm text-foreground"
+                    >
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>{ingredient}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Instructions */}
+            {post.recipe_data?.instructions && (
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Instructions
+                </h3>
+                <ol className="space-y-2">
+                  {parseInstructions(post.recipe_data.instructions).map((instruction, index) => (
+                    <li
+                      key={index}
+                      className="flex items-start gap-2 text-sm text-foreground"
+                    >
+                      <span className="flex-shrink-0 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
+                        {index + 1}
+                      </span>
+                      <span className="pt-0.5">{instruction}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {/* Rating Section - Only for recipe posts */}
+            {post.type === "recipe" && (
+              <>
+                <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1.5">Average Rating</p>
+                    <StarRating
+                      rating={averageRating}
+                      size="md"
+                      showCount
+                      count={ratings.length}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1.5">
+                      {userRating > 0 ? "Your Rating" : "Rate this recipe"}
+                    </p>
+                    <StarRating
+                      rating={userRating}
+                      size="md"
+                      interactive
+                      userRating={userRating}
+                      onRate={(rating) => onRate(post.id, rating)}
+                    />
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border my-4" />
+              </>
+            )}
+
+            {/* Comments Section */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-foreground">Comments ({post.comments.length})</h3>
+              
+              {post.comments.length > 0 ? (
+                <div className="space-y-3">
+                  {post.comments.map((comment) => (
+                    <div key={comment.id} className="flex items-start space-x-3">
+                      <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <span className="text-white text-xs">
+                          {comment.author_name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-secondary rounded-lg p-3">
+                          <p className="text-sm font-medium text-foreground">
+                            {comment.author_name}
+                          </p>
+                          <p className="text-sm text-foreground mt-1">
+                            {comment.content}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 pl-3">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
+              )}
+            </div>
+          </div>
+
+          {/* Post Actions & Comment Input */}
+          <div className="border-t border-border p-4 space-y-3 bg-background">
+            {/* Like and Comment Counts */}
+            <div className="flex items-center justify-between text-sm">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLike(post.id);
+                }}
+                className="flex items-center space-x-2 hover:scale-105 transition-transform"
+              >
+                <Heart
+                  className={`h-5 w-5 ${
+                    post.likes.includes(user.id)
+                      ? "fill-red-500 text-red-500"
+                      : "text-foreground"
+                  }`}
+                />
+                <span className="text-foreground">{post.likes.length} likes</span>
+              </button>
+              
+              <div className="flex items-center space-x-1 text-muted-foreground">
+                <MessageCircle className="h-4 w-4" />
+                <span>{post.comments.length} comments</span>
+              </div>
+            </div>
+
+            {/* Comment Input */}
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {user.avatar_url ? (
+                  <ImageWithFallback
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <input
+                type="text"
+                placeholder="Write a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleComment()}
+                className="flex-1 px-3 py-2 input-clean text-sm rounded-full"
+              />
+              <button
+                onClick={handleComment}
+                disabled={!commentText.trim()}
+                className="p-2 text-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-secondary rounded-full transition-colors"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

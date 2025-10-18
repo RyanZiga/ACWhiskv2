@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, Settings, User, LogOut, Shield, Menu, X, FileText, BarChart3, Moon, Sun, Bot, Plus } from 'lucide-react'
+import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, Settings, User, LogOut, Shield, Menu, X, FileText, BarChart3, Moon, Sun, Bot, Plus, Briefcase } from 'lucide-react'
 import { User as UserType } from '../utils/auth'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { useTheme } from '../contexts/ThemeContext'
@@ -9,7 +9,7 @@ import { projectId } from '../utils/supabase/info'
 interface SidebarProps {
   user: UserType
   currentPage: string
-  onNavigate: (page: string) => void
+  onNavigate: (page: string, id?: string) => void
   onLogout: () => void
   unreadMessagesCount?: number
   onCollapseChange?: (isCollapsed: boolean) => void
@@ -108,7 +108,12 @@ const SidebarContent = React.memo(({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              onNavigate(item.id)
+
+              if (item.id === 'portfolio') {
+                onNavigate(item.id, user.id)
+              } else {
+                onNavigate(item.id)
+              }
               setIsMobileOpen(false)
             }}
             className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all duration-200 group touch-manipulation min-h-[52px] ${
@@ -171,7 +176,7 @@ const SidebarContent = React.memo(({
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          onNavigate('profile')
+          onNavigate('profile', user.id)
         }}
         className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all duration-200 group touch-manipulation min-h-[52px] text-sidebar-foreground hover:bg-sidebar-accent/50"
         type="button"
@@ -235,9 +240,9 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
   const getNavigationItems = () => {
     const baseNavigation = [
       { name: 'Feed', id: 'feed', icon: Home },
-      { name: 'Assignments', id: 'recipes', icon: FileText },
-      { name: 'Forum', id: 'forum', icon: MessageSquare },
+      { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
       { name: 'Learning', id: 'learning', icon: BookOpen },
+      { name: 'Messages', id: 'messages', icon: MessageSquare },
     ]
 
 
@@ -391,7 +396,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe">
         <div className="sidebar-gradient border-t border-sidebar-border">
           <div className="flex items-center justify-around px-[0px] py-[5px]">
-            {/* Feed */}
+
             <button
               onClick={(e) => {
                 e.preventDefault()
@@ -437,37 +442,32 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                     <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
                   )}
                 </div>
-                <span className={`text-[10px] mt-1.5 transition-all duration-300 ${
-                  currentPage === 'admin' 
-                    ? 'font-semibold text-primary' 
-                    : 'font-medium text-sidebar-foreground/60'
-                }`}>
-                  Admin
-                </span>
+                
+                {currentPage === 'admin' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
               </button>
             ) : (
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onNavigate('recipes')
+                  onNavigate('portfolio')
                 }}
-                className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 group"
+                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'portfolio'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
                 type="button"
               >
-                <div className={`relative transition-all duration-300 ${
-                  currentPage === 'recipes' ? 'scale-110 -translate-y-0.5' : 'scale-100 group-active:scale-95'
-                }`}>
-                  <FileText className={`h-6 w-6 transition-all duration-300 ${
-                    currentPage === 'recipes' 
-                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
-                      : 'text-sidebar-foreground/60'
-                  }`} />
-                  {currentPage === 'recipes' && (
-                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-                  )}
+                <div className="relative">
+                  <Briefcase className={`h-6 w-6 ${currentPage === 'portfolio' ? 'scale-110' : ''} transition-transform duration-200`} />
                 </div>
                 
+                {currentPage === 'portfolio' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
               </button>
             )}
 
@@ -486,33 +486,36 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 <Plus className="h-7 w-7 text-white transition-transform duration-300 group-active:rotate-90" />
               </div>
             </button>
-            
-            {/* Forum */}
+
+
             <button
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                onNavigate('forum')
+                onNavigate('messages')
               }}
-              className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 group"
+              className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                currentPage === 'messages'
+                  ? 'text-primary'
+                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+              }`}
               type="button"
             >
-              <div className={`relative transition-all duration-300 ${
-                currentPage === 'forum' ? 'scale-110 -translate-y-0.5' : 'scale-100 group-active:scale-95'
-              }`}>
-                <MessageSquare className={`h-6 w-6 transition-all duration-300 ${
-                  currentPage === 'forum' 
-                    ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
-                    : 'text-sidebar-foreground/60'
-                }`} />
-                {currentPage === 'forum' && (
-                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative">
+                <MessageSquare className={`h-6 w-6 ${currentPage === 'messages' ? 'scale-110' : ''} transition-transform duration-200`} />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg">
+                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                  </span>
                 )}
               </div>
               
+              {currentPage === 'messages' && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+              )}
             </button>
 
-            {/* Menu */}
+
             <button
               onClick={(e) => {
                 e.preventDefault()
@@ -565,7 +568,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </div>
 
-              {/* More Options */}
+
               <div className="space-y-2">
                 {user.role === 'admin' && (
                   <button
@@ -641,7 +644,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </>
       )}
 
-      {/* Desktop Sidebar - Floating */}
+
       <div
         className={`hidden lg:block fixed left-6 top-6 bottom-6 sidebar-gradient shadow-2xl transition-all duration-300 z-30 rounded-2xl overflow-visible ${
           isCollapsed ? 'w-16' : 'w-64'

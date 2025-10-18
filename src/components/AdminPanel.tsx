@@ -127,7 +127,7 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
       })
 
       if (response.ok) {
-        await loadAdminData() // Reload data
+        await loadAdminData() 
         console.log(`User status updated to ${newStatus}`)
       } else {
         console.error('Failed to update user status')

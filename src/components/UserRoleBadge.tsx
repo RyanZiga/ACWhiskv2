@@ -11,7 +11,7 @@ interface UserRoleBadgeProps {
 
 export function UserRoleBadge({ role, size = 'md', showIcon = true, className = '' }: UserRoleBadgeProps) {
   const baseClasses = AuthService.getRoleBadgeColor(role)
-
+  
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',
     md: 'px-3 py-1 text-sm',
@@ -20,7 +20,7 @@ export function UserRoleBadge({ role, size = 'md', showIcon = true, className = 
 
   const iconSizes = {
     sm: 'h-3 w-3',
-    md: 'h-4 w-4',
+    md: 'h-4 w-4', 
     lg: 'h-5 w-5'
   }
 
@@ -32,13 +32,9 @@ export function UserRoleBadge({ role, size = 'md', showIcon = true, className = 
 
   const Icon = roleIcons[role]
 
-  if (!Icon && showIcon) {
-    console.warn(`Missing icon for role: ${role}`)
-  }
-
   return (
     <span className={`inline-flex items-center gap-1 font-medium rounded-full ${baseClasses} ${sizeClasses[size]} ${className}`}>
-      {showIcon && Icon && <Icon className={iconSizes[size]} />}
+      {showIcon && <Icon className={iconSizes[size]} />}
       {AuthService.getRoleDisplayName(role)}
     </span>
   )
@@ -54,7 +50,7 @@ interface UserRoleIndicatorProps {
 export function UserRoleIndicator({ role, name, size = 'md', layout = 'horizontal' }: UserRoleIndicatorProps) {
   const roleColors = {
     student: 'text-blue-600',
-    instructor: 'text-green-600',
+    instructor: 'text-green-600', 
     admin: 'text-purple-600'
   }
 

@@ -6,8 +6,7 @@ import { Dashboard } from './components/Dashboard'
 import { RecipeDetail } from './components/RecipeDetail'
 import { Recipes } from './components/Recipes'
 import { Profile } from './components/Profile'
-import { Forum } from './components/Forum'
-import { ForumPost } from './components/ForumPost'
+import { Portfolio } from './components/Portfolio'
 import { LearningHub } from './components/LearningHub'
 import { AdminPanel } from './components/AdminPanel'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -47,6 +46,7 @@ function App() {
   const [currentRecipeId, setCurrentRecipeId] = useState<string | null>(null)
   const [currentPostId, setCurrentPostId] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentPortfolioUserId, setCurrentPortfolioUserId] = useState<string | null>(null)
   const [targetUserId, setTargetUserId] = useState<string | null>(null)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -138,6 +138,23 @@ function App() {
       } else {
         console.error('Invalid user ID provided for account navigation:', id)
         setCurrentUserId(null)
+      }
+    } else if (page === 'account' && !id) {
+
+      setCurrentUserId(null)
+    }
+    if (page === 'portfolio') {
+      if (id) {
+  
+        if (isValidUUID(id)) {
+          setCurrentPortfolioUserId(id)
+        } else {
+          console.error('Invalid user ID provided for portfolio navigation:', id)
+          setCurrentPortfolioUserId(null)
+        }
+      } else {
+
+        setCurrentPortfolioUserId(user?.id || null)
       }
     }
     if (page === 'messages' && id && id.startsWith('user:')) {
@@ -273,17 +290,12 @@ function App() {
               </div>
             )}
             
-            {currentPage === 'forum' && user && (
+            {currentPage === 'portfolio' && user && (
               <div className="pt-0">
-                <Forum user={user} onNavigate={navigateTo} />
-              </div>
-            )}
-            
-            {currentPage === 'post' && currentPostId && user && (
-              <div className="pt-0">
-                <ForumPost 
-                  postId={currentPostId} 
+                <Portfolio 
+                  key={currentPortfolioUserId || user.id}
                   user={user} 
+                  userId={currentPortfolioUserId || undefined}
                   onNavigate={navigateTo} 
                 />
               </div>
