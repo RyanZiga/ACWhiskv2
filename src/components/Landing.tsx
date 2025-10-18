@@ -416,13 +416,6 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
             className="input-clean w-full px-4 py-3"
             placeholder="Enter your email address"
           />
-        <p className="text-xs text-muted-foreground mt-1">
-            {formData.email.toLowerCase().includes("student@asiancollege.edu.ph")
-              ? "You will be registered as a Student"
-              : formData.email.toLowerCase().endsWith("@asiancollege.edu.ph")
-              ? "You will be registered as an Instructor"
-              : "Use your @asiancollege.edu.ph email"}
-          </p>
         </div>
 
         <div>
