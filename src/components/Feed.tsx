@@ -28,6 +28,7 @@ import {
   FileText,
   Image as ImageIcon,
   Send,
+  ChevronRight,
 } from "lucide-react";
 import { projectId } from "../utils/supabase/info";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -37,6 +38,7 @@ import { StoryCreator } from "./StoryCreator";
 import { StoryViewer } from "./StoryViewer";
 import { StarRating } from "./StarRating";
 import { RecipeDetailModal } from "./RecipeDetailModal";
+import { PostImageCarousel } from "./PostImageCarousel";
 
 interface User {
   id: string;
@@ -317,7 +319,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(10000), 
         },
       );
 
@@ -433,7 +435,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
 
     const index = groupsWithStories.findIndex(group => group.user_id === userId);
     
-    if (index === -1) return; 
+    if (index === -1) return; // User not found
     
     setViewerStartIndex(index);
     setShowStoryViewer(true);
@@ -443,7 +445,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     try {
       if (!user.access_token) return;
 
-
+      // Fetch all users
       const usersResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/all`,
         {
@@ -842,7 +844,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error liking post:", error);
-
+      // Optimistic update for demo
       setPosts((prevPosts) =>
         prevPosts.map((post) => {
           if (post.id === postId) {
@@ -885,7 +887,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error commenting on post:", error);
-
+      // Optimistic update for demo
       const newComment: Comment = {
         id: `comment_${Date.now()}`,
         content,
@@ -935,7 +937,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error editing post:", error);
-
+      // Optimistic update for demo
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === editingPost.id
@@ -949,7 +951,7 @@ Serve immediately with vanilla ice cream`,
   };
 
   const handleDeletePost = async (postId: string) => {
-    setActiveDropdown(null);
+    setActiveDropdown(null); 
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}`,
@@ -967,7 +969,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-
+      // Optimistic update for demo
       setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
       setShowDeleteConfirm(null);
     }
@@ -1145,7 +1147,7 @@ Serve immediately with vanilla ice cream`,
   return (
     <>
     <div className="min-h-screen">
-      {/* Floating Arrow Button for Mobile Sidebar */}
+
       {!showMobileSidebar && (
         <button
           onClick={() => setShowMobileSidebar(true)}
@@ -1157,15 +1159,15 @@ Serve immediately with vanilla ice cream`,
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Story Circles Section and User Header */}
+
         <div className="mb-6 flex gap-6 items-start">
-          {/* Story Circles - Full width on mobile, flex-1 on desktop */}
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              {/* Story Circles */}
+
               <div className="overflow-x-auto scrollbar-hide w-full">
                 <div className="flex space-x-4 pb-2 pr-4">
-                  {/* User's own story - add story button */}
+
                   <div
                     onClick={() => userHasStory ? handleStoryClick(user.id) : setShowStoryCreator(true)}
                     className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
@@ -1201,7 +1203,7 @@ Serve immediately with vanilla ice cream`,
                           )}
                         </div>
                       </div>
-                      {/* Always show add button - allows adding more stories */}
+
                       <div 
                         className="absolute bottom-0 right-0 w-5 h-5 lg:w-6 lg:h-6 bg-primary rounded-full flex items-center justify-center border-2 border-background cursor-pointer hover:scale-110 transition-transform"
                         onClick={(e) => {
@@ -1217,7 +1219,7 @@ Serve immediately with vanilla ice cream`,
                     </span>
                   </div>
 
-                  {/* Other users' stories */}
+
                   {storyGroups.map((group) => {
                     if (group.user_id === user.id) return null;
                     
@@ -1282,7 +1284,7 @@ Serve immediately with vanilla ice cream`,
         <div className="flex gap-6 relative">
           {/* Main Feed */}
           <div className="flex-1 max-w-7xl mx-auto lg:mx-0">
-            {/* Create Post Section - Hidden on Mobile */}
+
             <div className="hidden lg:block post-card p-4 lg:p-6 mb-6">
               <div className="flex items-center space-x-3 lg:space-x-4 mb-4">
                 <div className="w-10 h-10 lg:w-12 lg:h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden">
@@ -1328,7 +1330,7 @@ Serve immediately with vanilla ice cream`,
 
           
 
-            {/* Feed Posts */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {posts.map((post, index) => (
                 <div
@@ -1343,15 +1345,12 @@ Serve immediately with vanilla ice cream`,
                     }
                   }}
                 >
-                  {/* Post Content  */}
+  
                   {post.images && post.images.length > 0 ? (
-                    <div className="h-48 relative overflow-hidden group">
-                      <ImageWithFallback
-                        src={post.images[0]}
-                        alt={post.recipe_data?.title || "Post image"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
+                    <PostImageCarousel
+                      images={post.images}
+                      alt={post.recipe_data?.title || "Post image"}
+                    />
                   ) : (
                     <div className={`h-48 ${postBackgroundColors[index % postBackgroundColors.length]} flex items-center justify-center p-6`}>
                       <p className="text-foreground text-center line-clamp-4">
@@ -1360,7 +1359,7 @@ Serve immediately with vanilla ice cream`,
                     </div>
                   )}
 
-                  {/* Post Footer */}
+
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <button
@@ -1394,7 +1393,7 @@ Serve immediately with vanilla ice cream`,
                       </button>
 
                       <div className="flex items-center space-x-3">
-
+                        {/* Edit/Delete Dropdown */}
                         {post.author_id === user.id && (
                           <div className="relative">
                             <button
@@ -1417,17 +1416,17 @@ Serve immediately with vanilla ice cream`,
                                     let left = rect.right + window.scrollX - dropdownWidth;
                                     let top = rect.bottom + window.scrollY + 8;
                                     
-  
+
                                     if (left < 10) {
                                       left = 10;
                                     }
                                     
-
+     
                                     if (left + dropdownWidth > window.innerWidth - 10) {
                                       left = window.innerWidth - dropdownWidth - 10;
                                     }
                                     
-
+ 
                                     if (top + dropdownHeight > window.innerHeight + window.scrollY - 10) {
                                       top = rect.top + window.scrollY - dropdownHeight - 8;
                                     }
@@ -1473,14 +1472,14 @@ Serve immediately with vanilla ice cream`,
                       </div>
                     </div>
 
-
+     
                     {post.images && post.images.length > 0 && post.content && (
                       <p className="text-sm text-foreground mb-2 line-clamp-2">
                         {post.content}
                       </p>
                     )}
 
-
+                    {/* Comments Section */}
                     {showComments === post.id && (
                       <div className="border-t border-border pt-3 mt-3">
 
@@ -1557,7 +1556,7 @@ Serve immediately with vanilla ice cream`,
                       </div>
                     )}
 
-                    {/* Rating Section */}
+
                     {post.type === "recipe" && (
                       <div className="mt-3 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-2">
@@ -1603,7 +1602,7 @@ Serve immediately with vanilla ice cream`,
             </div>
           </div>
 
-          {/* Desktop Sidebar */}
+
           <div className="hidden lg:block w-80 space-y-4 sticky top-24 h-fit">
             <SidebarContent
               user={user}
@@ -1621,7 +1620,7 @@ Serve immediately with vanilla ice cream`,
         </div>
       </div>
 
-      {/* Mobile Sidebar */}
+
       {showMobileSidebar && (
         <>
           <div
@@ -1660,7 +1659,7 @@ Serve immediately with vanilla ice cream`,
         </>
       )}
 
-      {/* Create Post Modal */}
+
       {showCreatePost && (
         <CreatePostModal
           user={user}
@@ -1717,7 +1716,7 @@ Serve immediately with vanilla ice cream`,
         />
       )}
 
-      {/* Story Viewer Modal */}
+
       {showStoryViewer && storyGroups.length > 0 && (
         <StoryViewer
           storyGroups={storyGroups.filter(group => group.stories && group.stories.length > 0)}
@@ -1729,7 +1728,7 @@ Serve immediately with vanilla ice cream`,
         />
       )}
 
-      {/* Post Detail Modal */}
+
       {selectedPost && (
         <PostDetailModal
           post={selectedPost}
@@ -1765,7 +1764,7 @@ Serve immediately with vanilla ice cream`,
           }}
           onRate={(postId, rating) => {
             handleRateRecipe(postId, rating);
-
+ 
             const newRating: Rating = {
               user_id: user.id,
               user_name: user.name,
@@ -1786,7 +1785,7 @@ Serve immediately with vanilla ice cream`,
         />
       )}
 
-      {/* Recipe Detail Modal */}
+
       {selectedRecipe && (
         <RecipeDetailModal
           post={selectedRecipe}
@@ -1915,12 +1914,15 @@ function SidebarContent({
 }: SidebarContentProps) {
   return (
     <>
-      {/* Suggestions for you */}
+
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">
             Suggestions for you
           </h3>
+          <button className="text-xs text-primary hover:text-primary/80">
+            See All
+          </button>
         </div>
 
         <div className="space-y-3">
@@ -1992,7 +1994,7 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Daily Cooking Tips */}
+
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">
@@ -2054,7 +2056,7 @@ function CreatePostModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-
+  // Recipe-specific fields
   const [recipeTitle, setRecipeTitle] = useState("");
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Easy");
   const [cookingTime, setCookingTime] = useState("");
@@ -2077,7 +2079,7 @@ function CreatePostModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-
+    // Validation
     if (postType === "recipe") {
       if (!recipeTitle.trim()) {
         setError("Recipe title is required");
@@ -2281,10 +2283,10 @@ function CreatePostModal({
             </button>
           </div>
 
-          {/* Recipe-specific fields */}
+
           {postType === "recipe" && (
             <div className="space-y-3 mb-4 p-3 bg-secondary/30 rounded-lg">
-              {/* Recipe Title */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Recipe Title *
@@ -2299,7 +2301,7 @@ function CreatePostModal({
                 />
               </div>
 
-              {/* Difficulty, Time, Servings Row */}
+
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
@@ -2343,7 +2345,7 @@ function CreatePostModal({
                 </div>
               </div>
 
-              {/* Ingredients */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Ingredients (one per line)
@@ -2357,7 +2359,7 @@ function CreatePostModal({
                 />
               </div>
 
-              {/* Instructions */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Instructions (one step per line)
@@ -2371,7 +2373,7 @@ function CreatePostModal({
                 />
               </div>
 
-              {/* Tags */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Tags (comma-separated)
@@ -2387,7 +2389,7 @@ function CreatePostModal({
             </div>
           )}
 
-          {/* Description/Content */}
+
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -2400,7 +2402,7 @@ function CreatePostModal({
             rows={postType === "recipe" ? 3 : 4}
           />
 
-          {/* Image Preview */}
+
           {images.length > 0 && (
             <div className="grid grid-cols-2 gap-2 lg:gap-3 mt-4">
               {images.map((image, index) => (
@@ -2609,7 +2611,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
         className="relative w-full max-w-6xl max-h-[90vh] bg-background rounded-lg overflow-hidden flex flex-col lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors"
@@ -2617,13 +2619,13 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           <X className="h-5 w-5" />
         </button>
 
-        {/* Left Side - Image */}
+
         <div className="lg:w-3/5 bg-black flex items-center justify-center">
           {post.images && post.images.length > 0 ? (
-            <ImageWithFallback
-              src={post.images[0]}
+            <PostImageCarousel
+              images={post.images}
               alt={post.recipe_data?.title || "Post image"}
-              className="w-full h-full object-contain max-h-[90vh]"
+              className="h-64 lg:h-[90vh] max-h-[90vh]"
             />
           ) : (
             <div className="w-full h-64 lg:h-full flex items-center justify-center p-8">
@@ -2634,7 +2636,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           )}
         </div>
 
-        {/* Right Side - Details and Comments */}
+
         <div className="lg:w-2/5 flex flex-col max-h-[90vh] lg:max-h-none">
           {/* Post Header */}
           <div className="p-4 border-b border-border">
@@ -2673,9 +2675,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </button>
           </div>
 
-          {/* Post Content & Recipe Data */}
+
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Recipe Title */}
+
             {post.recipe_data?.title && (
               <div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -2684,7 +2686,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Post Description */}
+
             {post.content && (
               <div>
                 <p className="text-foreground whitespace-pre-wrap">
@@ -2693,7 +2695,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Recipe Metadata */}
+
             {post.recipe_data && (
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="p-2 bg-secondary/30 rounded-lg text-center">
@@ -2724,7 +2726,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Tags */}
+
             {post.recipe_data?.tags && post.recipe_data.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.recipe_data.tags.map((tag, index) => (
@@ -2738,7 +2740,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Ingredients */}
+
             {post.recipe_data?.ingredients && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -2758,7 +2760,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Instructions */}
+
             {post.recipe_data?.instructions && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -2780,7 +2782,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Rating Section - Only for recipe posts */}
+
             {post.type === "recipe" && (
               <>
                 <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
@@ -2812,7 +2814,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </>
             )}
 
-            {/* Comments Section */}
+
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Comments ({post.comments.length})</h3>
               
@@ -2847,9 +2849,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </div>
           </div>
 
-          {/* Post Actions & Comment Input */}
+
           <div className="border-t border-border p-4 space-y-3 bg-background">
-            {/* Like and Comment Counts */}
+
             <div className="flex items-center justify-between text-sm">
               <button
                 onClick={(e) => {
@@ -2874,7 +2876,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             </div>
 
-            {/* Comment Input */}
+
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user.avatar_url ? (
