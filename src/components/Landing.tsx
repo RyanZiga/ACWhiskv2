@@ -200,7 +200,7 @@ function SignInForm({ onNavigate, onForgotPassword }: SignInFormProps) {
           Forgot Password?
         </button>
         <p className="text-xs text-muted-foreground">
-          Only @asiancollege.edu.ph accounts are allowed
+
         </p>
       </div>
     </form>
@@ -245,7 +245,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
     try {
 
       if (!formData.email.toLowerCase().endsWith("@asiancollege.edu.ph")) {
-        setError("Only @asiancollege.edu.ph accounts are allowed");
+        setError("Use your Asian College Email Address");
         setSendingCode(false);
         return;
       }
@@ -416,13 +416,6 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
             className="input-clean w-full px-4 py-3"
             placeholder="Enter your email address"
           />
-        <p className="text-xs text-muted-foreground mt-1">
-            {formData.email.toLowerCase().includes("student@asiancollege.edu.ph")
-              ? "You will be registered as a Student"
-              : formData.email.toLowerCase().endsWith("@asiancollege.edu.ph")
-              ? "You will be registered as an Instructor"
-              : "Use your @asiancollege.edu.ph email"}
-          </p>
         </div>
 
         <div>
@@ -468,7 +461,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
 
           <div className="mt-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Only @asiancollege.edu.ph accounts are allowed
+
             </p>
           </div>
         </form>
@@ -585,7 +578,7 @@ function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
     try {
 
       if (!email.toLowerCase().endsWith("@asiancollege.edu.ph")) {
-        setError("Only @asiancollege.edu.ph accounts are allowed");
+        setError("Use your Asian College Email Address");
         setLoading(false);
         return;
       }
@@ -884,7 +877,7 @@ function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
           autoFocus
         />
         <p className="text-xs text-muted-foreground mt-2">
-          Only @asiancollege.edu.ph accounts are allowed
+          Use your Asian College Email Address
         </p>
       </div>
 

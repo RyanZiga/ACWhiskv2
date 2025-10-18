@@ -1921,9 +1921,6 @@ function SidebarContent({
           <h3 className="font-semibold text-foreground">
             Suggestions for you
           </h3>
-          <button className="text-xs text-primary hover:text-primary/80">
-            See All
-          </button>
         </div>
 
         <div className="space-y-3">
