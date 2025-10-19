@@ -4,6 +4,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { StarRating } from "./StarRating";
 import { LinkifiedText } from "../utils/linkify";
 import { UserRoleBadge } from "./UserRoleBadge";
+import { PostImageCarousel } from "./PostImageCarousel";
 
 interface Rating {
   user_id: string;
@@ -117,7 +118,7 @@ export function RecipeDetailModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="post-card max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+
         <div className="sticky top-0 bg-card border-b border-border p-4 lg:p-6 rounded-t-lg z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">
@@ -136,20 +137,15 @@ export function RecipeDetailModal({
           {/* Recipe Image */}
           {post.images && post.images.length > 0 && (
             <div className="mb-6 rounded-lg overflow-hidden">
-              <ImageWithFallback
-                src={post.images[0]}
+              <PostImageCarousel
+                images={post.images}
                 alt={recipe.title}
-                className="w-full h-64 object-cover"
-                fallback={
-                  <div className="w-full h-64 bg-secondary flex items-center justify-center">
-                    <ChefHat className="h-16 w-16 text-muted-foreground" />
-                  </div>
-                }
+                className="h-64"
               />
             </div>
           )}
 
-          {/* Recipe Title & Author */}
+
           <div className="mb-4">
             <h1 className="text-2xl font-bold text-foreground mb-2">
               {recipe.title}
@@ -189,7 +185,7 @@ export function RecipeDetailModal({
             </div>
           </div>
 
-          {/* Rating Section */}
+
           <div className="mb-6 p-4 bg-secondary/30 rounded-lg">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -218,7 +214,7 @@ export function RecipeDetailModal({
             </div>
           </div>
 
-          {/* Recipe Meta */}
+
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="p-3 bg-secondary/30 rounded-lg text-center">
               <Clock className="h-5 w-5 mx-auto mb-1 text-primary" />
@@ -247,7 +243,7 @@ export function RecipeDetailModal({
             </div>
           </div>
 
-          {/* Tags */}
+
           {recipe.tags && recipe.tags.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-foreground mb-2">Tags</p>
@@ -264,7 +260,7 @@ export function RecipeDetailModal({
             </div>
           )}
 
-          {/* Description */}
+
           {post.content && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -276,7 +272,7 @@ export function RecipeDetailModal({
             </div>
           )}
 
-          {/* Ingredients */}
+
           {recipe.ingredients && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground mb-3">
@@ -296,7 +292,7 @@ export function RecipeDetailModal({
             </div>
           )}
 
-          {/* Instructions */}
+
           {recipe.instructions && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground mb-3">
@@ -318,7 +314,7 @@ export function RecipeDetailModal({
             </div>
           )}
 
-          {/* Comments Section */}
+
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">
@@ -338,7 +334,7 @@ export function RecipeDetailModal({
               </div>
             </div>
             
-            {/* Comments List */}
+
             {post.comments.length > 0 ? (
               <div className="space-y-3 mb-4">
                 {post.comments.map((comment) => (
@@ -370,7 +366,7 @@ export function RecipeDetailModal({
               </p>
             )}
 
-            {/* Comment Input */}
+
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user.avatar_url ? (
@@ -408,7 +404,7 @@ export function RecipeDetailModal({
             </div>
           </div>
 
-          {/* Recent Ratings */}
+
           {ratings.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-3">
