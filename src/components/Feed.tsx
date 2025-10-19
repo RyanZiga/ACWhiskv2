@@ -48,6 +48,7 @@ interface User {
   avatar_url?: string;
 }
 
+
 interface Comment {
   id: string;
   content: string;
