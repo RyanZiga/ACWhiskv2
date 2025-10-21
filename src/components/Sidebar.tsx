@@ -238,17 +238,21 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
 
   const getNavigationItems = () => {
+
+    if (user.role === 'admin') {
+      return [
+        { name: 'Dashboard', id: 'dashboard', icon: BarChart3 },
+        { name: 'Admin Panel', id: 'admin', icon: Shield },
+      ]
+    }
+
+
     const baseNavigation = [
       { name: 'Feed', id: 'feed', icon: Home },
       { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
       { name: 'Learning', id: 'learning', icon: BookOpen },
       { name: 'Messages', id: 'messages', icon: MessageSquare },
     ]
-
-
-    if (user.role === 'admin') {
-      baseNavigation.push({ name: 'Admin Panel', id: 'admin', icon: Shield })
-    }
 
     return baseNavigation
   }
@@ -307,21 +311,24 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   <span className="font-medium">Profile</span>
                 </button>
                 
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onNavigate('learning')
-                    setIsProfileMenuOpen(false)
-                  }}
-                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
-                  type="button"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                    <BookOpen className="h-5 w-5 text-accent" />
-                  </div>
-                  <span className="font-medium">Learning</span>
-                </button>
+
+                {user.role !== 'admin' && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onNavigate('learning')
+                      setIsProfileMenuOpen(false)
+                    }}
+                    className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
+                    type="button"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <BookOpen className="h-5 w-5 text-accent" />
+                    </div>
+                    <span className="font-medium">Learning</span>
+                  </button>
+                )}
 
                 <div className="h-px bg-border/50 my-2 mx-4" />
 
@@ -395,64 +402,113 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe">
         <div className="sidebar-gradient border-t border-sidebar-border">
-          <div className="flex items-center justify-around px-[0px] py-[5px]">
+          {user.role === 'admin' ? (
 
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onNavigate('feed')
-              }}
-              className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                currentPage === 'feed'
-                  ? 'text-primary'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-              }`}
-              type="button"
-            >
-              <div className="relative">
-                <Home className={`h-6 w-6 ${currentPage === 'feed' ? 'scale-110' : ''} transition-transform duration-200`} />
-              </div>
-              
-              {currentPage === 'feed' && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-              )}
-            </button>
+            <div className="flex items-center justify-around px-4 py-[5px]">
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('dashboard')
+                }}
+                className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'dashboard'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <BarChart3 className={`h-6 w-6 ${currentPage === 'dashboard' ? 'scale-110' : ''} transition-transform duration-200`} />
+                </div>
+                
+                {currentPage === 'dashboard' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
+              </button>
 
 
-            {user.role === 'admin' ? (
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
                   onNavigate('admin')
                 }}
-                className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 group"
+                className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'admin'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
                 type="button"
               >
-                <div className={`relative transition-all duration-300 ${
-                  currentPage === 'admin' ? 'scale-110 -translate-y-0.5' : 'scale-100 group-active:scale-95'
-                }`}>
-                  <Shield className={`h-6 w-6 transition-all duration-300 ${
-                    currentPage === 'admin' 
-                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
-                      : 'text-sidebar-foreground/60'
-                  }`} />
-                  {currentPage === 'admin' && (
-                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-                  )}
+                <div className="relative">
+                  <Shield className={`h-6 w-6 ${currentPage === 'admin' ? 'scale-110' : ''} transition-transform duration-200`} />
                 </div>
                 
                 {currentPage === 'admin' && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
                 )}
               </button>
-            ) : (
+
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onNavigate('portfolio')
+                  setIsProfileMenuOpen(!isProfileMenuOpen)
+                }}
+                className="flex flex-col items-center justify-center px-4 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 profile-menu-container group"
+                type="button"
+              >
+                <div className={`relative transition-all duration-300 ${
+                  (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile') 
+                    ? 'scale-110 -translate-y-0.5' 
+                    : 'scale-100 group-active:scale-95'
+                }`}>
+                  <Menu className={`h-6 w-6 transition-all duration-300 ${
+                    (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile') 
+                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                      : 'text-sidebar-foreground/60'
+                  }`} />
+                  {(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile') && (
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  )}
+                </div>
+              </button>
+            </div>
+          ) : (
+
+            <div className="flex items-center justify-around px-[0px] py-[5px]">
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('feed')
+                }}
+                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'feed'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <Home className={`h-6 w-6 ${currentPage === 'feed' ? 'scale-110' : ''} transition-transform duration-200`} />
+                </div>
+                
+                {currentPage === 'feed' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
+              </button>
+
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('portfolio', user.id)
                 }}
                 className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
                   currentPage === 'portfolio'
@@ -469,79 +525,77 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
                 )}
               </button>
-            )}
-
-            
-
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onCreatePost?.()
-              }}
-              className="flex flex-col items-center justify-center px-2 transition-all duration-300 touch-target relative z-10 group -mt-2"
-              type="button"
-            >
-              <div className="w-14 h-14 avatar-gradient rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(220,38,38,0.4)] dark:shadow-[0_4px_24px_rgba(239,68,68,0.5)] transition-all duration-300 group-hover:shadow-[0_6px_32px_rgba(220,38,38,0.5)] group-active:scale-95 group-hover:scale-105 border-4 border-card">
-                <Plus className="h-7 w-7 text-white transition-transform duration-300 group-active:rotate-90" />
-              </div>
-            </button>
 
 
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onNavigate('messages')
-              }}
-              className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                currentPage === 'messages'
-                  ? 'text-primary'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-              }`}
-              type="button"
-            >
-              <div className="relative">
-                <MessageSquare className={`h-6 w-6 ${currentPage === 'messages' ? 'scale-110' : ''} transition-transform duration-200`} />
-                {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg">
-                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                  </span>
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onCreatePost?.()
+                }}
+                className="flex flex-col items-center justify-center px-2 transition-all duration-300 touch-target relative z-10 group -mt-2"
+                type="button"
+              >
+                <div className="w-14 h-14 avatar-gradient rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(220,38,38,0.4)] dark:shadow-[0_4px_24px_rgba(239,68,68,0.5)] transition-all duration-300 group-hover:shadow-[0_6px_32px_rgba(220,38,38,0.5)] group-active:scale-95 group-hover:scale-105 border-4 border-card">
+                  <Plus className="h-7 w-7 text-white transition-transform duration-300 group-active:rotate-90" />
+                </div>
+              </button>
+
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('messages')
+                }}
+                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'messages'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <MessageSquare className={`h-6 w-6 ${currentPage === 'messages' ? 'scale-110' : ''} transition-transform duration-200`} />
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg">
+                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                    </span>
+                  )}
+                </div>
+                
+                {currentPage === 'messages' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
                 )}
-              </div>
-              
-              {currentPage === 'messages' && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-              )}
-            </button>
+              </button>
 
 
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIsProfileMenuOpen(!isProfileMenuOpen)
-              }}
-              className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 profile-menu-container group"
-              type="button"
-            >
-              <div className={`relative transition-all duration-300 ${
-                (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') 
-                  ? 'scale-110 -translate-y-0.5' 
-                  : 'scale-100 group-active:scale-95'
-              }`}>
-                <Menu className={`h-6 w-6 transition-all duration-300 ${
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsProfileMenuOpen(!isProfileMenuOpen)
+                }}
+                className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 profile-menu-container group"
+                type="button"
+              >
+                <div className={`relative transition-all duration-300 ${
                   (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') 
-                    ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
-                    : 'text-sidebar-foreground/60'
-                }`} />
-                {(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') && (
-                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-                )}
-              </div>
-              
-            </button>
-          </div>
+                    ? 'scale-110 -translate-y-0.5' 
+                    : 'scale-100 group-active:scale-95'
+                }`}>
+                  <Menu className={`h-6 w-6 transition-all duration-300 ${
+                    (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') 
+                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                      : 'text-sidebar-foreground/60'
+                  }`} />
+                  {(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning') && (
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  )}
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </nav>
 
