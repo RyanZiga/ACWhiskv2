@@ -3,11 +3,8 @@ import { Plus, Clock, Star, ChefHat, Award, BookOpen, FileText, AlertCircle, Che
 import { GlassCard, GlassButton } from './ui/glass-card'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
 import { SubmissionModal } from './SubmissionModal'
-import { RoleChecker } from './RoleChecker'
-import { StorageTestComponent } from './StorageTestComponent'
-import { UploadComparisonTest } from './UploadComparisonTest'
-import { RoleSwitcher } from './RoleSwitcher'
 import { isValidUUID } from '../utils/auth'
+import { AdminDashboard } from './AdminDashboard'
 
 interface User {
   id: string
@@ -50,6 +47,11 @@ interface DashboardProps {
 }
 
 export function Dashboard({ user, onNavigate }: DashboardProps) {
+
+  if (user.role === 'admin') {
+    return <AdminDashboard user={user} onNavigate={onNavigate} />
+  }
+
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +73,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   const loadAssignments = async () => {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000) 
 
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/assignments`, {
         headers: {
@@ -151,7 +153,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   }
 
   const handleSubmissionComplete = () => {
- 
+
     loadSubmissions()
     loadAssignments()
   }
@@ -186,15 +188,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
-        
-
-        <div className="space-y-6 mb-8">
-          <RoleChecker user={user} />
-          <RoleSwitcher user={user} />
-          <StorageTestComponent user={user} />
-          <UploadComparisonTest user={user} />
-        </div>
-        
 
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-6">
@@ -217,7 +210,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
 
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
- 
+
           <div className="lg:col-span-4">
             <GlassCard className="p-6 bg-gradient-to-br from-teal-400/20 to-cyan-500/20 border-teal-200/30 dark:border-teal-400/30">
               <div className="flex items-center justify-between mb-4">
@@ -242,7 +235,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-     
+
           <div className="lg:col-span-3">
             <GlassCard className="p-6 bg-gradient-to-br from-green-400/20 to-emerald-500/20 border-green-200/30 dark:border-green-400/30 h-full">
               <div className="flex flex-col h-full">
@@ -399,7 +392,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
             </GlassCard>
 
- 
+
             <GlassCard className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-900 dark:text-white">Recent Grades</h3>
@@ -574,7 +567,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-  
+ 
           <div className="lg:col-span-4">
             <GlassCard className="p-6 bg-gradient-to-br from-pink-400/20 to-purple-500/20 border-pink-200/30 dark:border-pink-400/30">
               <div className="text-center">
@@ -604,7 +597,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </div>
         </div>
 
- 
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
 
           <GlassCard className="p-6">
@@ -663,7 +656,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </div>
           </GlassCard>
 
-  
+
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-gray-900 dark:text-white">Grades Overview</h3>
@@ -702,89 +695,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </GlassCard>
         </div>
 
-
-        <div className="mt-8">
-          <GlassCard className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-gray-900 dark:text-white">Video Tutorials</h3>
-              <GlassButton
-                onClick={() => onNavigate('learning')}
-                variant="secondary"
-                className="text-sm px-3 py-1"
-              >
-                View All Tutorials
-              </GlassButton>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      
-              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
-                <div className="relative">
-                  <iframe
-                    className="w-full h-48"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Knife Skills Fundamentals"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Knife Skills Fundamentals</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Learn proper cutting techniques</p>
-                  <div className="flex items-center mt-2 text-xs text-gray-400">
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>12:34</span>
-                  </div>
-                </div>
-              </div>
-
- 
-              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
-                <div className="relative">
-                  <iframe
-                    className="w-full h-48"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Sauce Making Basics"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Sauce Making Basics</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Master the art of sauce preparation</p>
-                  <div className="flex items-center mt-2 text-xs text-gray-400">
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>18:26</span>
-                  </div>
-                </div>
-              </div>
-
-
-              <div className="bg-white/30 dark:bg-gray-800/30 rounded-xl overflow-hidden">
-                <div className="relative">
-                  <iframe
-                    className="w-full h-48"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Plating Techniques"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Plating Techniques</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Professional presentation skills</p>
-                  <div className="flex items-center mt-2 text-xs text-gray-400">
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>15:42</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-        </div>
       </div> 
 
 
