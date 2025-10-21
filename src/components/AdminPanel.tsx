@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Users, Activity, Settings, BarChart } from 'lucide-react'
+import { Users, Activity, Settings, BarChart, RefreshCw, Trash2 } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
 import { DebugUser } from './DebugUser'
 
@@ -31,6 +31,8 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
   })
   const [loading, setLoading] = useState(true)
   const [updatingUser, setUpdatingUser] = useState<string | null>(null)
+  const [deletingUser, setDeletingUser] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     loadAdminData()
@@ -38,6 +40,7 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
 
   const loadAdminData = async () => {
     try {
+      setRefreshing(true)
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users`, {
         headers: {
           'Authorization': `Bearer ${user.access_token}`,
@@ -65,6 +68,7 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
       console.error('Error loading admin data:', error)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -102,7 +106,7 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
       })
 
       if (response.ok) {
-        await loadAdminData() // Reload data
+        await loadAdminData() 
         console.log(`User role updated to ${newRole}`)
       } else {
         console.error('Failed to update user role')
@@ -139,6 +143,38 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
     }
   }
 
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to permanently delete ${userName}? This action cannot be undone and will remove the user from both Deno KV and Supabase Auth.`)) {
+      return
+    }
+
+    setDeletingUser(userId)
+    try {
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        await loadAdminData() 
+        console.log(`User ${userName} deleted successfully`)
+        alert(`User ${userName} has been permanently deleted from both KV and Auth.`)
+      } else {
+        const error = await response.json()
+        console.error('Failed to delete user:', error)
+        alert(`Failed to delete user: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('Error deleting user. Please try again.')
+    } finally {
+      setDeletingUser(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -153,12 +189,22 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Admin Panel</h1>
-        <p className="text-muted-foreground">Manage users and platform settings</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Panel</h1>
+          <p className="text-muted-foreground">Manage users and platform settings</p>
+        </div>
+        <button
+          onClick={loadAdminData}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
-      {/* Stats Grid */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="post-card p-6 text-center hover:shadow-lg transition-all duration-200">
           <Users className="h-8 w-8 text-primary mx-auto mb-2" />
@@ -185,13 +231,15 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
         </div>
       </div>
 
-      {/* Users Table */}
+
       <div className="post-card overflow-hidden">
         <div className="p-6 border-b border-border">
           <h2 className="text-xl font-bold text-foreground">Platform Users</h2>
+          <p className="text-sm text-muted-foreground mt-1">{users.length} total users</p>
         </div>
         
-        <div className="overflow-x-auto">
+
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-secondary">
               <tr>
@@ -199,8 +247,8 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                 <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Email</th>
                 <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Role</th>
                 <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Status</th>
-                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Actions</th>
                 <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Joined</th>
+                <th className="text-left py-3 px-6 font-medium text-secondary-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -208,13 +256,13 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                 <tr key={userData.id} className="hover:bg-secondary/50 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center space-x-3">
-                      <div className="avatar-gradient w-8 h-8 rounded-full flex items-center justify-center">
+                      <div className="avatar-gradient w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-sm font-medium text-white">
                           {userData.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <div>
-                        <div className="font-medium text-foreground">{userData.name}</div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground truncate">{userData.name}</div>
                         {userData.followers !== undefined && (
                           <div className="text-xs text-muted-foreground">
                             {userData.followers} followers • {userData.following} following
@@ -223,7 +271,9 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-foreground">{userData.email}</td>
+                  <td className="py-4 px-6">
+                    <div className="text-foreground truncate max-w-xs">{userData.email}</div>
+                  </td>
                   <td className="py-4 px-6">
                     {updatingUser === userData.id ? (
                       <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -231,8 +281,8 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                       <select
                         value={userData.role}
                         onChange={(e) => updateUserRole(userData.id, e.target.value)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getRoleColor(userData.role)}`}
-                        disabled={userData.id === user.id} // Can't change own role
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getRoleColor(userData.role)}`}
+                        disabled={userData.id === user.id}
                       >
                         <option value="student">Student</option>
                         <option value="instructor">Instructor</option>
@@ -247,24 +297,14 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                       <select
                         value={userData.status || 'active'}
                         onChange={(e) => updateUserStatus(userData.id, e.target.value)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getStatusColor(userData.status || 'active')}`}
-                        disabled={userData.id === user.id} // Can't change own status
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getStatusColor(userData.status || 'active')}`}
+                        disabled={userData.id === user.id}
                       >
                         <option value="active">Active</option>
                         <option value="suspended">Suspended</option>
                         <option value="banned">Banned</option>
                       </select>
                     )}
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => onNavigate('account', userData.id)}
-                        className="text-xs px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all duration-200 border border-primary/20"
-                      >
-                        View Profile
-                      </button>
-                    </div>
                   </td>
                   <td className="py-4 px-6 text-muted-foreground text-sm">
                     <div>{formatDate(userData.created_at)}</div>
@@ -274,10 +314,148 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
                       </div>
                     )}
                   </td>
+                  <td className="py-4 px-6">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => onNavigate('account', userData.id)}
+                        className="text-xs px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all duration-200 border border-primary/20 whitespace-nowrap"
+                      >
+                        View Profile
+                      </button>
+                      {userData.id !== user.id && (
+                        <button
+                          onClick={() => deleteUser(userData.id, userData.name)}
+                          disabled={deletingUser === userData.id}
+                          className="text-xs px-3 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-all duration-200 border border-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        >
+                          {deletingUser === userData.id ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-destructive border-t-transparent rounded-full animate-spin"></div>
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-3 w-3" />
+                              Delete
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+
+        <div className="lg:hidden divide-y divide-border">
+          {users.map((userData) => (
+            <div key={userData.id} className="p-4 hover:bg-secondary/50 transition-colors">
+
+              <div className="flex items-start space-x-3 mb-4">
+                <div className="avatar-gradient w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="font-medium text-white">
+                    {userData.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-foreground mb-1">{userData.name}</div>
+                  <div className="text-sm text-muted-foreground truncate mb-1">{userData.email}</div>
+                  {userData.followers !== undefined && (
+                    <div className="text-xs text-muted-foreground">
+                      {userData.followers} followers • {userData.following} following
+                    </div>
+                  )}
+                </div>
+              </div>
+
+
+              <div className="space-y-3 mb-4">
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Role:</span>
+                  {updatingUser === userData.id ? (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <select
+                      value={userData.role}
+                      onChange={(e) => updateUserRole(userData.id, e.target.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getRoleColor(userData.role)}`}
+                      disabled={userData.id === user.id}
+                    >
+                      <option value="student">Student</option>
+                      <option value="instructor">Instructor</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  )}
+                </div>
+
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  {updatingUser === userData.id ? (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <select
+                      value={userData.status || 'active'}
+                      onChange={(e) => updateUserStatus(userData.id, e.target.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all hover:shadow-sm ${getStatusColor(userData.status || 'active')}`}
+                      disabled={userData.id === user.id}
+                    >
+                      <option value="active">Active</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="banned">Banned</option>
+                    </select>
+                  )}
+                </div>
+
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Joined:</span>
+                  <span className="text-sm text-foreground">{formatDate(userData.created_at)}</span>
+                </div>
+
+
+                {userData.last_login && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Last Login:</span>
+                    <span className="text-sm text-foreground">{formatDate(userData.last_login)}</span>
+                  </div>
+                )}
+              </div>
+
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => onNavigate('account', userData.id)}
+                  className="flex-1 text-sm px-4 py-2.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all duration-200 border border-primary/20 touch-target"
+                >
+                  View Profile
+                </button>
+                {userData.id !== user.id && (
+                  <button
+                    onClick={() => deleteUser(userData.id, userData.name)}
+                    disabled={deletingUser === userData.id}
+                    className="flex-1 text-sm px-4 py-2.5 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-all duration-200 border border-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-target"
+                  >
+                    {deletingUser === userData.id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-destructive border-t-transparent rounded-full animate-spin"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4" />
+                        Delete User
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
