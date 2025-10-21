@@ -145,7 +145,7 @@ function App() {
     }
     if (page === 'portfolio') {
       if (id) {
-  
+
         if (isValidUUID(id)) {
           setCurrentPortfolioUserId(id)
         } else {
