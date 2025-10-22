@@ -9,6 +9,7 @@ import { Profile } from './components/Profile'
 import { Portfolio } from './components/Portfolio'
 import { LearningHub } from './components/LearningHub'
 import { AdminPanel } from './components/AdminPanel'
+import { AdminDashboard } from './components/AdminDashboard'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Search } from './components/Search'
 import { ChatBot } from './components/ChatBot'
@@ -313,8 +314,16 @@ function App() {
             {currentPage === 'admin' && user && (
               <div className="pt-0">
                 <ProtectedRoute requiredRole="admin">
-                  <AdminPanel user={user} onNavigate={navigateTo} />
+                  <AdminDashboard user={user} onNavigate={navigateTo} />
                   <DebugPanel />
+                </ProtectedRoute>
+              </div>
+            )}
+            
+            {currentPage === 'user-management' && user && (
+              <div className="pt-0">
+                <ProtectedRoute requiredRole="admin">
+                  <AdminPanel user={user} onNavigate={navigateTo} />
                 </ProtectedRoute>
               </div>
             )}
