@@ -102,7 +102,7 @@ function SignInForm({ onNavigate, onForgotPassword }: SignInFormProps) {
         formData.password,
       );
       if (result.success) {
-        onNavigate("feed");
+        
       } else {
         setError(result.error || "Sign in failed");
       }
@@ -316,7 +316,7 @@ function SignUpForm({ onNavigate }: SignUpFormProps) {
       );
 
       if (result.success) {
-        onNavigate("feed");
+
       } else {
         setError(result.error || "Sign up failed");
       }
