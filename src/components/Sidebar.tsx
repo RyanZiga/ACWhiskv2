@@ -241,8 +241,8 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
     if (user.role === 'admin') {
       return [
-        { name: 'Dashboard', id: 'dashboard', icon: BarChart3 },
-        { name: 'Admin Panel', id: 'admin', icon: Shield },
+        { name: 'Admin Dashboard', id: 'admin', icon: BarChart3 },
+        { name: 'User Management', id: 'user-management', icon: Shield },
       ]
     }
 
@@ -410,29 +410,6 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onNavigate('dashboard')
-                }}
-                className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                  currentPage === 'dashboard'
-                    ? 'text-primary'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-                }`}
-                type="button"
-              >
-                <div className="relative">
-                  <BarChart3 className={`h-6 w-6 ${currentPage === 'dashboard' ? 'scale-110' : ''} transition-transform duration-200`} />
-                </div>
-                
-                {currentPage === 'dashboard' && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
-                )}
-              </button>
-
-
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
                   onNavigate('admin')
                 }}
                 className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 touch-target relative ${
@@ -443,10 +420,33 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 type="button"
               >
                 <div className="relative">
-                  <Shield className={`h-6 w-6 ${currentPage === 'admin' ? 'scale-110' : ''} transition-transform duration-200`} />
+                  <BarChart3 className={`h-6 w-6 ${currentPage === 'admin' ? 'scale-110' : ''} transition-transform duration-200`} />
                 </div>
                 
                 {currentPage === 'admin' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
+              </button>
+
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('user-management')
+                }}
+                className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'user-management'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <Shield className={`h-6 w-6 ${currentPage === 'user-management' ? 'scale-110' : ''} transition-transform duration-200`} />
+                </div>
+                
+                {currentPage === 'user-management' && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
                 )}
               </button>
