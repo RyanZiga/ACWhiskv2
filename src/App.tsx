@@ -61,7 +61,8 @@ function App() {
       const result = await AuthService.checkSession()
       if (result.success && result.user) {
         setUser(result.user)
-        setCurrentPage('feed')
+
+        setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
       }
     } catch (error) {
       console.error('❌ Session check error:', error)
@@ -76,7 +77,8 @@ function App() {
       const result = await AuthService.login(email, password)
       if (result.success && result.user) {
         setUser(result.user)
-        setCurrentPage('feed')
+
+        setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
       } else {
         return { success: false, error: result.error }
@@ -95,7 +97,8 @@ function App() {
       const result = await AuthService.signup(email, password, name, role)
       if (result.success && result.user) {
         setUser(result.user)
-        setCurrentPage('feed')
+
+        setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
       } else {
         return { success: false, error: result.error }
