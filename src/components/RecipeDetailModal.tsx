@@ -243,7 +243,7 @@ export function RecipeDetailModal({
           </div>
 
           {/* Recipe Meta */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="p-3 bg-secondary/30 rounded-lg text-center">
               <Clock className="h-5 w-5 mx-auto mb-1 text-primary" />
               <p className="text-xs text-muted-foreground">Time</p>
@@ -256,17 +256,6 @@ export function RecipeDetailModal({
               <p className="text-xs text-muted-foreground">Servings</p>
               <p className="text-sm font-medium text-foreground">
                 {recipe.servings}
-              </p>
-            </div>
-            <div className="p-3 bg-secondary/30 rounded-lg text-center">
-              <ChefHat className="h-5 w-5 mx-auto mb-1 text-primary" />
-              <p className="text-xs text-muted-foreground">Difficulty</p>
-              <p
-                className={`text-sm font-medium px-2 py-0.5 rounded ${getDifficultyColor(
-                  recipe.difficulty
-                )}`}
-              >
-                {recipe.difficulty}
               </p>
             </div>
           </div>
