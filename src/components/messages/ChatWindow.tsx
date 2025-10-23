@@ -50,7 +50,7 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Auto-scroll to bottom when messages change
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -83,16 +83,16 @@ export function ChatWindow({
   const handleMessageChange = (value: string) => {
     setNewMessage(value)
     
-    // Handle typing indicator
+
     if (value.length > 0) {
       onTyping(true)
       
-      // Clear existing timeout
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
       }
       
-      // Set timeout to stop typing indicator
+
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false)
       }, 2000)
@@ -115,7 +115,7 @@ export function ChatWindow({
       await onSendMessage(messageContent)
     } catch (error) {
       console.error('Failed to send message:', error)
-      setNewMessage(messageContent) // Restore message on error
+      setNewMessage(messageContent) 
     } finally {
       setSendingMessage(false)
     }
@@ -156,7 +156,7 @@ export function ChatWindow({
     <div className={`${
       isMobile ? (showConversationList ? 'hidden' : 'flex') : 'flex'
     } flex-col flex-1`}>
-      {/* Chat Header */}
+
       <div className="p-4 border-b post-card flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {isMobile && (
@@ -203,30 +203,9 @@ export function ChatWindow({
             </div>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <button 
-            className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"
-            aria-label="Voice call"
-          >
-            <Phone className="h-5 w-5" />
-          </button>
-          <button 
-            className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"
-            aria-label="Video call"
-          >
-            <Video className="h-5 w-5" />
-          </button>
-          <button 
-            className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"
-            aria-label="More options"
-          >
-            <MoreVertical className="h-5 w-5" />
-          </button>
-        </div>
       </div>
       
-      {/* Messages */}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
         {messages.length === 0 ? (
           <div className="text-center py-8">
@@ -264,7 +243,7 @@ export function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Message Input */}
+
       <div className="p-4 border-t post-card chat-input-mobile">
         <div className="flex items-center space-x-2">
           <button 
