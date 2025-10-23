@@ -98,7 +98,7 @@ export function AdminDashboard({ user, onNavigate }: AdminDashboardProps) {
   useEffect(() => {
     fetchAnalytics()
     
-
+    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchAnalytics, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -166,7 +166,13 @@ export function AdminDashboard({ user, onNavigate }: AdminDashboardProps) {
                 <RefreshCw className={`h-5 w-5 text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="text-foreground">Refresh</span>
               </button>
-
+              <button
+                onClick={() => onNavigate('admin')}
+                className="btn-gradient px-6 py-3 rounded-lg flex items-center space-x-2 transform hover:scale-105 shadow-lg touch-target"
+              >
+                <ShieldCheck className="h-5 w-5" />
+                <span>Admin Panel</span>
+              </button>
             </div>
           </div>
         </div>
@@ -374,8 +380,8 @@ export function AdminDashboard({ user, onNavigate }: AdminDashboardProps) {
                 />
                 <Legend />
                 <Bar dataKey="messages" fill="#3b82f6" name="Messages" />
-                <Bar dataKey="assignments" fill="#8b5cf6" name="Assignments" />
-                <Bar dataKey="submissions" fill="#10b981" name="Submissions" />
+                <Bar dataKey="assignments" fill="#8b5cf6" name="Posts" />
+                <Bar dataKey="submissions" fill="#10b981" name="Recipes" />
               </BarChart>
             </ResponsiveContainer>
           </GlassCard>
