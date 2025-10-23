@@ -48,7 +48,6 @@ interface User {
   avatar_url?: string;
 }
 
-
 interface Comment {
   id: string;
   content: string;
@@ -68,6 +67,8 @@ interface Post {
   id: string;
   content: string;
   images: string[];
+  video?: string;
+  background_color?: string;
   author_id: string;
   author_name: string;
   author_role: string;
@@ -194,14 +195,15 @@ const cookingTips = [
 ];
 
 const postBackgroundColors = [
-  "bg-gradient-to-br from-pink-200 to-pink-300",
-  "bg-gradient-to-br from-blue-200 to-blue-300",
-  "bg-gradient-to-br from-amber-100 to-amber-200",
-  "bg-gradient-to-br from-yellow-100 to-yellow-200",
-  "bg-gradient-to-br from-rose-200 to-rose-300",
-  "bg-gradient-to-br from-cyan-200 to-cyan-300",
-  "bg-gradient-to-br from-orange-100 to-orange-200",
-  "bg-gradient-to-br from-purple-200 to-purple-300",
+  { name: "None", value: "", class: "" },
+  { name: "Pink Gradient", value: "gradient-pink", class: "bg-gradient-to-br from-pink-400 to-pink-600" },
+  { name: "Blue Gradient", value: "gradient-blue", class: "bg-gradient-to-br from-blue-400 to-blue-600" },
+  { name: "Purple Gradient", value: "gradient-purple", class: "bg-gradient-to-br from-purple-400 to-purple-600" },
+  { name: "Orange Gradient", value: "gradient-orange", class: "bg-gradient-to-br from-orange-400 to-orange-600" },
+  { name: "Green Gradient", value: "gradient-green", class: "bg-gradient-to-br from-green-400 to-green-600" },
+  { name: "Sunset", value: "gradient-sunset", class: "bg-gradient-to-br from-yellow-400 via-orange-500 to-pink-500" },
+  { name: "Ocean", value: "gradient-ocean", class: "bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600" },
+  { name: "Forest", value: "gradient-forest", class: "bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600" },
 ];
 
 export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRef }: FeedProps) {
@@ -320,7 +322,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(10000), 
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         },
       );
 
@@ -420,7 +422,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           },
         }
       );
-
+      // Reload stories to update view status
       loadStories();
     } catch (error) {
       console.error("Error marking story as viewed:", error);
@@ -436,17 +438,27 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
 
     const index = groupsWithStories.findIndex(group => group.user_id === userId);
     
-    if (index === -1) return; // User not found
+    if (index === -1) return; 
     
     setViewerStartIndex(index);
     setShowStoryViewer(true);
   };
 
+  const videoRefs = useRef<HTMLVideoElement[]>([]);
+  const handleVideoPlay = (currentIndex: number) => {
+    videoRefs.current.forEach((video, index) => {
+      if (index !== currentIndex && video && !video.paused) {
+        video.pause();
+      }
+    });
+  };
+  
+
   const loadSuggestedUsers = async () => {
     try {
       if (!user.access_token) return;
 
-      // Fetch all users
+
       const usersResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/users/all`,
         {
@@ -888,7 +900,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error commenting on post:", error);
-      // Optimistic update for demo
+
       const newComment: Comment = {
         id: `comment_${Date.now()}`,
         content,
@@ -938,7 +950,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error editing post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === editingPost.id
@@ -952,7 +964,7 @@ Serve immediately with vanilla ice cream`,
   };
 
   const handleDeletePost = async (postId: string) => {
-    setActiveDropdown(null); 
+    setActiveDropdown(null); // Close any open dropdowns
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/posts/${postId}`,
@@ -1283,7 +1295,7 @@ Serve immediately with vanilla ice cream`,
         </div>
 
         <div className="flex gap-6 relative">
-          {/* Main Feed */}
+
           <div className="flex-1 max-w-7xl mx-auto lg:mx-0">
 
             <div className="hidden lg:block post-card p-4 lg:p-6 mb-6">
@@ -1329,8 +1341,6 @@ Serve immediately with vanilla ice cream`,
             </div>
 
 
-          
-
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {posts.map((post, index) => (
@@ -1346,19 +1356,50 @@ Serve immediately with vanilla ice cream`,
                     }
                   }}
                 >
-  
-                  {post.images && post.images.length > 0 ? (
-                    <PostImageCarousel
-                      images={post.images}
-                      alt={post.recipe_data?.title || "Post image"}
-                    />
-                  ) : (
-                    <div className={`h-48 ${postBackgroundColors[index % postBackgroundColors.length]} flex items-center justify-center p-6`}>
-                      <p className="text-foreground text-center line-clamp-4">
-                        {post.content}
-                      </p>
-                    </div>
-                  )}
+
+            {post.video ? (
+              <div className="relative w-full h-64 bg-black flex items-center justify-center">
+                <video
+                  src={post.video}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  onPlay={() => handleVideoPlay(index)}
+                  className="w-full h-full object-cover rounded-none"
+                  onClick={(e) => e.stopPropagation()}
+                  onError={(e) =>
+                    console.error("⚠️ Video failed to load:", post.video, e)
+                  }
+                >
+                  <source src={post.video} type="video/mp4" />
+                  <source src={post.video} type="video/webm" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            ) : post.images && post.images.length > 0 ? (
+              <PostImageCarousel
+                images={post.images}
+                alt={post.recipe_data?.title || "Post image"}
+              />
+            ) : (
+              (() => {
+                const bgColor = postBackgroundColors.find(
+                  (bg) => bg.value === post.background_color
+                );
+                const bgClass = bgColor?.class || "bg-card";
+                const textClass = bgColor
+                  ? "text-white font-medium drop-shadow"
+                  : "text-foreground";
+                return (
+                  <div className={`h-48 ${bgClass} flex items-center justify-center p-6`}>
+                    <p className={`text-center line-clamp-4 ${textClass}`}>
+                      {post.content}
+                    </p>
+                  </div>
+                );
+              })()
+            )}
+
 
 
                   <div className="p-4">
@@ -1394,7 +1435,7 @@ Serve immediately with vanilla ice cream`,
                       </button>
 
                       <div className="flex items-center space-x-3">
-                        {/* Edit/Delete Dropdown */}
+
                         {post.author_id === user.id && (
                           <div className="relative">
                             <button
@@ -1422,12 +1463,12 @@ Serve immediately with vanilla ice cream`,
                                       left = 10;
                                     }
                                     
-     
+
                                     if (left + dropdownWidth > window.innerWidth - 10) {
                                       left = window.innerWidth - dropdownWidth - 10;
                                     }
                                     
- 
+
                                     if (top + dropdownHeight > window.innerHeight + window.scrollY - 10) {
                                       top = rect.top + window.scrollY - dropdownHeight - 8;
                                     }
@@ -1473,14 +1514,14 @@ Serve immediately with vanilla ice cream`,
                       </div>
                     </div>
 
-     
-                    {post.images && post.images.length > 0 && post.content && (
+
+                    {((post.images && post.images.length > 0) || post.video) && post.content && (
                       <p className="text-sm text-foreground mb-2 line-clamp-2">
                         {post.content}
                       </p>
                     )}
 
-                    {/* Comments Section */}
+
                     {showComments === post.id && (
                       <div className="border-t border-border pt-3 mt-3">
 
@@ -1765,7 +1806,7 @@ Serve immediately with vanilla ice cream`,
           }}
           onRate={(postId, rating) => {
             handleRateRecipe(postId, rating);
- 
+            // Update selectedPost state to reflect the new rating
             const newRating: Rating = {
               user_id: user.id,
               user_name: user.name,
@@ -1786,7 +1827,7 @@ Serve immediately with vanilla ice cream`,
         />
       )}
 
-
+      {/* Recipe Detail Modal */}
       {selectedRecipe && (
         <RecipeDetailModal
           post={selectedRecipe}
@@ -1794,7 +1835,7 @@ Serve immediately with vanilla ice cream`,
           onClose={() => setSelectedRecipe(null)}
           onRate={(rating) => {
             handleRateRecipe(selectedRecipe.id, rating);
-
+            // Update selectedRecipe state to reflect the new rating
             const newRating: Rating = {
               user_id: user.id,
               user_name: user.name,
@@ -1843,7 +1884,7 @@ Serve immediately with vanilla ice cream`,
         />
       )}
 
-
+      {/* Portal-rendered dropdown menu */}
       {activeDropdown && dropdownPosition && createPortal(
         <div
           className="fixed w-48 post-card shadow-lg rounded-lg overflow-hidden z-50"
@@ -1915,7 +1956,7 @@ function SidebarContent({
 }: SidebarContentProps) {
   return (
     <>
-
+      {/* Suggestions for you */}
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">
@@ -1995,7 +2036,7 @@ function SidebarContent({
         </div>
       </div>
 
-
+      {/* Daily Cooking Tips */}
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-foreground">
@@ -2054,6 +2095,8 @@ function CreatePostModal({
   const [postType, setPostType] = useState<"post" | "recipe">("post");
   const [content, setContent] = useState("");
   const [images, setImages] = useState<File[]>([]);
+  const [video, setVideo] = useState<File | null>(null);
+  const [backgroundColor, setBackgroundColor] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -2071,10 +2114,29 @@ function CreatePostModal({
   ) => {
     const files = Array.from(e.target.files || []);
     setImages((prev) => [...prev, ...files].slice(0, 4));
+    // Clear video if images are added
+    if (files.length > 0) {
+      setVideo(null);
+    }
+  };
+
+  const handleVideoUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVideo(file);
+      // Clear images if video is added
+      setImages([]);
+    }
   };
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = () => {
+    setVideo(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2091,7 +2153,7 @@ function CreatePostModal({
         return;
       }
     } else {
-      if (!content.trim() && images.length === 0) return;
+      if (!content.trim() && images.length === 0 && !video) return;
     }
 
     setLoading(true);
@@ -2099,8 +2161,9 @@ function CreatePostModal({
 
     try {
       const imageUrls: string[] = [];
+      let videoUrl: string | undefined = undefined;
 
-
+      // Upload images
       for (const image of images) {
         const formData = new FormData();
         formData.append("file", image);
@@ -2122,11 +2185,43 @@ function CreatePostModal({
         }
       }
 
+      // Upload video
+      if (video) {
+        const formData = new FormData();
+        formData.append("file", video);
 
+        const uploadResponse = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/upload/posts`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${user.access_token}`,
+            },
+            body: formData,
+          },
+        );
+
+        if (uploadResponse.ok) {
+          const { url } = await uploadResponse.json();
+          videoUrl = url;
+        }
+      }
+
+      // Create post in KV store (for feed)
       const postPayload: any = {
         content: content.trim(),
         images: imageUrls,
       };
+
+      // Add video if uploaded
+      if (videoUrl) {
+        postPayload.video = videoUrl;
+      }
+
+      // Add background color for text-only posts
+      if (!imageUrls.length && !videoUrl && backgroundColor) {
+        postPayload.background_color = backgroundColor;
+      }
       
       if (postType === "recipe") {
         postPayload.type = "recipe";
@@ -2163,11 +2258,11 @@ function CreatePostModal({
       }
     } catch (err) {
       console.error("Post creation error:", err);
-
+      // For demo, create post locally
       const newPost: Post = {
         id: `post_${Date.now()}`,
         content: content.trim(),
-        images: [], 
+        images: [], // In demo mode, we don't have uploaded image URLs
         author_id: user.id,
         author_name: user.name,
         author_role: user.role,
@@ -2252,7 +2347,7 @@ function CreatePostModal({
             </div>
           </div>
 
-
+          {/* Post Type Selector */}
           <div className="mb-4 flex gap-2">
             <button
               type="button"
@@ -2284,10 +2379,10 @@ function CreatePostModal({
             </button>
           </div>
 
-
+          {/* Recipe-specific fields */}
           {postType === "recipe" && (
             <div className="space-y-3 mb-4 p-3 bg-secondary/30 rounded-lg">
-
+              {/* Recipe Title */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Recipe Title *
@@ -2302,7 +2397,7 @@ function CreatePostModal({
                 />
               </div>
 
-
+              {/* Difficulty, Time, Servings Row */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
@@ -2346,7 +2441,7 @@ function CreatePostModal({
                 </div>
               </div>
 
-
+              {/* Ingredients */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Ingredients (one per line)
@@ -2360,7 +2455,7 @@ function CreatePostModal({
                 />
               </div>
 
-
+              {/* Instructions */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Instructions (one step per line)
@@ -2374,7 +2469,7 @@ function CreatePostModal({
                 />
               </div>
 
-
+              {/* Tags */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Tags (comma-separated)
@@ -2390,7 +2485,7 @@ function CreatePostModal({
             </div>
           )}
 
-
+          {/* Description/Content */}
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -2403,7 +2498,36 @@ function CreatePostModal({
             rows={postType === "recipe" ? 3 : 4}
           />
 
+          {/* Background Color Selector - Only show for text-only posts */}
+          {!images.length && !video && postType === "post" && (
+            <div className="mt-4 p-3 bg-secondary/30 rounded-lg">
+              <label className="block text-xs font-medium text-foreground mb-2">
+                Background Design
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {postBackgroundColors.map((bg) => (
+                  <button
+                    key={bg.value}
+                    type="button"
+                    onClick={() => setBackgroundColor(bg.value)}
+                    className={`h-16 rounded-lg transition-all ${
+                      bg.class || "bg-card border-2 border-dashed border-border"
+                    } ${
+                      backgroundColor === bg.value
+                        ? "ring-2 ring-primary ring-offset-2"
+                        : ""
+                    } flex items-center justify-center`}
+                  >
+                    {!bg.value && (
+                      <span className="text-xs text-muted-foreground">None</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
+          {/* Image Preview */}
           {images.length > 0 && (
             <div className="grid grid-cols-2 gap-2 lg:gap-3 mt-4">
               {images.map((image, index) => (
@@ -2425,26 +2549,58 @@ function CreatePostModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
-            <label className="flex items-center space-x-2 px-3 py-2 btn-secondary rounded-lg cursor-pointer transition-colors text-sm">
-              <Camera className="h-4 w-4" />
-              <span>Add Photos</span>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={images.length >= 4}
+          {/* Video Preview */}
+          {video && (
+            <div className="mt-4 relative">
+              <video
+                src={URL.createObjectURL(video)}
+                controls
+                className="w-full h-48 object-cover rounded-xl"
               />
-            </label>
+              <button
+                type="button"
+                onClick={removeVideo}
+                className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center space-x-2 px-3 py-2 btn-secondary rounded-lg cursor-pointer transition-colors text-sm">
+                <Camera className="h-4 w-4" />
+                <span>Photos</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={images.length >= 4 || !!video}
+                />
+              </label>
+              
+              <label className="flex items-center space-x-2 px-3 py-2 btn-secondary rounded-lg cursor-pointer transition-colors text-sm">
+                <Video className="h-4 w-4" />
+                <span>Video</span>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                  disabled={images.length > 0 || !!video}
+                />
+              </label>
+            </div>
 
             <button
               type="submit"
               disabled={
                 postType === "recipe"
                   ? !recipeTitle.trim() || loading
-                  : (!content.trim() && images.length === 0) || loading
+                  : (!content.trim() && images.length === 0 && !video) || loading
               }
               className="px-6 py-2 btn-gradient rounded-lg transition-colors disabled:opacity-50 text-sm font-semibold"
             >
@@ -2612,7 +2768,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
         className="relative w-full max-w-6xl max-h-[90vh] bg-background rounded-lg overflow-hidden flex flex-col lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
-
+        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors"
@@ -2620,24 +2776,45 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           <X className="h-5 w-5" />
         </button>
 
-
+        {/* Left Side - Media (Video, Image, or Text) */}
         <div className="lg:w-3/5 bg-black flex items-center justify-center">
-          {post.images && post.images.length > 0 ? (
+          {/* ✅ If recipe has a video (or any post) — show video */}
+          {post.video ? (
+            <video
+              src={post.video}
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-full max-h-[90vh] object-contain bg-black"
+            >
+              <source src={post.video} type="video/mp4" />
+              <source src={post.video} type="video/webm" />
+              Your browser does not support the video tag.
+            </video>
+          ) : post.images && post.images.length > 0 ? (
             <PostImageCarousel
               images={post.images}
-              alt={post.recipe_data?.title || "Post image"}
+              alt={post.recipe_data?.title || 'Post image'}
               className="h-64 lg:h-[90vh] max-h-[90vh]"
             />
           ) : (
-            <div className="w-full h-64 lg:h-full flex items-center justify-center p-8">
-              <p className="text-white text-center text-lg">
-                {post.content}
+            <div
+              className={`w-full h-64 lg:h-full flex items-center justify-center p-8 ${
+                post.background_color || 'bg-black'
+              }`}
+            >
+              <p
+                className={`text-white text-center text-lg whitespace-pre-wrap ${
+                  post.background_color ? 'text-black' : 'text-white'
+                }`}
+              >
+                {post.content || post.recipe_data?.title || 'No content'}
               </p>
             </div>
           )}
         </div>
 
-
+        {/* Right Side - Details and Comments */}
         <div className="lg:w-2/5 flex flex-col max-h-[90vh] lg:max-h-none">
           {/* Post Header */}
           <div className="p-4 border-b border-border">
@@ -2676,9 +2853,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </button>
           </div>
 
-
+          {/* Post Content & Recipe Data */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-
+            {/* Recipe Title */}
             {post.recipe_data?.title && (
               <div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -2687,7 +2864,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Post Description */}
             {post.content && (
               <div>
                 <p className="text-foreground whitespace-pre-wrap">
@@ -2696,7 +2873,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Recipe Metadata */}
             {post.recipe_data && (
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="p-2 bg-secondary/30 rounded-lg text-center">
@@ -2727,7 +2904,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Tags */}
             {post.recipe_data?.tags && post.recipe_data.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.recipe_data.tags.map((tag, index) => (
@@ -2741,7 +2918,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Ingredients */}
             {post.recipe_data?.ingredients && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -2761,7 +2938,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Instructions */}
             {post.recipe_data?.instructions && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -2783,7 +2960,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Rating Section - Only for recipe posts */}
             {post.type === "recipe" && (
               <>
                 <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
@@ -2815,7 +2992,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </>
             )}
 
-
+            {/* Comments Section */}
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Comments ({post.comments.length})</h3>
               
@@ -2850,9 +3027,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </div>
           </div>
 
-
+          {/* Post Actions & Comment Input */}
           <div className="border-t border-border p-4 space-y-3 bg-background">
-
+            {/* Like and Comment Counts */}
             <div className="flex items-center justify-between text-sm">
               <button
                 onClick={(e) => {
@@ -2877,7 +3054,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             </div>
 
-
+            {/* Comment Input */}
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user.avatar_url ? (
