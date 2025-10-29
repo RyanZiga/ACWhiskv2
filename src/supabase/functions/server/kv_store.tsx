@@ -9,7 +9,7 @@ CREATE TABLE kv_store_c56dfc7a (
 
 
 
-// This file provides a simple key-value interface for storing data. It should be adequate for most small-scale use cases.
+// This file provides a simple key-value interface for storing Figma Make data. It should be adequate for most small-scale use cases.
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 
 const client = () => createClient(
@@ -84,4 +84,14 @@ export const getByPrefix = async (prefix: string): Promise<any[]> => {
     throw new Error(error.message);
   }
   return data?.map((d) => d.value) ?? [];
+};
+
+// Search for key-value pairs by prefix, returning both keys and values.
+export const getByPrefixWithKeys = async (prefix: string): Promise<{ key: string; value: any }[]> => {
+  const supabase = client()
+  const { data, error } = await supabase.from("kv_store_c56dfc7a").select("key, value").like("key", prefix + "%");
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data ?? [];
 };

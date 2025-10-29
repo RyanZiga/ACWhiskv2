@@ -10,6 +10,7 @@ import { Portfolio } from './components/Portfolio'
 import { LearningHub } from './components/LearningHub'
 import { AdminPanel } from './components/AdminPanel'
 import { AdminDashboard } from './components/AdminDashboard'
+import { StudentManagement } from './components/StudentManagement'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Search } from './components/Search'
 import { ChatBot } from './components/ChatBot'
@@ -18,6 +19,8 @@ import { Account } from './components/Account'
 import { MessagesRefactored } from './components/MessagesRefactored'
 import { DebugPanel } from './components/DebugPanel'
 import { Notifications } from './components/Notifications'
+import { SetPassword } from './components/SetPassword'
+import { ChangePasswordModal } from './components/ChangePasswordModal'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthService, User, AuthResult, Permissions, isValidUUID } from './utils/auth'
 import { projectId } from './utils/supabase/info'
@@ -51,6 +54,8 @@ function App() {
   const [targetUserId, setTargetUserId] = useState<string | null>(null)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
+  const [hasTemporaryPassword, setHasTemporaryPassword] = useState(false)
   const createPostRef = React.useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -62,7 +67,9 @@ function App() {
       const result = await AuthService.checkSession()
       if (result.success && result.user) {
         setUser(result.user)
-
+        // Check for temporary password
+        await checkForTemporaryPassword(result.user)
+        // Redirect admin users to Admin Dashboard, others to Feed
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
       }
     } catch (error) {
@@ -73,11 +80,34 @@ function App() {
     }
   }
 
+  const checkForTemporaryPassword = async (user: User) => {
+    try {
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
+        headers: {
+          'Authorization': `Bearer ${user.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const { profile } = await response.json()
+        if (profile.has_temp_password === true) {
+          setHasTemporaryPassword(true)
+          setShowChangePasswordModal(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for temporary password:', error)
+    }
+  }
+
   const login = async (email: string, password: string) => {
     try {
       const result = await AuthService.login(email, password)
       if (result.success && result.user) {
         setUser(result.user)
+
+        await checkForTemporaryPassword(result.user)
 
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
@@ -229,6 +259,10 @@ function App() {
               <Landing onNavigate={navigateTo} />
             )}
             
+            {currentPage === 'set-password' && (
+              <SetPassword onNavigate={navigateTo} />
+            )}
+            
             {currentPage === 'feed' && user && (
               <div className="pt-0">
                 <Feed user={user} onNavigate={navigateTo} unreadMessagesCount={unreadMessagesCount} onCreatePostRef={createPostRef} />
@@ -328,6 +362,14 @@ function App() {
               </div>
             )}
             
+            {currentPage === 'student-management' && user && (
+              <div className="pt-0">
+                <ProtectedRoute requiredRole="instructor">
+                  <StudentManagement user={user} onNavigate={navigateTo} />
+                </ProtectedRoute>
+              </div>
+            )}
+            
             {currentPage === 'search' && user && (
               <div className="pt-0">
                 <Search user={user} onNavigate={navigateTo} />
@@ -347,6 +389,39 @@ function App() {
           </main>
           
           {user && <ChatBot />}
+
+
+          {showChangePasswordModal && user && (
+            <ChangePasswordModal
+              user={user}
+              onClose={() => {
+                if (!hasTemporaryPassword) {
+                  setShowChangePasswordModal(false)
+                }
+              }}
+              onSuccess={async () => {
+                setHasTemporaryPassword(false)
+                setShowChangePasswordModal(false)
+
+                try {
+                  const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
+                    headers: {
+                      'Authorization': `Bearer ${user.access_token}`,
+                      'Content-Type': 'application/json'
+                    }
+                  })
+                  
+                  if (response.ok) {
+                    const { profile } = await response.json()
+                    setUser({ ...user, ...profile })
+                  }
+                } catch (error) {
+                  console.error('Error refreshing user profile:', error)
+                }
+              }}
+              isForced={hasTemporaryPassword}
+            />
+          )}
         </div>
       </AuthContext.Provider>
     </ThemeProvider>

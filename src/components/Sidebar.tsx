@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, Settings, User, LogOut, Shield, Menu, X, FileText, BarChart3, Moon, Sun, Bot, Plus, Briefcase } from 'lucide-react'
+import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, Settings, User, LogOut, Shield, Menu, X, FileText, BarChart3, Moon, Sun, Bot, Plus, Briefcase, GraduationCap } from 'lucide-react'
 import { User as UserType } from '../utils/auth'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { useTheme } from '../contexts/ThemeContext'
@@ -29,7 +29,7 @@ interface SidebarContentProps {
   toggleTheme: () => void
 }
 
-
+// Move SidebarContent outside to prevent re-creation on every render
 const SidebarContent = React.memo(({
   user,
   currentPage,
@@ -43,7 +43,7 @@ const SidebarContent = React.memo(({
   toggleTheme
 }: SidebarContentProps) => (
   <div className="flex flex-col h-full overflow-visible">
-
+    {/* User Header */}
     <div className="p-6 pb-8 overflow-visible">
       {!isCollapsed ? (
         <div className="flex items-center space-x-3">
@@ -138,7 +138,7 @@ const SidebarContent = React.memo(({
       })}
     </nav>
 
-
+    {/* Bottom section - Dark Mode Toggle, Settings, Sign out */}
     <div className="p-4 border-t border-sidebar-border mt-auto space-y-1">
       <button
         onClick={(e) => {
@@ -247,6 +247,17 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
     }
 
 
+    if (user.role === 'instructor') {
+      return [
+        { name: 'Feed', id: 'feed', icon: Home },
+        { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
+        { name: 'Learning', id: 'learning', icon: BookOpen },
+        { name: 'Messages', id: 'messages', icon: MessageSquare },
+        { name: 'Student Management', id: 'student-management', icon: GraduationCap },
+      ]
+    }
+
+    // Regular users see all other navigation items
     const baseNavigation = [
       { name: 'Feed', id: 'feed', icon: Home },
       { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
@@ -264,7 +275,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
       {isProfileMenuOpen && (
         <>
-
+          {/* Backdrop */}
           <div 
             className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-fade-in"
             onClick={() => setIsProfileMenuOpen(false)}
@@ -327,6 +338,30 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                       <BookOpen className="h-5 w-5 text-accent" />
                     </div>
                     <span className="font-medium">Learning</span>
+                  </button>
+                )}
+
+
+                {user.role === 'instructor' && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onNavigate('messages')
+                      setIsProfileMenuOpen(false)
+                    }}
+                    className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
+                    type="button"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <MessageSquare className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <span className="font-medium">Messages</span>
+                    {unreadMessagesCount > 0 && (
+                      <span className="ml-auto bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                        {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -405,7 +440,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           {user.role === 'admin' ? (
 
             <div className="flex items-center justify-around px-4 py-[5px]">
-
+              {/* Admin Dashboard */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -477,10 +512,10 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </button>
             </div>
-          ) : (
+          ) : user.role === 'instructor' ? (
 
             <div className="flex items-center justify-around px-[0px] py-[5px]">
-
+              {/* Feed */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -503,7 +538,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-
+              {/* Portfolio */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -526,7 +561,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-
+              {/* Create Post Button - Floating FAB */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -541,7 +576,120 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </button>
 
+              {/* Student Management */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('student-management')
+                }}
+                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'student-management'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <GraduationCap className={`h-6 w-6 ${currentPage === 'student-management' ? 'scale-110' : ''} transition-transform duration-200`} />
+                </div>
+                
+                {currentPage === 'student-management' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
+              </button>
 
+              {/* Menu */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsProfileMenuOpen(!isProfileMenuOpen)
+                }}
+                className="flex flex-col items-center justify-center px-3 py-2 rounded-[20px] transition-all duration-300 touch-target relative z-10 profile-menu-container group"
+                type="button"
+              >
+                <div className={`relative transition-all duration-300 ${
+                  (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning' || currentPage === 'messages') 
+                    ? 'scale-110 -translate-y-0.5' 
+                    : 'scale-100 group-active:scale-95'
+                }`}>
+                  <Menu className={`h-6 w-6 transition-all duration-300 ${
+                    (isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning' || currentPage === 'messages') 
+                      ? 'text-primary drop-shadow-[0_2px_8px_rgba(220,38,38,0.4)]' 
+                      : 'text-sidebar-foreground/60'
+                  }`} />
+                  {(isProfileMenuOpen || currentPage === 'account' || currentPage === 'profile' || currentPage === 'learning' || currentPage === 'messages') && (
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  )}
+                </div>
+              </button>
+            </div>
+          ) : (
+            /* Regular User Navigation */
+            <div className="flex items-center justify-around px-[0px] py-[5px]">
+              {/* Feed */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('feed')
+                }}
+                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'feed'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <Home className={`h-6 w-6 ${currentPage === 'feed' ? 'scale-110' : ''} transition-transform duration-200`} />
+                </div>
+                
+                {currentPage === 'feed' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
+              </button>
+
+              {/* Portfolio */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onNavigate('portfolio', user.id)
+                }}
+                className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
+                  currentPage === 'portfolio'
+                    ? 'text-primary'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                }`}
+                type="button"
+              >
+                <div className="relative">
+                  <Briefcase className={`h-6 w-6 ${currentPage === 'portfolio' ? 'scale-110' : ''} transition-transform duration-200`} />
+                </div>
+                
+                {currentPage === 'portfolio' && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                )}
+              </button>
+
+              {/* Create Post Button - Floating FAB */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onCreatePost?.()
+                }}
+                className="flex flex-col items-center justify-center px-2 transition-all duration-300 touch-target relative z-10 group -mt-2"
+                type="button"
+              >
+                <div className="w-14 h-14 avatar-gradient rounded-full flex items-center justify-center shadow-[0_4px_24px_rgba(220,38,38,0.4)] dark:shadow-[0_4px_24px_rgba(239,68,68,0.5)] transition-all duration-300 group-hover:shadow-[0_6px_32px_rgba(220,38,38,0.5)] group-active:scale-95 group-hover:scale-105 border-4 border-card">
+                  <Plus className="h-7 w-7 text-white transition-transform duration-300 group-active:rotate-90" />
+                </div>
+              </button>
+
+              {/* Messages */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -569,7 +717,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-
+              {/* Menu */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -599,7 +747,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </div>
       </nav>
 
-
+      {/* Mobile More Menu Modal */}
       {isMobileOpen && (
         <>
           <div
@@ -608,10 +756,10 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           />
           <div className="lg:hidden fixed bottom-0 left-0 right-0 sidebar-gradient z-50 shadow-2xl rounded-t-3xl animate-slide-up pb-safe">
             <div className="p-6">
-
+              {/* Handle bar */}
               <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-6" />
               
-
+              {/* User Info */}
               <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-sidebar-border">
                 <div className="avatar-gradient w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
                   <User className="w-7 h-7 text-white" />
@@ -622,7 +770,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </div>
 
-
+              {/* More Options */}
               <div className="space-y-2">
                 {user.role === 'admin' && (
                   <button
@@ -698,7 +846,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </>
       )}
 
-
+      {/* Desktop Sidebar - Floating */}
       <div
         className={`hidden lg:block fixed left-6 top-6 bottom-6 sidebar-gradient shadow-2xl transition-all duration-300 z-30 rounded-2xl overflow-visible ${
           isCollapsed ? 'w-16' : 'w-64'
