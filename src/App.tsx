@@ -59,6 +59,18 @@ function App() {
   const createPostRef = React.useRef<(() => void) | null>(null)
 
   useEffect(() => {
+    // Check URL for special routes before checking session
+    const pathname = window.location.pathname
+    const searchParams = new URLSearchParams(window.location.search)
+    
+    // Handle set-password route
+    if (pathname === '/set-password' && searchParams.get('token')) {
+      setCurrentPage('set-password')
+      setLoading(false)
+      return
+    }
+    
+    // Otherwise proceed with normal session check
     checkSession()
   }, [])
 
@@ -106,9 +118,9 @@ function App() {
       const result = await AuthService.login(email, password)
       if (result.success && result.user) {
         setUser(result.user)
-
+        // Check for temporary password
         await checkForTemporaryPassword(result.user)
-
+        // Redirect admin users to Admin Dashboard, others to Feed
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
       } else {
@@ -128,7 +140,7 @@ function App() {
       const result = await AuthService.signup(email, password, name, role)
       if (result.success && result.user) {
         setUser(result.user)
-
+        // Redirect admin users to Admin Dashboard, others to Feed
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
       } else {
@@ -187,7 +199,7 @@ function App() {
           setCurrentPortfolioUserId(null)
         }
       } else {
-
+        // No ID provided - navigate to current user's portfolio
         setCurrentPortfolioUserId(user?.id || null)
       }
     }
@@ -390,7 +402,7 @@ function App() {
           
           {user && <ChatBot />}
 
-
+          {/* Change Password Modal for Temporary Passwords */}
           {showChangePasswordModal && user && (
             <ChangePasswordModal
               user={user}
@@ -402,7 +414,7 @@ function App() {
               onSuccess={async () => {
                 setHasTemporaryPassword(false)
                 setShowChangePasswordModal(false)
-
+                // Refresh user profile to update the has_temp_password flag
                 try {
                   const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
                     headers: {
