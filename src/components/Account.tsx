@@ -99,7 +99,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       if (response.ok) {
         const { profile: profileData } = await response.json()
         
-        // Ensure all required properties exist with default values
+
         const safeProfile: UserProfile = {
           id: profileData.id || userId,
           name: profileData.name || 'Unknown User',
@@ -535,7 +535,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
               </div>
             ) : portfolioData ? (
               <>
- 
+
                 <div className="post-card p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-foreground">Professional Portfolio</h2>

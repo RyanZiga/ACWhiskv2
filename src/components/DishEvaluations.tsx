@@ -87,10 +87,10 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
   };
 
   const filteredEvaluations = evaluations.filter((evaluation) => {
-
+    // Filter by status
     if (filter !== 'all' && evaluation.status !== filter) return false;
 
-
+    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -136,7 +136,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
 
   return (
     <div className="min-h-screen bg-background">
-
+      {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-6">
@@ -164,7 +164,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
             )}
           </div>
 
-
+          {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -212,7 +212,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
         </div>
       </div>
 
-
+      {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -251,7 +251,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
                 className="bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => setSelectedEvaluation(evaluation)}
               >
-
+                {/* Image */}
                 <div className="relative aspect-video bg-muted">
                   <ImageWithFallback
                     src={evaluation.images[0]}
@@ -265,9 +265,9 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
                   )}
                 </div>
 
-
+                {/* Content */}
                 <div className="p-5 space-y-4">
-
+                  {/* Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-foreground truncate">
@@ -282,12 +282,12 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
                     {getStatusBadge(evaluation.status)}
                   </div>
 
-
+                  {/* Description */}
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {evaluation.description}
                   </p>
 
-
+                  {/* Meta Info */}
                   <div className="flex items-center space-x-3">
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-medium ${getDifficultyColor(
@@ -323,7 +323,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
         )}
       </div>
 
-
+      {/* Modals */}
       {showCreateModal && (
         <DishEvaluationModal
           user={user}
@@ -360,9 +360,9 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
               </button>
             </div>
 
-
+            {/* Content */}
             <div className="p-6 space-y-6">
-
+              {/* Status */}
               <div className="flex items-center justify-between">
                 {getStatusBadge(selectedEvaluation.status)}
                 <span className="text-sm text-muted-foreground">
@@ -370,7 +370,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
                 </span>
               </div>
 
-
+              {/* Images */}
               <div className="grid grid-cols-2 gap-3">
                 {selectedEvaluation.images.map((image, index) => (
                   <div key={index} className="aspect-square rounded-xl overflow-hidden">
@@ -383,7 +383,7 @@ export function DishEvaluations({ user, onNavigate }: DishEvaluationsProps) {
                 ))}
               </div>
 
-
+              {/* Details */}
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-foreground mb-2">Description</p>

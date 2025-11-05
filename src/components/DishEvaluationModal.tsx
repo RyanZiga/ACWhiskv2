@@ -169,7 +169,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-
+        {/* Header */}
         <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between z-10">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -189,9 +189,9 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
           </button>
         </div>
 
-
+        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-
+          {/* Dish Name */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Dish Name *
@@ -206,7 +206,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
             />
           </div>
 
-
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Description *
@@ -221,7 +221,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
             />
           </div>
 
-
+          {/* Select Instructor */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Select Instructor *
@@ -252,7 +252,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
             )}
           </div>
 
-
+          {/* Difficulty and Prep Time */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -285,7 +285,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
             </div>
           </div>
 
-
+          {/* Additional Notes */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Additional Notes
@@ -300,7 +300,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
             />
           </div>
 
-
+          {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Dish Images *
@@ -333,7 +333,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
                 />
               </label>
 
-
+              {/* Image Preview */}
               {images.length > 0 && (
                 <div className="grid grid-cols-3 gap-3">
                   {images.map((image, index) => (
@@ -358,7 +358,7 @@ export function DishEvaluationModal({ user, onClose, onSubmit }: DishEvaluationM
             </div>
           </div>
 
-
+          {/* Submit Buttons */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-border">
             <button
               type="button"

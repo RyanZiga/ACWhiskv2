@@ -640,7 +640,7 @@ function AddStudentModal({ user, onClose, onSuccess, addUserMethod, setAddUserMe
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Must be an @asiancollege.edu.ph email address
+              Use Asian College Email
             </p>
           </div>
 

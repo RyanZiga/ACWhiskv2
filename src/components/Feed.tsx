@@ -330,7 +330,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(10000), 
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         },
       );
 
@@ -430,7 +430,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           },
         }
       );
-
+      // Reload stories to update view status
       loadStories();
     } catch (error) {
       console.error("Error marking story as viewed:", error);
@@ -511,7 +511,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   };
 
   const loadRecentLearningPost = () => {
-
+    // Demo recent learning post
     const demoLearningPost = {
       id: "learning_1",
       title: "Mastering Knife Skills: Essential Techniques",
@@ -879,7 +879,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error liking post:", error);
-
+      // Optimistic update for demo
       setPosts((prevPosts) =>
         prevPosts.map((post) => {
           if (post.id === postId) {
@@ -1004,7 +1004,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-
+      // Optimistic update for demo
       setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
       setShowDeleteConfirm(null);
     }
@@ -1140,7 +1140,7 @@ Serve immediately with vanilla ice cream`,
     }
   };
 
-
+  // Filter posts based on sort selection
   const getFilteredPosts = () => {
     if (sortBy === "posts") {
       return posts.filter(post => post.type !== "recipe");
@@ -2274,7 +2274,7 @@ function CreatePostModal({
   const [error, setError] = useState("");
   const [privacy, setPrivacy] = useState<"public" | "followers" | "private">("public");
   
-
+  // Recipe-specific fields
   const [recipeTitle, setRecipeTitle] = useState("");
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Easy");
   const [cookingTime, setCookingTime] = useState("");
@@ -2288,7 +2288,7 @@ function CreatePostModal({
   ) => {
     const files = Array.from(e.target.files || []);
     setImages((prev) => [...prev, ...files].slice(0, 4));
-
+    // Clear video if images are added
     if (files.length > 0) {
       setVideo(null);
     }
@@ -2300,7 +2300,7 @@ function CreatePostModal({
     const file = e.target.files?.[0];
     if (file) {
       setVideo(file);
-
+      // Clear images if video is added
       setImages([]);
     }
   };
@@ -2337,7 +2337,7 @@ function CreatePostModal({
       const imageUrls: string[] = [];
       let videoUrl: string | undefined = undefined;
 
-
+      // Upload images
       for (const image of images) {
         const formData = new FormData();
         formData.append("file", image);
@@ -2359,7 +2359,7 @@ function CreatePostModal({
         }
       }
 
-
+      // Upload video
       if (video) {
         const formData = new FormData();
         formData.append("file", video);
@@ -2381,19 +2381,19 @@ function CreatePostModal({
         }
       }
 
-
+      // Create post in KV store (for feed)
       const postPayload: any = {
         content: content.trim(),
         images: imageUrls,
         privacy: privacy,
       };
 
-
+      // Add video if uploaded
       if (videoUrl) {
         postPayload.video = videoUrl;
       }
 
-
+      // Add background color for text-only posts
       if (!imageUrls.length && !videoUrl && backgroundColor) {
         postPayload.background_color = backgroundColor;
       }
@@ -2433,11 +2433,11 @@ function CreatePostModal({
       }
     } catch (err) {
       console.error("Post creation error:", err);
-
+      // For demo, create post locally
       const newPost: Post = {
         id: `post_${Date.now()}`,
         content: content.trim(),
-        images: [], 
+        images: [], // In demo mode, we don't have uploaded image URLs
         author_id: user.id,
         author_name: user.name,
         author_role: user.role,
@@ -2522,7 +2522,7 @@ function CreatePostModal({
             </div>
           </div>
 
-
+          {/* Post Type Selector */}
           <div className="mb-4 flex gap-2">
             <button
               type="button"
@@ -2605,10 +2605,10 @@ function CreatePostModal({
             </div>
           </div>
 
-
+          {/* Recipe-specific fields */}
           {postType === "recipe" && (
             <div className="space-y-3 mb-4 p-3 bg-secondary/30 rounded-lg">
-
+              {/* Recipe Title */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Recipe Title *
@@ -2623,7 +2623,7 @@ function CreatePostModal({
                 />
               </div>
 
-
+              {/* Difficulty, Time, Servings Row */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
@@ -2667,7 +2667,7 @@ function CreatePostModal({
                 </div>
               </div>
 
-
+              {/* Ingredients */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Ingredients (one per line)
@@ -2681,7 +2681,7 @@ function CreatePostModal({
                 />
               </div>
 
-
+              {/* Instructions */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Instructions (one step per line)
@@ -2695,7 +2695,7 @@ function CreatePostModal({
                 />
               </div>
 
-
+              {/* Tags */}
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Tags (comma-separated)
@@ -2711,7 +2711,7 @@ function CreatePostModal({
             </div>
           )}
 
-
+          {/* Description/Content */}
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -2724,7 +2724,7 @@ function CreatePostModal({
             rows={postType === "recipe" ? 3 : 4}
           />
 
-
+          {/* Background Color Selector - Only show for text-only posts */}
           {!images.length && !video && postType === "post" && (
             <div className="mt-4 p-3 bg-secondary/30 rounded-lg">
               <label className="block text-xs font-medium text-foreground mb-2">
@@ -2753,7 +2753,7 @@ function CreatePostModal({
             </div>
           )}
 
-
+          {/* Image Preview */}
           {images.length > 0 && (
             <div className="grid grid-cols-2 gap-2 lg:gap-3 mt-4">
               {images.map((image, index) => (
@@ -2994,7 +2994,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
         className="relative w-full max-w-6xl max-h-[90vh] bg-background rounded-lg overflow-hidden flex flex-col lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
-
+        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors"
@@ -3002,9 +3002,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           <X className="h-5 w-5" />
         </button>
 
-
+        {/* Left Side - Media (Video, Image, or Text) */}
         <div className="lg:w-3/5 bg-black flex items-center justify-center">
-
+          {/* ✅ If recipe has a video (or any post) — show video */}
           {post.video ? (
             <video
               src={post.video}
@@ -3040,9 +3040,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           )}
         </div>
 
-
+        {/* Right Side - Details and Comments */}
         <div className="lg:w-2/5 flex flex-col max-h-[90vh] lg:max-h-none">
-
+          {/* Post Header */}
           <div className="p-4 border-b border-border">
             <button
               onClick={(e) => {
@@ -3079,7 +3079,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </button>
           </div>
 
-
+          {/* Post Content & Recipe Data */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Recipe Title */}
             {post.recipe_data?.title && (
@@ -3090,7 +3090,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Post Description */}
             {post.content && (
               <div>
                 <p className="text-foreground whitespace-pre-wrap">
@@ -3099,7 +3099,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Recipe Metadata */}
             {post.recipe_data && (
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="p-2 bg-secondary/30 rounded-lg text-center">
@@ -3130,7 +3130,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Tags */}
             {post.recipe_data?.tags && post.recipe_data.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.recipe_data.tags.map((tag, index) => (
@@ -3144,7 +3144,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Ingredients */}
             {post.recipe_data?.ingredients && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -3164,7 +3164,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Instructions */}
             {post.recipe_data?.instructions && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -3186,7 +3186,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-
+            {/* Rating Section - Only for recipe posts */}
             {post.type === "recipe" && (
               <>
                 <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
@@ -3213,12 +3213,12 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
                   </div>
                 </div>
 
-
+                {/* Divider */}
                 <div className="border-t border-border my-4" />
               </>
             )}
 
-
+            {/* Comments Section */}
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Comments ({post.comments.length})</h3>
               
@@ -3253,9 +3253,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </div>
           </div>
 
-
+          {/* Post Actions & Comment Input */}
           <div className="border-t border-border p-4 space-y-3 bg-background">
-
+            {/* Like and Comment Counts */}
             <div className="flex items-center justify-between text-sm">
               <button
                 onClick={(e) => {
@@ -3280,7 +3280,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             </div>
 
-
+            {/* Comment Input */}
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user.avatar_url ? (

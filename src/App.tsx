@@ -141,7 +141,7 @@ function App() {
       const result = await AuthService.signup(email, password, name, role)
       if (result.success && result.user) {
         setUser(result.user)
-        // Redirect admin users to Admin Dashboard, others to Feed
+
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
       } else {

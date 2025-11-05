@@ -357,7 +357,7 @@ export function AdminPanel({ user, onNavigate }: AdminPanelProps) {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+
       <div className="mb-8">
         <div className="flex gap-2 border-b border-border">
           <button
@@ -929,7 +929,7 @@ function AddUserModal({ user, onClose, onSuccess }: { user: any; onClose: () => 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="post-card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+
         <div className="p-6 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
           <h2 className="text-2xl font-bold text-foreground">Add New User</h2>
           <button
@@ -1007,7 +1007,7 @@ function AddUserModal({ user, onClose, onSuccess }: { user: any; onClose: () => 
                   placeholder="user@asiancollege.edu.ph"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Only @asiancollege.edu.ph emails are allowed
+                  Use Asian College Email Address
                 </p>
               </div>
 
@@ -1074,9 +1074,7 @@ function AddUserModal({ user, onClose, onSuccess }: { user: any; onClose: () => 
                   className="input-clean w-full px-4 py-3"
                   placeholder="user@asiancollege.edu.ph"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Only @asiancollege.edu.ph emails are allowed
-                </p>
+
               </div>
 
               <div>
@@ -1127,7 +1125,7 @@ function AddUserModal({ user, onClose, onSuccess }: { user: any; onClose: () => 
   );
 }
 
-// Content Management Component
+
 interface ContentPost {
   id: string
   author_id: string
@@ -1183,12 +1181,12 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     totalRatings: 0
   })
   
-  // Bulk actions
+
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkWarning, setBulkWarning] = useState(false)
   
-  // Advanced filters
+
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFrom, setDateFrom] = useState<Date | undefined>()
   const [dateTo, setDateTo] = useState<Date | undefined>()
@@ -1196,12 +1194,12 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
   const [privacyFilter, setPrivacyFilter] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
   
-  // Warning management
+
   const [warningsHistory, setWarningsHistory] = useState<Warning[]>([])
   const [showWarningsHistory, setShowWarningsHistory] = useState(false)
   const [selectedUserWarnings, setSelectedUserWarnings] = useState<string | null>(null)
   
-  // Comment moderation
+
   const [editingComment, setEditingComment] = useState<{ postId: string; commentId: string; content: string } | null>(null)
   const [hidingComment, setHidingComment] = useState<string | null>(null)
 
@@ -1293,7 +1291,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
           user_id: warningModal!.userId,
           reason: warningReason,
           post_id: warningModal!.postId,
-          send_email: true 
+          send_email: true // Enable email notification
         })
       })
 
@@ -1317,7 +1315,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Bulk delete posts
   const bulkDeletePosts = async () => {
     if (selectedPosts.size === 0) {
       toast.error('No posts selected')
@@ -1354,7 +1352,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Bulk warn users
   const bulkWarnUsers = async () => {
     if (selectedPosts.size === 0) {
       toast.error('No posts selected')
@@ -1366,7 +1364,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
 
     setBulkWarning(true)
     try {
-
+      // Get unique user IDs from selected posts
       const selectedPostData = posts.filter(p => selectedPosts.has(p.id))
       const uniqueUsers = new Map<string, { id: string; name: string; postIds: string[] }>()
       
@@ -1414,7 +1412,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Load warnings history
   const loadWarningsHistory = async () => {
     try {
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/admin/warnings`, {
@@ -1433,7 +1431,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Delete comment
   const deleteComment = async (postId: string, commentId: string) => {
     if (!confirm('Are you sure you want to delete this comment?')) return
 
@@ -1458,7 +1456,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Edit comment
   const saveEditedComment = async () => {
     if (!editingComment) return
 
@@ -1485,7 +1483,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Hide/unhide comment
   const toggleCommentVisibility = async (postId: string, commentId: string, currentlyHidden: boolean) => {
     try {
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/admin/posts/${postId}/comments/${commentId}/visibility`, {
@@ -1509,7 +1507,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     }
   }
 
-
+  // Toggle post selection
   const togglePostSelection = (postId: string) => {
     const newSelection = new Set(selectedPosts)
     if (newSelection.has(postId)) {
@@ -1520,7 +1518,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     setSelectedPosts(newSelection)
   }
 
-
+  // Select all posts
   const toggleSelectAll = () => {
     if (selectedPosts.size === filteredPosts.length) {
       setSelectedPosts(new Set())
@@ -1539,18 +1537,18 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
     })
   }
 
-
+  // Enhanced filtering logic
   const filteredPosts = posts.filter(post => {
-
+    // Type filter
     if (filterType !== 'all' && post.type !== filterType) return false
     
-
+    // Search query
     if (searchQuery && !post.content.toLowerCase().includes(searchQuery.toLowerCase()) && 
         !post.author_name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
     
-
+    // Date range filter
     if (dateFrom) {
       const postDate = new Date(post.created_at)
       if (postDate < dateFrom) return false
@@ -1560,12 +1558,12 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
       if (postDate > dateTo) return false
     }
     
-
+    // Author role filter
     if (authorRoleFilter !== 'all' && post.author_role !== authorRoleFilter) {
       return false
     }
     
-
+    // Privacy filter
     if (privacyFilter !== 'all') {
       const postPrivacy = post.privacy || 'public'
       if (postPrivacy !== privacyFilter) return false
@@ -1585,7 +1583,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
 
   return (
     <div>
-
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <div className="post-card p-6 text-center hover:shadow-lg transition-all duration-200">
           <FileText className="h-8 w-8 text-primary mx-auto mb-2" />
@@ -1618,7 +1616,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
         </div>
       </div>
 
-
+      {/* Bulk Actions Bar */}
       {selectedPosts.size > 0 && (
         <div className="mb-6 post-card p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1656,7 +1654,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
         </div>
       )}
 
-
+      {/* Search and Filters */}
       <div className="mb-6 space-y-4">
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[250px] relative">
@@ -1687,12 +1685,12 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
           </button>
         </div>
 
-
+        {/* Advanced Filters Panel */}
         {showFilters && (
           <div className="post-card p-6 space-y-4">
             <h3 className="font-medium text-foreground mb-4">Advanced Filters</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
+              {/* Date From */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Date From
@@ -1715,7 +1713,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                 </Popover>
               </div>
 
-
+              {/* Date To */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Date To
@@ -1738,7 +1736,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                 </Popover>
               </div>
 
-
+              {/* Author Role */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Author Role
@@ -1755,7 +1753,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                 </select>
               </div>
 
-
+              {/* Privacy Level */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Privacy Level
@@ -1791,7 +1789,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
         )}
       </div>
 
-
+      {/* Filter Tabs */}
       <div className="mb-6">
         <div className="flex gap-2 flex-wrap items-center">
           <button
@@ -1850,11 +1848,11 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
         ) : (
           filteredPosts.map((post) => (
             <div key={post.id} className="post-card overflow-hidden">
-
+              {/* Post Header */}
               <div className="p-6 border-b border-border">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
-
+                    {/* Checkbox for bulk selection */}
                     <button
                       onClick={() => togglePostSelection(post.id)}
                       className="mt-1 p-2 hover:bg-secondary rounded-lg transition-colors"
@@ -1907,11 +1905,11 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                 </div>
               </div>
 
-
+              {/* Post Content */}
               <div className="p-6 border-b border-border">
                 <p className="text-foreground whitespace-pre-wrap mb-4">{post.content}</p>
                 
-
+                {/* Images */}
                 {post.images && post.images.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
                     {post.images.map((image, idx) => (
@@ -1925,7 +1923,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                   </div>
                 )}
 
-
+                {/* Recipe Data Preview */}
                 {post.type === 'recipe' && post.recipe_data && (
                   <div className="bg-secondary/50 rounded-lg p-4 mt-4">
                     <h4 className="font-medium text-foreground mb-2">Recipe Details</h4>
@@ -1937,7 +1935,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                   </div>
                 )}
 
-
+                {/* Engagement Stats */}
                 <div className="flex gap-4 mt-4 text-sm text-muted-foreground">
                   <span>{post.likes?.length || 0} likes</span>
                   <span>{post.comments?.length || 0} comments</span>
@@ -1945,7 +1943,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                 </div>
               </div>
 
-
+              {/* Comments & Ratings */}
               {(post.comments?.length > 0 || post.ratings?.length > 0) && (
                 <div className="border-b border-border">
                   <button
@@ -1960,7 +1958,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                   
                   {expandedPost === post.id && (
                     <div className="p-6 space-y-4">
-
+                      {/* Comments */}
                       {post.comments?.length > 0 && (
                         <div>
                           <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
@@ -2038,7 +2036,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                         </div>
                       )}
 
- 
+                      {/* Ratings */}
                       {post.ratings && post.ratings.length > 0 && (
                         <div>
                           <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
@@ -2070,7 +2068,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
                 </div>
               )}
 
-
+              {/* Actions */}
               <div className="p-6 flex gap-3 flex-wrap">
                 <button
                   onClick={() => setWarningModal({ postId: post.id, userId: post.author_id, userName: post.author_name })}
@@ -2102,7 +2100,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
         )}
       </div>
 
-
+      {/* Warning Modal */}
       {warningModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="post-card max-w-lg w-full">
@@ -2165,7 +2163,7 @@ function ContentManagement({ user, onNavigate }: { user: any; onNavigate: (page:
         </div>
       )}
 
-
+      {/* Warning History Modal */}
       {showWarningsHistory && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="post-card max-w-4xl w-full my-8">

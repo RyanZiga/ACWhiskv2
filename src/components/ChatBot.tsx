@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Bot, User, HelpCircle, Search, ChefHat, Utensils, Clock, Thermometer, Users, BookOpen, Star, ArrowRight, Sparkles } from 'lucide-react'
 
+
 // Gemini API Configuration
 const GEMINI_API_KEY = 'AIzaSyDyUg2FIWKve9YAP3bytJ2aWFZRQP4C970'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
@@ -57,7 +58,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['sauce-mother-sauces', 'fixing-broken-sauce']
   },
 
-  // Ingredients
+
   {
     id: 'seasoning-basics',
     question: 'When and how should I season my food?',
@@ -91,7 +92,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['smoke-points', 'oil-storage']
   },
 
-  // Equipment
+
   {
     id: 'essential-equipment',
     question: 'What are the essential tools every home cook should have?',
@@ -117,7 +118,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['cooking-temperatures', 'food-safety-temps']
   },
 
-  // Food Safety
+
   {
     id: 'food-safety-temps',
     question: 'What are the safe internal temperatures for different meats?',
@@ -143,7 +144,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['kitchen-sanitization', 'food-storage']
   },
 
-  // Baking
+
   {
     id: 'baking-measurements',
     question: 'Why is measuring by weight important in baking?',
@@ -169,7 +170,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['flour-types', 'mixing-techniques']
   },
 
-  // Recipe Development
+
   {
     id: 'recipe-scaling',
     question: 'How do I properly scale recipes up or down?',
@@ -195,7 +196,7 @@ const FAQS: FAQ[] = [
     relatedFAQs: ['ingredient-functions', 'dietary-modifications']
   },
 
-  // Common Problems
+
   {
     id: 'fixing-broken-sauce',
     question: 'How do I fix a broken or separated sauce?',

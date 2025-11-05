@@ -18,7 +18,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  // Password strength validation
+
   const validatePassword = (password: string) => {
     const minLength = password.length >= 6
     const hasUpperCase = /[A-Z]/.test(password)
@@ -39,13 +39,13 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
     setError('')
     setSuccess(false)
 
-    // Validate passwords match
+
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match')
       return
     }
 
-    // Validate password strength
+
     if (!passwordValidation.isValid) {
       setError('Password does not meet the requirements')
       return
@@ -89,7 +89,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
       <div className="post-card max-w-md w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+
         <div className="p-6 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-accent/10 rounded-lg">
@@ -116,7 +116,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
           )}
         </div>
 
-        {/* Form */}
+
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {isForced && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
@@ -131,7 +131,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
             </div>
           )}
 
-          {/* New Password */}
+
           <div>
             <label className="block text-foreground text-sm font-medium mb-2">
               New Password *
@@ -160,7 +160,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
             </div>
           </div>
 
-          {/* Password Requirements */}
+
           {newPassword && (
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Password must contain:</p>
@@ -199,7 +199,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
             </div>
           )}
 
-          {/* Confirm Password */}
+
           <div>
             <label className="block text-foreground text-sm font-medium mb-2">
               Confirm New Password *
@@ -230,14 +230,14 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
             )}
           </div>
 
-          {/* Error Message */}
+
           {error && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
               <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
-          {/* Success Message */}
+
           {success && (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export function ChangePasswordModal({ user, onClose, onSuccess, isForced = false
             </div>
           )}
 
-          {/* Submit Button */}
+
           <div className="flex gap-3 pt-2">
             {!isForced && (
               <button

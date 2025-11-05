@@ -271,7 +271,7 @@ export function ChatWindow({
           </div>
         </div>
         
-        <div className="hidden flex items-center space-x-2">
+        <div className="flex items-center space-x-2">
           <button 
             onClick={handleVoiceCall}
             className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"

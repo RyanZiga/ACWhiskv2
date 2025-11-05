@@ -199,9 +199,9 @@ function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
     setError("");
 
     try {
-
+      // Validate email domain
       if (!email.toLowerCase().endsWith("@asiancollege.edu.ph")) {
-        setError("Please use Asian College Email");
+        setError("Please use your Asian College Email");
         setLoading(false);
         return;
       }
@@ -235,13 +235,13 @@ function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
     e.preventDefault();
     setError("");
 
-
+    // Validate passwords match
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
-
+    // Validate password strength
     if (newPassword.length < 8) {
       setError("Password must be at least 8 characters long");
       return;

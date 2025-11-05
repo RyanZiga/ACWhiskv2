@@ -158,7 +158,7 @@ const SidebarContent = React.memo(({
           <span className="font-medium">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
         )}
         {!isCollapsed && (
-          <div className="ml-auto">
+          <div className="ml-auto">3
             <div className={`w-12 h-6 rounded-full transition-all duration-300 relative ${
               isDark 
                 ? 'bg-primary shadow-[0_0_10px_rgba(239,68,68,0.3)]' 

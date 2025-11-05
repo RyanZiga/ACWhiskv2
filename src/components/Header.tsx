@@ -23,7 +23,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
-
+  // Role-based navigation
   const getNavigationItems = () => {
     const baseNavigation = [
       { name: 'Feed', id: 'feed' },
@@ -32,12 +32,12 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
       { name: 'Learning', id: 'learning' }
     ]
 
-
+    // Add instructor-only items
     if (user.role === 'instructor' || user.role === 'admin') {
       baseNavigation.push({ name: 'Instructor Tools', id: 'instructor-tools' })
     }
 
-
+    // Add admin-only items
     if (user.role === 'admin') {
       baseNavigation.push({ name: 'Admin Panel', id: 'admin' })
     }
@@ -61,7 +61,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
     <header className="fixed top-0 left-0 right-0 header-gradient z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-
+          {/* Logo */}
           <div className="flex items-center space-x-4">
             <button
               onClick={() => onNavigate('feed')}
@@ -80,7 +80,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
             </button>
           </div>
 
-
+          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-2">
             {navigation.map((item) => (
               <button
@@ -100,9 +100,9 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
             ))}
           </nav>
 
-
+          {/* Search and Actions */}
           <div className="flex items-center space-x-3">
-
+            {/* Search Button */}
             <button
               onClick={() => onNavigate('search')}
               className={`p-2 rounded-lg transition-all duration-200 ${
@@ -114,12 +114,12 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
               <Search className="h-5 w-5" />
             </button>
 
-
+            {/* Notifications Bell */}
             <div className="relative">
               <Notifications user={user} />
             </div>
 
-
+            {/* Messages */}
             <button
               onClick={() => onNavigate('messages')}
               className={`p-2 rounded-lg transition-all duration-200 ${
@@ -133,7 +133,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
               </svg>
             </button>
 
-
+            {/* Profile Menu */}
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -152,18 +152,18 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                 <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
               </button>
 
-
+              {/* Profile Dropdown */}
               {showProfileMenu && (
                 <>
-
+                  {/* Backdrop */}
                   <div
                     className="fixed inset-0 z-30"
                     onClick={() => setShowProfileMenu(false)}
                   />
                   
-
+                  {/* Dropdown Menu */}
                   <div className="absolute right-0 mt-2 w-64 post-card shadow-xl z-40 overflow-hidden">
-
+                    {/* User Info */}
                     <div className="p-4 bg-muted border-b border-border">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center">
@@ -185,7 +185,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
                       </div>
                     </div>
 
-
+                    {/* Menu Items */}
                     <div className="py-2">
                       <button
                         onClick={() => handleProfileNavigation('profile')}
@@ -218,7 +218,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
               )}
             </div>
 
-
+            {/* Mobile menu button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className="lg:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
@@ -228,7 +228,7 @@ export function Header({ user, currentPage, onNavigate, onLogout }: HeaderProps)
           </div>
         </div>
 
-
+        {/* Mobile Navigation */}
         {showMobileMenu && (
           <div className="lg:hidden border-t border-gray-200 py-4">
             <nav className="flex flex-col space-y-2">

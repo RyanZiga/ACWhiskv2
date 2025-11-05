@@ -153,7 +153,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   }
 
   const handleSubmissionComplete = () => {
-
+    // Reload submissions to show the new one
     loadSubmissions()
     loadAssignments()
   }
@@ -171,7 +171,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
     )
   }
 
-
+  // Calculate stats based on submissions and assignments
   const completedAssignments = submissions.filter(s => s.status === 'graded').length
   const pendingAssignments = assignments.filter(a => {
     const hasSubmission = submissions.some(s => s.assignment_id === a.id)
@@ -208,9 +208,9 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </div>
         </div>
 
-
+        {/* Dashboard Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-
+          {/* Latest Uploads Card */}
           <div className="lg:col-span-4">
             <GlassCard className="p-6 bg-gradient-to-br from-teal-400/20 to-cyan-500/20 border-teal-200/30 dark:border-teal-400/30">
               <div className="flex items-center justify-between mb-4">
@@ -235,7 +235,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-
+          {/* Latest Media Card */}
           <div className="lg:col-span-3">
             <GlassCard className="p-6 bg-gradient-to-br from-green-400/20 to-emerald-500/20 border-green-200/30 dark:border-green-400/30 h-full">
               <div className="flex flex-col h-full">
@@ -259,7 +259,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-
+          {/* Assignment Status Card */}
           <div className="lg:col-span-2">
             <GlassCard className="p-6 bg-gradient-to-br from-orange-400/20 to-yellow-500/20 border-orange-200/30 dark:border-orange-400/30 h-full">
               <div className="text-center">
@@ -302,7 +302,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-
+          {/* Progress Card */}
           <div className="lg:col-span-3">
             <GlassCard className="p-6 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border-blue-200/30 dark:border-blue-400/30 h-full relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full -translate-y-8 translate-x-8"></div>
@@ -321,10 +321,10 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </div>
         </div>
 
-
+        {/* Assignment Section for Students */}
         {user.role === 'student' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
+            {/* Pending Assignments */}
             <GlassCard className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-900 dark:text-white">Pending Assignments</h3>
@@ -392,7 +392,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
               </div>
             </GlassCard>
 
-
+            {/* Recent Grades */}
             <GlassCard className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-gray-900 dark:text-white">Recent Grades</h3>
@@ -454,9 +454,9 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </div>
         )}
 
-
+        {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
+          {/* Recent Activity */}
           <div className="lg:col-span-5">
             <GlassCard className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -524,7 +524,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-
+          {/* Circular Progress */}
           <div className="lg:col-span-3">
             <GlassCard className="p-6 text-center">
               <div className="relative w-32 h-32 mx-auto mb-4">
@@ -567,7 +567,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
-
+          {/* Achievement Card */}
           <div className="lg:col-span-4">
             <GlassCard className="p-6 bg-gradient-to-br from-pink-400/20 to-purple-500/20 border-pink-200/30 dark:border-pink-400/30">
               <div className="text-center">
@@ -597,9 +597,9 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           </div>
         </div>
 
-
+        {/* New Educational Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-
+          {/* Learning Progress */}
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-gray-900 dark:text-white">Learning Progress</h3>
@@ -656,7 +656,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </div>
           </GlassCard>
 
-
+          {/* Grades Overview */}
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-gray-900 dark:text-white">Grades Overview</h3>
@@ -697,7 +697,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
 
       </div> 
 
-
+      {/* Submission Modal */}
       {submissionModal.isOpen && submissionModal.assignment && (
         <SubmissionModal
           isOpen={submissionModal.isOpen}
