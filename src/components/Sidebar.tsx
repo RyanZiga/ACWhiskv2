@@ -29,7 +29,7 @@ interface SidebarContentProps {
   toggleTheme: () => void
 }
 
-// Move SidebarContent outside to prevent re-creation on every render
+
 const SidebarContent = React.memo(({
   user,
   currentPage,
@@ -43,11 +43,11 @@ const SidebarContent = React.memo(({
   toggleTheme
 }: SidebarContentProps) => (
   <div className="flex flex-col h-full overflow-visible">
-    {/* User Header */}
+
     <div className="p-6 pb-8 overflow-visible">
       {!isCollapsed ? (
         <div className="flex items-center space-x-3">
-          {/* User Avatar, Name, and Role Badge */}
+
           <button
             onClick={() => onNavigate('account', user.id)}
             className="flex items-center space-x-3 hover:opacity-90 transition-opacity"
@@ -73,7 +73,7 @@ const SidebarContent = React.memo(({
           </button>
         </div>
       ) : (
-        // Collapsed state - just show avatar
+
         <button
           onClick={() => onNavigate('account', user.id)}
           className="flex items-center justify-center hover:opacity-90 transition-opacity w-full"
@@ -96,7 +96,7 @@ const SidebarContent = React.memo(({
       )}
     </div>
 
-    {/* Navigation */}
+
     <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
       {navigation.map((item) => {
         const Icon = item.icon
@@ -108,7 +108,7 @@ const SidebarContent = React.memo(({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              // For portfolio, always navigate to current user's portfolio
+
               if (item.id === 'portfolio') {
                 onNavigate(item.id, user.id)
               } else {
@@ -127,7 +127,7 @@ const SidebarContent = React.memo(({
             {!isCollapsed && (
               <span className={`font-medium ${isActive ? 'text-white' : ''}`}>{item.name}</span>
             )}
-            {/* Show unread messages badge */}
+
             {!isCollapsed && item.id === 'messages' && unreadMessagesCount > 0 && (
               <span className="ml-auto bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                 {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
@@ -138,7 +138,7 @@ const SidebarContent = React.memo(({
       })}
     </nav>
 
-    {/* Bottom section - Dark Mode Toggle, Settings, Sign out */}
+
     <div className="p-4 border-t border-sidebar-border mt-auto space-y-1">
       <button
         onClick={(e) => {
@@ -158,7 +158,7 @@ const SidebarContent = React.memo(({
           <span className="font-medium">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
         )}
         {!isCollapsed && (
-          <div className="ml-auto">3
+          <div className="ml-auto">
             <div className={`w-12 h-6 rounded-full transition-all duration-300 relative ${
               isDark 
                 ? 'bg-primary shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
@@ -196,7 +196,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
 
-  // Close profile menu when clicking outside
+
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement
@@ -214,16 +214,16 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
     }
   }, [isProfileMenuOpen])
 
-  // Notify parent component when collapse state changes
+
   const handleCollapseToggle = () => {
     const newCollapsedState = !isCollapsed
     setIsCollapsed(newCollapsedState)
     onCollapseChange?.(newCollapsedState)
   }
 
-  // Role-based navigation
+
   const getNavigationItems = () => {
-    // Admin users only see Admin Dashboard and User Management
+
     if (user.role === 'admin') {
       return [
         { name: 'Admin Dashboard', id: 'admin', icon: BarChart3 },
@@ -231,7 +231,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       ]
     }
 
-    // Instructor users see Student Management and Dish Evaluations along with regular navigation
+
     if (user.role === 'instructor') {
       return [
         { name: 'Feed', id: 'feed', icon: Home },
@@ -243,7 +243,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       ]
     }
 
-    // Regular student users see Dish Evaluations along with standard navigation
+
     const baseNavigation = [
       { name: 'Feed', id: 'feed', icon: Home },
       { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
@@ -259,17 +259,17 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
   return (
     <>
-      {/* Profile Menu Dropdown - Mobile Only - Modern Design */}
+
       {isProfileMenuOpen && (
         <>
-          {/* Backdrop */}
+
           <div 
             className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-fade-in"
             onClick={() => setIsProfileMenuOpen(false)}
           />
           <div className="lg:hidden fixed bottom-24 right-4 left-4 z-50 profile-menu-container animate-scale-in">
             <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
-              {/* User Info Header */}
+
               <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden shadow-lg">
@@ -309,7 +309,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   <span className="font-medium">Profile</span>
                 </button>
                 
-                {/* Only show Learning for non-admin users */}
+
                 {user.role !== 'admin' && (
                   <button
                     onClick={(e) => {
@@ -328,7 +328,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   </button>
                 )}
 
-                {/* Messages for instructor */}
+
                 {user.role === 'instructor' && (
                   <button
                     onClick={(e) => {
@@ -405,13 +405,13 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </>
       )}
 
-      {/* Mobile Bottom Navigation Bar */}
+
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe">
         <div className="sidebar-gradient border-t border-sidebar-border">
           {user.role === 'admin' ? (
-            /* Admin Navigation - Admin Dashboard and User Management */
+
             <div className="flex items-center justify-around px-4 py-[5px]">
-              {/* Admin Dashboard */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -434,7 +434,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* User Management */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -457,7 +457,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Menu */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -484,9 +484,9 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               </button>
             </div>
           ) : user.role === 'instructor' ? (
-            /* Instructor Navigation */
+
             <div className="flex items-center justify-around px-[0px] py-[5px]">
-              {/* Feed */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -509,7 +509,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Dish Evaluations */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -532,7 +532,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Create Post Button - Floating FAB */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -547,7 +547,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </button>
 
-              {/* Student Management */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -570,7 +570,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Menu */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -597,9 +597,9 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               </button>
             </div>
           ) : (
-            /* Regular User Navigation */
+
             <div className="flex items-center justify-around px-[0px] py-[5px]">
-              {/* Feed */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -622,7 +622,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Dish Evaluations */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -645,7 +645,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Create Post Button - Floating FAB */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -660,7 +660,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </button>
 
-              {/* Messages */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -688,7 +688,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Menu */}
+
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -718,7 +718,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </div>
       </nav>
 
-      {/* Mobile More Menu Modal */}
+
       {isMobileOpen && (
         <>
           <div
@@ -727,10 +727,10 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           />
           <div className="lg:hidden fixed bottom-0 left-0 right-0 sidebar-gradient z-50 shadow-2xl rounded-t-3xl animate-slide-up pb-safe">
             <div className="p-6">
-              {/* Handle bar */}
+
               <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-6" />
               
-              {/* User Info */}
+
               <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-sidebar-border">
                 <div className="avatar-gradient w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
                   <User className="w-7 h-7 text-white" />
@@ -741,7 +741,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 </div>
               </div>
 
-              {/* More Options */}
+
               <div className="space-y-2">
                 {user.role === 'admin' && (
                   <button
@@ -817,7 +817,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </>
       )}
 
-      {/* Desktop Sidebar - Floating */}
+
       <div
         className={`hidden lg:block fixed left-6 top-6 bottom-6 sidebar-gradient shadow-2xl transition-all duration-300 z-30 rounded-2xl overflow-visible ${
           isCollapsed ? 'w-16' : 'w-64'
