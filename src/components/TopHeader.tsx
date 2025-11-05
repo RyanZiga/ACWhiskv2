@@ -47,7 +47,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
     }
   }
 
-
+  // Close search results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -59,7 +59,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-
+  // Search users with debouncing
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
@@ -148,7 +148,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
   }
 
   return (
-    <header className={`z-40 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[5.5rem]' : 'lg:ml-[18rem]'}`}>
+    <header className={`sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[5.5rem]' : 'lg:ml-[18rem]'}`}>
       <div className="px-4 py-3 pl-4 lg:px-6 lg:py-4 lg:pl-8">
         <div className="flex items-center justify-between gap-4">
           {/* ACWhisk Logo */}
@@ -166,9 +166,9 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
             </span>
           </button>
 
-
+          {/* Right Actions */}
           <div className="flex items-center space-x-2 lg:space-x-4 relative z-10">
-
+            {/* Search Toggle */}
             <button
               onClick={(e) => {
                 e.preventDefault()
@@ -189,7 +189,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
           </div>
         </div>
 
-
+        {/* Search Bar (Expandable) */}
         {showSearch && (
           <div className="mt-4 transition-all duration-200" ref={searchRef}>
             <form onSubmit={handleSearchSubmit} className="relative">
@@ -217,7 +217,7 @@ export function TopHeader({ user, currentPage, onNavigate, onLogout, isSidebarCo
                 </button>
               </div>
 
-
+              {/* Search Results Dropdown */}
               {showResults && (
                 <div className="absolute top-full left-0 right-0 mt-2 post-card max-h-96 overflow-y-auto z-50 shadow-lg">
                   {isSearching ? (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, Settings, User, LogOut, Shield, Menu, X, FileText, BarChart3, Moon, Sun, Bot, Plus, Briefcase, GraduationCap } from 'lucide-react'
+import { Home, ChefHat, MessageSquare, BookOpen, MessageCircle, User, LogOut, Shield, Menu, X, FileText, BarChart3, Moon, Sun, Bot, Plus, Briefcase, GraduationCap, Utensils } from 'lucide-react'
 import { User as UserType } from '../utils/auth'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { useTheme } from '../contexts/ThemeContext'
@@ -47,7 +47,7 @@ const SidebarContent = React.memo(({
     <div className="p-6 pb-8 overflow-visible">
       {!isCollapsed ? (
         <div className="flex items-center space-x-3">
-
+          {/* User Avatar, Name, and Role Badge */}
           <button
             onClick={() => onNavigate('account', user.id)}
             className="flex items-center space-x-3 hover:opacity-90 transition-opacity"
@@ -73,7 +73,7 @@ const SidebarContent = React.memo(({
           </button>
         </div>
       ) : (
-
+        // Collapsed state - just show avatar
         <button
           onClick={() => onNavigate('account', user.id)}
           className="flex items-center justify-center hover:opacity-90 transition-opacity w-full"
@@ -96,7 +96,7 @@ const SidebarContent = React.memo(({
       )}
     </div>
 
-
+    {/* Navigation */}
     <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
       {navigation.map((item) => {
         const Icon = item.icon
@@ -108,7 +108,7 @@ const SidebarContent = React.memo(({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-
+              // For portfolio, always navigate to current user's portfolio
               if (item.id === 'portfolio') {
                 onNavigate(item.id, user.id)
               } else {
@@ -127,7 +127,7 @@ const SidebarContent = React.memo(({
             {!isCollapsed && (
               <span className={`font-medium ${isActive ? 'text-white' : ''}`}>{item.name}</span>
             )}
-
+            {/* Show unread messages badge */}
             {!isCollapsed && item.id === 'messages' && unreadMessagesCount > 0 && (
               <span className="ml-auto bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                 {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
@@ -176,21 +176,6 @@ const SidebarContent = React.memo(({
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          onNavigate('profile', user.id)
-        }}
-        className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all duration-200 group touch-manipulation min-h-[52px] text-sidebar-foreground hover:bg-sidebar-accent/50"
-        type="button"
-      >
-        <Settings className="h-5 w-5 text-sidebar-foreground/70" />
-        {!isCollapsed && (
-          <span className="font-medium">Settings</span>
-        )}
-      </button>
-
-      <button
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
           onLogout()
         }}
         className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all duration-200 group touch-manipulation min-h-[52px] text-sidebar-foreground hover:bg-sidebar-accent/50"
@@ -211,7 +196,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
 
-
+  // Close profile menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement
@@ -229,16 +214,16 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
     }
   }, [isProfileMenuOpen])
 
-
+  // Notify parent component when collapse state changes
   const handleCollapseToggle = () => {
     const newCollapsedState = !isCollapsed
     setIsCollapsed(newCollapsedState)
     onCollapseChange?.(newCollapsedState)
   }
 
-
+  // Role-based navigation
   const getNavigationItems = () => {
-
+    // Admin users only see Admin Dashboard and User Management
     if (user.role === 'admin') {
       return [
         { name: 'Admin Dashboard', id: 'admin', icon: BarChart3 },
@@ -246,23 +231,25 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
       ]
     }
 
-
+    // Instructor users see Student Management and Dish Evaluations along with regular navigation
     if (user.role === 'instructor') {
       return [
         { name: 'Feed', id: 'feed', icon: Home },
         { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
         { name: 'Learning', id: 'learning', icon: BookOpen },
         { name: 'Messages', id: 'messages', icon: MessageSquare },
+        { name: 'Dish Evaluations', id: 'dish-evaluations', icon: Utensils },
         { name: 'Student Management', id: 'student-management', icon: GraduationCap },
       ]
     }
 
-    // Regular users see all other navigation items
+    // Regular student users see Dish Evaluations along with standard navigation
     const baseNavigation = [
       { name: 'Feed', id: 'feed', icon: Home },
       { name: 'Portfolio', id: 'portfolio', icon: Briefcase },
       { name: 'Learning', id: 'learning', icon: BookOpen },
       { name: 'Messages', id: 'messages', icon: MessageSquare },
+      { name: 'Dish Evaluations', id: 'dish-evaluations', icon: Utensils },
     ]
 
     return baseNavigation
@@ -272,7 +259,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
 
   return (
     <>
-
+      {/* Profile Menu Dropdown - Mobile Only - Modern Design */}
       {isProfileMenuOpen && (
         <>
           {/* Backdrop */}
@@ -282,7 +269,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
           />
           <div className="lg:hidden fixed bottom-24 right-4 left-4 z-50 profile-menu-container animate-scale-in">
             <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden">
-
+              {/* User Info Header */}
               <div className="px-5 py-4 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 avatar-gradient rounded-full flex items-center justify-center overflow-hidden shadow-lg">
@@ -322,7 +309,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   <span className="font-medium">Profile</span>
                 </button>
                 
-
+                {/* Only show Learning for non-admin users */}
                 {user.role !== 'admin' && (
                   <button
                     onClick={(e) => {
@@ -341,7 +328,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   </button>
                 )}
 
-
+                {/* Messages for instructor */}
                 {user.role === 'instructor' && (
                   <button
                     onClick={(e) => {
@@ -395,22 +382,6 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                   </div>
                 </button>
 
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onNavigate('profile')
-                    setIsProfileMenuOpen(false)
-                  }}
-                  className="w-full flex items-center space-x-3 px-5 py-3.5 text-sidebar-foreground hover:bg-primary/5 active:bg-primary/10 transition-all duration-200 group"
-                  type="button"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                    <Settings className="h-5 w-5 text-slate-500" />
-                  </div>
-                  <span className="font-medium">Settings</span>
-                </button>
-
                 <div className="h-px bg-border/50 my-2 mx-4" />
 
                 <button
@@ -434,11 +405,11 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
         </>
       )}
 
-
+      {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-safe">
         <div className="sidebar-gradient border-t border-sidebar-border">
           {user.role === 'admin' ? (
-
+            /* Admin Navigation - Admin Dashboard and User Management */
             <div className="flex items-center justify-around px-4 py-[5px]">
               {/* Admin Dashboard */}
               <button
@@ -463,7 +434,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-
+              {/* User Management */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -486,7 +457,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-
+              {/* Menu */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -513,7 +484,7 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
               </button>
             </div>
           ) : user.role === 'instructor' ? (
-
+            /* Instructor Navigation */
             <div className="flex items-center justify-around px-[0px] py-[5px]">
               {/* Feed */}
               <button
@@ -538,25 +509,25 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Portfolio */}
+              {/* Dish Evaluations */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onNavigate('portfolio', user.id)
+                  onNavigate('dish-evaluations')
                 }}
                 className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                  currentPage === 'portfolio'
+                  currentPage === 'dish-evaluations'
                     ? 'text-primary'
                     : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
                 }`}
                 type="button"
               >
                 <div className="relative">
-                  <Briefcase className={`h-6 w-6 ${currentPage === 'portfolio' ? 'scale-110' : ''} transition-transform duration-200`} />
+                  <Utensils className={`h-6 w-6 ${currentPage === 'dish-evaluations' ? 'scale-110' : ''} transition-transform duration-200`} />
                 </div>
                 
-                {currentPage === 'portfolio' && (
+                {currentPage === 'dish-evaluations' && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
                 )}
               </button>
@@ -651,25 +622,25 @@ export function Sidebar({ user, currentPage, onNavigate, onLogout, unreadMessage
                 )}
               </button>
 
-              {/* Portfolio */}
+              {/* Dish Evaluations */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  onNavigate('portfolio', user.id)
+                  onNavigate('dish-evaluations')
                 }}
                 className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-200 touch-target relative ${
-                  currentPage === 'portfolio'
+                  currentPage === 'dish-evaluations'
                     ? 'text-primary'
                     : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
                 }`}
                 type="button"
               >
                 <div className="relative">
-                  <Briefcase className={`h-6 w-6 ${currentPage === 'portfolio' ? 'scale-110' : ''} transition-transform duration-200`} />
+                  <Utensils className={`h-6 w-6 ${currentPage === 'dish-evaluations' ? 'scale-110' : ''} transition-transform duration-200`} />
                 </div>
                 
-                {currentPage === 'portfolio' && (
+                {currentPage === 'dish-evaluations' && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
                 )}
               </button>

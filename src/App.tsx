@@ -16,11 +16,12 @@ import { Search } from './components/Search'
 import { ChatBot } from './components/ChatBot'
 import { Feed } from './components/Feed'
 import { Account } from './components/Account'
-import { MessagesRefactored } from './components/MessagesRefactored'
+import { MessagesEnhanced } from './components/MessagesEnhanced'
 import { DebugPanel } from './components/DebugPanel'
 import { Notifications } from './components/Notifications'
 import { SetPassword } from './components/SetPassword'
 import { ChangePasswordModal } from './components/ChangePasswordModal'
+import { DishEvaluations } from './components/DishEvaluations'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthService, User, AuthResult, Permissions, isValidUUID } from './utils/auth'
 import { projectId } from './utils/supabase/info'
@@ -59,6 +60,18 @@ function App() {
   const createPostRef = React.useRef<(() => void) | null>(null)
 
   useEffect(() => {
+
+    const pathname = window.location.pathname
+    const searchParams = new URLSearchParams(window.location.search)
+    
+
+    if (pathname === '/set-password' && searchParams.get('token')) {
+      setCurrentPage('set-password')
+      setLoading(false)
+      return
+    }
+    
+
     checkSession()
   }, [])
 
@@ -67,9 +80,9 @@ function App() {
       const result = await AuthService.checkSession()
       if (result.success && result.user) {
         setUser(result.user)
-        // Check for temporary password
+
         await checkForTemporaryPassword(result.user)
-        // Redirect admin users to Admin Dashboard, others to Feed
+
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
       }
     } catch (error) {
@@ -128,7 +141,7 @@ function App() {
       const result = await AuthService.signup(email, password, name, role)
       if (result.success && result.user) {
         setUser(result.user)
-
+        // Redirect admin users to Admin Dashboard, others to Feed
         setCurrentPage(result.user.role === 'admin' ? 'admin' : 'feed')
         return { success: true }
       } else {
@@ -370,6 +383,12 @@ function App() {
               </div>
             )}
             
+            {currentPage === 'dish-evaluations' && user && (
+              <div className="pt-0">
+                <DishEvaluations user={user} onNavigate={navigateTo} />
+              </div>
+            )}
+            
             {currentPage === 'search' && user && (
               <div className="pt-0">
                 <Search user={user} onNavigate={navigateTo} />
@@ -378,7 +397,7 @@ function App() {
             
             {currentPage === 'messages' && user && (
               <div className="pt-0">
-                <MessagesRefactored 
+                <MessagesEnhanced 
                   user={user} 
                   onNavigate={navigateTo}
                   onUnreadCountChange={setUnreadMessagesCount}

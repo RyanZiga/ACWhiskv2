@@ -18,7 +18,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user } = useAuth()
 
-
+  // Check if user is authenticated
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-50 flex items-center justify-center px-4">
@@ -41,7 +41,7 @@ export function ProtectedRoute({
     )
   }
 
-
+  // Check role-based access
   if (requiredRole) {
     const roleHierarchy = {
       'student': 1,
@@ -83,7 +83,7 @@ export function ProtectedRoute({
     }
   }
 
-
+  // Check permission-based access
   if (requiredPermission) {
     const hasPermission = AuthService.hasPermission(user, requiredPermission as any)
     
@@ -115,7 +115,7 @@ export function ProtectedRoute({
     }
   }
 
-
+  // If all checks pass, render the protected content
   return <>{children}</>
 }
 

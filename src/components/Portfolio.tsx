@@ -28,12 +28,23 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { User as UserType } from '../utils/auth';
 import { UserRoleBadge } from './UserRoleBadge';
+import { StarRating } from './StarRating';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 interface PortfolioProps {
   user: UserType;
-  userId?: string; 
+  userId?: string; // If viewing someone else's portfolio
   onNavigate: (page: string, id?: string) => void;
 }
 
@@ -50,6 +61,7 @@ interface PortfolioData {
   certifications: Certification[];
   contact_info: ContactInfo;
   social_links: SocialLinks;
+  selected_recipes: string[];
   created_at: string;
   updated_at: string;
 }
@@ -88,6 +100,7 @@ interface Certification {
   issuer: string;
   date: string;
   credential_id: string;
+  image_url?: string;
 }
 
 interface ContactInfo {
@@ -113,6 +126,8 @@ interface Recipe {
   cooking_time?: number;
   servings?: number;
   rating?: number;
+  average_rating?: number;
+  rating_count?: number;
   tags?: string[];
   author_id?: string;
   author_name?: string;
@@ -124,26 +139,35 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
   
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<PortfolioData>>({});
   const [viewerUser, setViewerUser] = useState<any>(null);
   const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-
+    // Reset states when viewing a different user's portfolio
     setIsEditing(false);
     setLoading(true);
     setViewerUser(null);
     setPortfolioData(null);
     setRecipes([]);
+    setAllRecipes([]);
     
     fetchPortfolioData();
-    fetchRecipes();
     if (!isOwnProfile) {
       fetchViewerUser();
     }
   }, [viewingUserId]);
+
+  // Fetch recipes after portfolio data is loaded
+  useEffect(() => {
+    if (portfolioData) {
+      fetchRecipes();
+    }
+  }, [portfolioData]);
 
   const fetchViewerUser = async () => {
     try {
@@ -187,7 +211,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
         setPortfolioData(data[0]);
         setEditData(data[0]);
       } else if (isOwnProfile) {
-
+        // Create default portfolio for own profile
         await createDefaultPortfolio();
       }
     } catch (error) {
@@ -208,6 +232,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
       education: [],
       achievements: [],
       certifications: [],
+      selected_recipes: [],
       contact_info: {
         email: user.email || '',
         phone: '',
@@ -247,7 +272,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
 
   const fetchRecipes = async () => {
     try {
-
+      // Fetch all posts from the feed
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/feed`,
         {
@@ -262,15 +287,14 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
       if (response.ok) {
         const { posts } = await response.json();
         
-
+        // Filter for recipe posts by the viewing user
         const userRecipePosts = (posts || [])
           .filter((post: any) => 
             post.type === 'recipe' && 
             post.author_id === viewingUserId
-          )
-          .slice(0, 6);
+          );
         
-
+        // Transform post data to match recipe structure
         const recipeData = userRecipePosts.map((post: any) => ({
           id: post.id,
           title: post.recipe_data?.title || 'Untitled Recipe',
@@ -284,21 +308,100 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
           rating: post.recipe_data?.rating || 0,
           tags: post.recipe_data?.tags || [],
           created_at: post.created_at,
+          average_rating: 0,
+          rating_count: 0,
         }));
         
-        setRecipes(recipeData);
+        // Fetch ratings for all recipes
+        if (recipeData.length > 0) {
+          const recipeIds = recipeData.map((r: any) => r.id);
+          const ratingsResponse = await fetch(
+            `https://${projectId}.supabase.co/rest/v1/make_c56dfc7a_ratings?post_id=in.(${recipeIds.join(',')})&select=post_id,rating`,
+            {
+              headers: {
+                'apikey': publicAnonKey,
+                'Authorization': `Bearer ${user.access_token}`,
+              },
+            }
+          );
+          
+          if (ratingsResponse.ok) {
+            const ratingsData = await ratingsResponse.json();
+            
+            // Calculate average rating and count for each recipe
+            const ratingsByPost = ratingsData.reduce((acc: any, rating: any) => {
+              if (!acc[rating.post_id]) {
+                acc[rating.post_id] = [];
+              }
+              acc[rating.post_id].push(rating.rating);
+              return acc;
+            }, {});
+            
+            // Update recipes with rating data
+            recipeData.forEach((recipe: any) => {
+              const postRatings = ratingsByPost[recipe.id];
+              if (postRatings && postRatings.length > 0) {
+                const sum = postRatings.reduce((a: number, b: number) => a + b, 0);
+                recipe.average_rating = sum / postRatings.length;
+                recipe.rating_count = postRatings.length;
+              }
+            });
+          }
+        }
+        
+        setAllRecipes(recipeData);
+        // Filter recipes based on selected_recipes if portfolio data exists
+        if (portfolioData?.selected_recipes && portfolioData.selected_recipes.length > 0) {
+          const filteredRecipes = recipeData.filter((r: any) => 
+            portfolioData.selected_recipes.includes(r.id)
+          );
+          setRecipes(filteredRecipes);
+        } else {
+          // Show no recipes if none are selected
+          setRecipes([]);
+        }
       } else {
         console.warn('Failed to fetch feed posts for recipes');
+        setAllRecipes([]);
         setRecipes([]);
       }
     } catch (error) {
       console.error('Error fetching recipes from feed:', error);
+      setAllRecipes([]);
       setRecipes([]);
     }
   };
 
   const handleSavePortfolio = async () => {
+    setSaving(true);
     try {
+      // Prepare the update data - remove read-only fields
+      const updateData = {
+        bio: editData.bio || '',
+        tagline: editData.tagline || '',
+        specialties: editData.specialties || [],
+        skills: editData.skills || [],
+        experience: editData.experience || [],
+        education: editData.education || [],
+        achievements: editData.achievements || [],
+        certifications: editData.certifications || [],
+        contact_info: editData.contact_info || {
+          email: user.email || '',
+          phone: '',
+          location: '',
+          website: '',
+        },
+        social_links: editData.social_links || {
+          linkedin: '',
+          instagram: '',
+          twitter: '',
+        },
+        selected_recipes: editData.selected_recipes || [],
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('Saving portfolio with data:', updateData);
+
       const response = await fetch(
         `https://${projectId}.supabase.co/rest/v1/make_c56dfc7a_portfolios?id=eq.${portfolioData?.id}`,
         {
@@ -309,19 +412,34 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
             'Content-Type': 'application/json',
             'Prefer': 'return=representation',
           },
-          body: JSON.stringify({
-            ...editData,
-            updated_at: new Date().toISOString(),
-          }),
+          body: JSON.stringify(updateData),
         }
       );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to save portfolio:', response.status, errorText);
+        alert(`Failed to save portfolio: ${response.status} - ${errorText}`);
+        return;
+      }
+
       const data = await response.json();
+      console.log('Portfolio saved successfully:', data);
+      
       if (data && data.length > 0) {
         setPortfolioData(data[0]);
+        setEditData(data[0]);
         setIsEditing(false);
+        alert('Portfolio saved successfully!');
+      } else {
+        console.error('No data returned after save');
+        alert('Portfolio may have been saved, but no data was returned. Please refresh the page.');
       }
     } catch (error) {
       console.error('Error saving portfolio:', error);
+      alert(`Error saving portfolio: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -337,10 +455,10 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
         return;
       }
 
-
+      // Clone the element to avoid modifying the original
       const clonedElement = element.cloneNode(true) as HTMLElement;
       
-
+      // Create a temporary container
       const container = document.createElement('div');
       container.style.cssText = `
         position: fixed;
@@ -353,9 +471,9 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
       container.appendChild(clonedElement);
       document.body.appendChild(container);
 
-
+      // Function to replace Tailwind classes with inline RGB styles
       const replaceWithInlineStyles = (elem: HTMLElement) => {
-
+        // Replace background colors
         if (elem.classList.contains('bg-card')) {
           elem.style.backgroundColor = 'rgb(255, 255, 255)';
         }
@@ -375,7 +493,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
           elem.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
         }
         
-
+        // Replace text colors
         if (elem.classList.contains('text-foreground')) {
           elem.style.color = 'rgb(26, 31, 46)';
         }
@@ -389,12 +507,12 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
           elem.style.color = 'rgb(255, 255, 255)';
         }
         
-
+        // Replace border colors
         if (elem.classList.contains('border-border') || elem.classList.contains('border')) {
           elem.style.borderColor = 'rgb(226, 232, 240)';
         }
         
-
+        // Replace gradients with solid colors
         if (elem.classList.contains('bg-gradient-to-br') || elem.classList.contains('gradient') || elem.className.match(/gradient/)) {
           elem.style.background = 'rgba(220, 38, 38, 0.05)';
           elem.style.backgroundImage = 'none';
@@ -405,7 +523,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
           elem.style.backgroundImage = 'none';
         }
         
-
+        // Remove all Tailwind classes that might contain oklch
         const classesToRemove = Array.from(elem.classList).filter(cls => 
           cls.includes('bg-') || 
           cls.includes('text-') || 
@@ -417,7 +535,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
         );
         classesToRemove.forEach(cls => elem.classList.remove(cls));
         
-
+        // Recursively process children
         Array.from(elem.children).forEach(child => {
           if (child instanceof HTMLElement) {
             replaceWithInlineStyles(child);
@@ -425,10 +543,10 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
         });
       };
 
-
+      // Apply inline styles to cloned element
       replaceWithInlineStyles(clonedElement);
 
-
+      // Wait for styles to be applied
       await new Promise(resolve => setTimeout(resolve, 200));
 
       const canvas = await html2canvas(clonedElement, {
@@ -441,7 +559,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
         imageTimeout: 0,
       });
 
-
+      // Clean up
       document.body.removeChild(container);
 
       const imgData = canvas.toDataURL('image/png');
@@ -506,10 +624,20 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
                 </button>
                 <button
                   onClick={handleSavePortfolio}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Changes
+                    </>
+                  )}
                 </button>
               </>
             )}
@@ -648,9 +776,53 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
             <h3 className="text-xl font-bold text-foreground">Culinary Creations</h3>
           </div>
 
-          {recipes.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recipes.map((recipe) => (
+          {isEditing && isOwnProfile && allRecipes.length > 0 && (
+            <div className="mb-6 p-4 bg-secondary rounded-xl">
+              <p className="text-sm text-muted-foreground mb-3">Select which recipes to display in your portfolio:</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {allRecipes.map((recipe) => (
+                  <label key={recipe.id} className="flex items-center gap-3 p-2 hover:bg-background rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(editData.selected_recipes || []).includes(recipe.id)}
+                      onChange={(e) => {
+                        const currentSelected = editData.selected_recipes || [];
+                        const newSelected = e.target.checked
+                          ? [...currentSelected, recipe.id]
+                          : currentSelected.filter(id => id !== recipe.id);
+                        setEditData({ ...editData, selected_recipes: newSelected });
+                      }}
+                      className="rounded border-border"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{recipe.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{recipe.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(() => {
+            // Determine which recipes to display
+            let displayRecipes: Recipe[];
+            
+            if (isEditing) {
+              // When editing, show selected recipes if any, otherwise show all for selection
+              if ((editData.selected_recipes || []).length > 0) {
+                displayRecipes = allRecipes.filter(r => (editData.selected_recipes || []).includes(r.id));
+              } else {
+                displayRecipes = allRecipes; // Show all recipes so user can select
+              }
+            } else {
+              // When viewing, only show explicitly selected recipes
+              displayRecipes = recipes;
+            }
+            
+            return displayRecipes.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {displayRecipes.map((recipe) => (
                 <button
                   key={recipe.id}
                   className="group bg-secondary rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 text-left"
@@ -670,7 +842,17 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
                   </div>
                   <div className="p-4">
                     <h4 className="font-semibold text-foreground mb-1 line-clamp-1">{recipe.title}</h4>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{recipe.description}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{recipe.description}</p>
+                    {recipe.rating_count && recipe.rating_count > 0 ? (
+                      <StarRating
+                        rating={recipe.average_rating || 0}
+                        size="sm"
+                        showCount={true}
+                        count={recipe.rating_count}
+                      />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No ratings yet</p>
+                    )}
                   </div>
                 </button>
               ))}
@@ -678,9 +860,10 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <ChefHat className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No culinary creations yet</p>
+              <p>{isEditing && isOwnProfile ? 'No recipes available. Create some recipes first!' : 'No culinary creations yet'}</p>
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {/* Experience */}
@@ -709,6 +892,7 @@ export function Portfolio({ user, userId, onNavigate }: PortfolioProps) {
           isEditing={isEditing}
           certifications={isEditing ? editData.certifications : portfolioData?.certifications}
           onCertificationsChange={(cert) => setEditData({ ...editData, certifications: cert as Certification[] })}
+          user={user}
         />
       </div>
     </div>
@@ -788,9 +972,56 @@ function PortfolioSection({ title, icon, isEditing, items = [], onItemsChange, e
   );
 }
 
+// Delete Confirmation Dialog Component
+interface DeleteConfirmationDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  itemType: string;
+  itemName: string;
+}
+
+function DeleteConfirmationDialog({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  itemType, 
+  itemName 
+}: DeleteConfirmationDialogProps) {
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {itemType}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{itemName}"? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 // Experience Section Component
 function ExperienceSection({ isEditing, experience = [], onExperienceChange }: any) {
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string; title: string }>({
+    isOpen: false,
+    id: '',
+    title: ''
+  });
   const [newExp, setNewExp] = useState<Partial<ExperienceItem>>({
     id: '',
     title: '',
@@ -821,6 +1052,7 @@ function ExperienceSection({ isEditing, experience = [], onExperienceChange }: a
 
   const handleRemoveExperience = (id: string) => {
     onExperienceChange((experience || []).filter((exp: ExperienceItem) => exp.id !== id));
+    setDeleteDialog({ isOpen: false, id: '', title: '' });
   };
 
   return (
@@ -927,7 +1159,7 @@ function ExperienceSection({ isEditing, experience = [], onExperienceChange }: a
                 </div>
                 {isEditing && (
                   <button
-                    onClick={() => handleRemoveExperience(exp.id)}
+                    onClick={() => setDeleteDialog({ isOpen: true, id: exp.id, title: exp.title })}
                     className="text-destructive hover:text-destructive/80"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -958,6 +1190,14 @@ function ExperienceSection({ isEditing, experience = [], onExperienceChange }: a
           <p className="text-muted-foreground text-center py-8">No experience added yet</p>
         )
       )}
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, id: '', title: '' })}
+        onConfirm={() => handleRemoveExperience(deleteDialog.id)}
+        itemType="Experience"
+        itemName={deleteDialog.title}
+      />
     </div>
   );
 }
@@ -965,6 +1205,11 @@ function ExperienceSection({ isEditing, experience = [], onExperienceChange }: a
 // Education Section Component
 function EducationSection({ isEditing, education = [], onEducationChange }: any) {
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string; title: string }>({
+    isOpen: false,
+    id: '',
+    title: ''
+  });
   const [newEdu, setNewEdu] = useState<Partial<EducationItem>>({
     id: '',
     degree: '',
@@ -991,6 +1236,7 @@ function EducationSection({ isEditing, education = [], onEducationChange }: any)
 
   const handleRemoveEducation = (id: string) => {
     onEducationChange((education || []).filter((edu: EducationItem) => edu.id !== id));
+    setDeleteDialog({ isOpen: false, id: '', title: '' });
   };
 
   return (
@@ -1077,7 +1323,7 @@ function EducationSection({ isEditing, education = [], onEducationChange }: any)
                 </div>
                 {isEditing && (
                   <button
-                    onClick={() => handleRemoveEducation(edu.id)}
+                    onClick={() => setDeleteDialog({ isOpen: true, id: edu.id, title: edu.degree })}
                     className="text-destructive hover:text-destructive/80"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1110,6 +1356,14 @@ function EducationSection({ isEditing, education = [], onEducationChange }: any)
           <p className="text-muted-foreground text-center py-8">No education added yet</p>
         )
       )}
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, id: '', title: '' })}
+        onConfirm={() => handleRemoveEducation(deleteDialog.id)}
+        itemType="Education"
+        itemName={deleteDialog.title}
+      />
     </div>
   );
 }
@@ -1117,6 +1371,11 @@ function EducationSection({ isEditing, education = [], onEducationChange }: any)
 // Achievements Section Component
 function AchievementsSection({ isEditing, achievements = [], onAchievementsChange }: any) {
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string; title: string }>({
+    isOpen: false,
+    id: '',
+    title: ''
+  });
   const [newAch, setNewAch] = useState<Partial<Achievement>>({
     id: '',
     title: '',
@@ -1142,6 +1401,7 @@ function AchievementsSection({ isEditing, achievements = [], onAchievementsChang
 
   const handleRemoveAchievement = (id: string) => {
     onAchievementsChange((achievements || []).filter((ach: Achievement) => ach.id !== id));
+    setDeleteDialog({ isOpen: false, id: '', title: '' });
   };
 
   const getIcon = (iconName: string) => {
@@ -1240,7 +1500,7 @@ function AchievementsSection({ isEditing, achievements = [], onAchievementsChang
                     <h4 className="font-semibold text-foreground">{ach.title}</h4>
                     {isEditing && (
                       <button
-                        onClick={() => handleRemoveAchievement(ach.id)}
+                        onClick={() => setDeleteDialog({ isOpen: true, id: ach.id, title: ach.title })}
                         className="text-destructive hover:text-destructive/80 ml-2 flex-shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1266,31 +1526,88 @@ function AchievementsSection({ isEditing, achievements = [], onAchievementsChang
           <p className="text-muted-foreground text-center py-8">No achievements added yet</p>
         )
       )}
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, id: '', title: '' })}
+        onConfirm={() => handleRemoveAchievement(deleteDialog.id)}
+        itemType="Achievement"
+        itemName={deleteDialog.title}
+      />
     </div>
   );
 }
 
 // Certifications Section Component
-function CertificationsSection({ isEditing, certifications = [], onCertificationsChange }: any) {
+function CertificationsSection({ isEditing, certifications = [], onCertificationsChange, user }: any) {
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string; title: string }>({
+    isOpen: false,
+    id: '',
+    title: ''
+  });
   const [newCert, setNewCert] = useState<Partial<Certification>>({
     id: '',
     name: '',
     issuer: '',
     date: '',
     credential_id: '',
+    image_url: '',
   });
 
   const handleAddCertification = () => {
     if (newCert.name && newCert.issuer) {
       onCertificationsChange([...(certifications || []), { ...newCert, id: Date.now().toString() }]);
-      setNewCert({ id: '', name: '', issuer: '', date: '', credential_id: '' });
+      setNewCert({ id: '', name: '', issuer: '', date: '', credential_id: '', image_url: '' });
       setIsAddingNew(false);
     }
   };
 
   const handleRemoveCertification = (id: string) => {
     onCertificationsChange((certifications || []).filter((cert: Certification) => cert.id !== id));
+    setDeleteDialog({ isOpen: false, id: '', title: '' });
+  };
+
+  const handleImageUpload = async (certId: string, file: File) => {
+    try {
+      setUploadingImage(certId);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/upload/certifications`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${user.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        const { url } = await response.json();
+        
+        if (certId === 'new') {
+          setNewCert({ ...newCert, image_url: url });
+        } else {
+          const updatedCerts = certifications.map((cert: Certification) =>
+            cert.id === certId ? { ...cert, image_url: url } : cert
+          );
+          onCertificationsChange(updatedCerts);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to upload certification image:', errorText);
+        alert(`Failed to upload image: ${errorText}. Please try again.`);
+      }
+    } catch (error) {
+      console.error('Error uploading certification image:', error);
+      alert('Error uploading image. Please try again.');
+    } finally {
+      setUploadingImage(null);
+    }
   };
 
   return (
@@ -1343,6 +1660,44 @@ function CertificationsSection({ isEditing, certifications = [], onCertification
             className="input-clean w-full"
             placeholder="Credential ID (optional)"
           />
+          
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Certification Image (optional)</label>
+            {newCert.image_url ? (
+              <div className="relative">
+                <ImageWithFallback
+                  src={newCert.image_url}
+                  alt="Certification"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <button
+                  onClick={() => setNewCert({ ...newCert, image_url: '' })}
+                  className="absolute top-2 right-2 p-2 bg-destructive text-white rounded-lg hover:bg-destructive/90"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg hover:border-primary cursor-pointer bg-background">
+                <Camera className="w-8 h-8 text-muted-foreground mb-2" />
+                <span className="text-sm text-muted-foreground">
+                  {uploadingImage === 'new' ? 'Uploading...' : 'Click to upload image'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload('new', file);
+                  }}
+                  className="hidden"
+                  disabled={uploadingImage === 'new'}
+                />
+              </label>
+            )}
+          </div>
+
           <div className="flex gap-2">
             <button
               onClick={handleAddCertification}
@@ -1351,7 +1706,10 @@ function CertificationsSection({ isEditing, certifications = [], onCertification
               Save
             </button>
             <button
-              onClick={() => setIsAddingNew(false)}
+              onClick={() => {
+                setIsAddingNew(false);
+                setNewCert({ id: '', name: '', issuer: '', date: '', credential_id: '', image_url: '' });
+              }}
               className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80"
             >
               Cancel
@@ -1363,28 +1721,76 @@ function CertificationsSection({ isEditing, certifications = [], onCertification
       {certifications && certifications.length > 0 ? (
         <div className="space-y-3">
           {certifications.map((cert: Certification) => (
-            <div key={cert.id} className="p-4 bg-secondary rounded-xl flex justify-between items-start">
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">{cert.name}</h4>
-                <p className="text-sm text-muted-foreground mb-1">{cert.issuer}</p>
-                {cert.date && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="w-3 h-3" />
-                    <span>{cert.date}</span>
+            <div key={cert.id} className="p-4 bg-secondary rounded-xl">
+              <div className="flex gap-4">
+                {/* Image Section */}
+                {cert.image_url ? (
+                  <div className="relative flex-shrink-0">
+                    <ImageWithFallback
+                      src={cert.image_url}
+                      alt={cert.name}
+                      className="w-32 h-32 object-cover rounded-lg"
+                    />
+                    {isEditing && (
+                      <button
+                        onClick={() => {
+                          const updatedCerts = certifications.map((c: Certification) =>
+                            c.id === cert.id ? { ...c, image_url: '' } : c
+                          );
+                          onCertificationsChange(updatedCerts);
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-destructive text-white rounded hover:bg-destructive/90"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
-                )}
-                {cert.credential_id && (
-                  <p className="text-xs text-muted-foreground mt-1">ID: {cert.credential_id}</p>
-                )}
+                ) : isEditing ? (
+                  <label className="flex-shrink-0 w-32 h-32 border-2 border-dashed border-border rounded-lg hover:border-primary cursor-pointer bg-background flex flex-col items-center justify-center">
+                    <Camera className="w-6 h-6 text-muted-foreground mb-1" />
+                    <span className="text-xs text-muted-foreground text-center px-2">
+                      {uploadingImage === cert.id ? 'Uploading...' : 'Add image'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(cert.id, file);
+                      }}
+                      className="hidden"
+                      disabled={uploadingImage === cert.id}
+                    />
+                  </label>
+                ) : null}
+
+                {/* Content Section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-foreground mb-1">{cert.name}</h4>
+                      <p className="text-sm text-muted-foreground mb-1">{cert.issuer}</p>
+                      {cert.date && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3" />
+                          <span>{cert.date}</span>
+                        </div>
+                      )}
+                      {cert.credential_id && (
+                        <p className="text-xs text-muted-foreground mt-1">ID: {cert.credential_id}</p>
+                      )}
+                    </div>
+                    {isEditing && (
+                      <button
+                        onClick={() => setDeleteDialog({ isOpen: true, id: cert.id, title: cert.name })}
+                        className="text-destructive hover:text-destructive/80 ml-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-              {isEditing && (
-                <button
-                  onClick={() => handleRemoveCertification(cert.id)}
-                  className="text-destructive hover:text-destructive/80"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
             </div>
           ))}
         </div>
@@ -1393,6 +1799,14 @@ function CertificationsSection({ isEditing, certifications = [], onCertification
           <p className="text-muted-foreground text-center py-8">No certifications added yet</p>
         )
       )}
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, id: '', title: '' })}
+        onConfirm={() => handleRemoveCertification(deleteDialog.id)}
+        itemType="Certification"
+        itemName={deleteDialog.title}
+      />
     </div>
   );
 }

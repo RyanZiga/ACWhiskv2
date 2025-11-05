@@ -66,6 +66,7 @@ export function MessagesRefactored({
   // Refs
   const messageChannelRef = useRef<any>(null)
   const conversationChannelRef = useRef<any>(null)
+  const typingChannelRef = useRef<any>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const notificationChannelRef = useRef<any>(null)
 
@@ -110,12 +111,15 @@ export function MessagesRefactored({
   useEffect(() => {
     if (selectedConversation) {
       setupMessageRealtimeSubscription(selectedConversation)
+      setupTypingIndicatorSubscription(selectedConversation)
     } else {
       cleanupMessageSubscription()
+      cleanupTypingSubscription()
     }
     
     return () => {
       cleanupMessageSubscription()
+      cleanupTypingSubscription()
     }
   }, [selectedConversation])
 
@@ -180,17 +184,19 @@ export function MessagesRefactored({
           async (payload) => {
             try {
               const newMessage = payload.new as any
+              console.log('📨 New message received via realtime:', newMessage.id)
               
               // Fetch complete message data with sender info
               const { data: fullMessage, error } = await supabase
                 .from('messages')
                 .select(`
-                  *,
-                  sender:user_profiles!messages_sender_id_fkey (
-                    id,
-                    name,
-                    avatar_url
-                  )
+                  id,
+                  content,
+                  sender_id,
+                  conversation_id,
+                  created_at,
+                  message_type,
+                  sender:user_profiles(id, name, avatar_url)
                 `)
                 .eq('id', newMessage.id)
                 .single()
@@ -202,26 +208,74 @@ export function MessagesRefactored({
                   sender_id: fullMessage.sender_id,
                   sender_name: fullMessage.sender?.name || 'Unknown',
                   created_at: fullMessage.created_at,
-                  type: fullMessage.type || 'text'
+                  type: (fullMessage.message_type || 'text') as 'text' | 'image' | 'file'
                 }
+                
+                console.log('✅ Formatted message:', formattedMessage)
                 
                 // Add to messages if not already present
                 setMessages(prev => {
                   if (prev.find(m => m.id === formattedMessage.id)) {
+                    console.log('⚠️ Message already exists, skipping:', formattedMessage.id)
                     return prev
                   }
+                  console.log('➕ Adding new message to state')
                   return [...prev, formattedMessage]
                 })
                 
                 // Update conversation list (optimized - only update the specific conversation)
                 updateConversationLastMessage(conversationId, formattedMessage)
+              } else {
+                console.error('❌ Error fetching full message:', error)
               }
             } catch (error) {
               console.error('❌ Error handling new message:', error)
             }
           }
         )
-        .subscribe()
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`
+          },
+          async (payload) => {
+            const updatedMessage = payload.new as any
+            console.log('✏️ Message updated via realtime:', updatedMessage.id)
+            
+            // Update message in state
+            setMessages(prev => prev.map(m => 
+              m.id === updatedMessage.id 
+                ? { ...m, content: updatedMessage.content, edited_at: updatedMessage.edited_at }
+                : m
+            ))
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`
+          },
+          (payload) => {
+            const deletedMessage = payload.old as any
+            console.log('🗑️ Message deleted via realtime:', deletedMessage.id)
+            
+            // Remove message from state
+            setMessages(prev => prev.filter(m => m.id !== deletedMessage.id))
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Message realtime subscription active for:', conversationId)
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Message realtime subscription error for:', conversationId)
+          }
+        })
 
       messageChannelRef.current = channel
     } catch (error) {
@@ -296,6 +350,7 @@ export function MessagesRefactored({
   // Cleanup subscriptions
   const cleanupSubscriptions = () => {
     cleanupMessageSubscription()
+    cleanupTypingSubscription()
     if (conversationChannelRef.current) {
       supabase.removeChannel(conversationChannelRef.current)
       conversationChannelRef.current = null
@@ -313,6 +368,69 @@ export function MessagesRefactored({
     }
   }
 
+  const cleanupTypingSubscription = () => {
+    if (typingChannelRef.current) {
+      supabase.removeChannel(typingChannelRef.current)
+      typingChannelRef.current = null
+    }
+  }
+
+  // Setup typing indicator subscription
+  const setupTypingIndicatorSubscription = (conversationId: string) => {
+    try {
+      // Clean up existing subscription
+      cleanupTypingSubscription()
+
+      const channel = supabase
+        .channel(`typing-${conversationId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'typing_indicators',
+            filter: `conversation_id=eq.${conversationId}`
+          },
+          async () => {
+            try {
+              // Fetch current typing users
+              const { data: typingData, error } = await supabase
+                .from('typing_indicators')
+                .select(`
+                  user_id,
+                  user_profiles(name)
+                `)
+                .eq('conversation_id', conversationId)
+                .neq('user_id', user.id)
+                .gte('started_at', new Date(Date.now() - 10000).toISOString()) // Only recent (within 10 seconds)
+
+              if (!error && typingData) {
+                const typingUserNames = typingData
+                  .map((t: any) => t.user_profiles?.name)
+                  .filter(Boolean) as string[]
+                
+                setTypingUsers(typingUserNames)
+                console.log('👀 Typing users:', typingUserNames)
+              }
+            } catch (error) {
+              console.error('❌ Error handling typing update:', error)
+            }
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Typing indicator subscription active for:', conversationId)
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Typing indicator subscription error for:', conversationId)
+          }
+        })
+
+      typingChannelRef.current = channel
+    } catch (error) {
+      console.error('❌ Error setting up typing subscription:', error)
+    }
+  }
+
   // Send typing indicator
   const sendTypingIndicator = useCallback(async (isTyping: boolean) => {
     if (!selectedConversation) return
@@ -320,20 +438,34 @@ export function MessagesRefactored({
     try {
       if (isTyping) {
         // Insert or update typing indicator
-        await supabase
+        const { error } = await supabase
           .from('typing_indicators')
           .upsert({
             conversation_id: selectedConversation,
             user_id: user.id,
-            updated_at: new Date().toISOString()
+            started_at: new Date().toISOString()
+          }, {
+            onConflict: 'conversation_id,user_id'
           })
+        
+        if (error) {
+          console.error('❌ Error upserting typing indicator:', error)
+        } else {
+          console.log('✅ Typing indicator sent')
+        }
       } else {
         // Remove typing indicator
-        await supabase
+        const { error } = await supabase
           .from('typing_indicators')
           .delete()
           .eq('conversation_id', selectedConversation)
           .eq('user_id', user.id)
+        
+        if (error) {
+          console.error('❌ Error removing typing indicator:', error)
+        } else {
+          console.log('✅ Typing indicator removed')
+        }
       }
     } catch (error) {
       console.error('❌ Error sending typing indicator:', error)

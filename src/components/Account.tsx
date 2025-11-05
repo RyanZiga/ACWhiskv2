@@ -3,6 +3,7 @@ import { ArrowLeft, MessageCircle, UserPlus, UserMinus, Grid, Users, Calendar, M
 import { projectId, publicAnonKey } from '../utils/supabase/info'
 import { ImageWithFallback } from './figma/ImageWithFallback'
 import { isValidUUID } from '../utils/auth'
+import { PostImageCarousel } from './PostImageCarousel'
 
 interface User {
   id: string
@@ -98,7 +99,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
       if (response.ok) {
         const { profile: profileData } = await response.json()
         
-   
+        // Ensure all required properties exist with default values
         const safeProfile: UserProfile = {
           id: profileData.id || userId,
           name: profileData.name || 'Unknown User',
@@ -287,7 +288,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
         </button>
       </div>
 
-      {/* Profile Header */}
+
       <div className="post-card p-8 mb-8 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <div className="w-24 h-24 avatar-gradient rounded-full flex items-center justify-center">
@@ -339,7 +340,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
               )}
             </div>
 
-            {/* Stats */}
+
             <div className="flex items-center space-x-6 mb-4 text-sm">
               <div>
                 <span className="font-semibold text-foreground">{posts.length}</span>
@@ -355,12 +356,12 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
               </div>
             </div>
 
-            {/* Bio */}
+
             {profile.bio && (
               <p className="text-foreground mb-3">{profile.bio}</p>
             )}
 
-            {/* Location and Join Date */}
+
             <div className="flex flex-wrap items-center gap-4 text-sm">
               {profile.location && (
                 <div className="flex items-center space-x-1">
@@ -374,7 +375,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
               </div>
             </div>
 
-            {/* Skills */}
+
             {profile.skills && profile.skills.length > 0 && (
               <div className="mt-4">
                 <div className="flex flex-wrap gap-2">
@@ -393,7 +394,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+
       <div className="border-b border-border mb-8">
         <nav className="flex space-x-8">
           <button
@@ -444,7 +445,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
         </nav>
       </div>
 
-      {/* Tab Content */}
+
       <div>
         {activeTab === 'posts' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -534,7 +535,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
               </div>
             ) : portfolioData ? (
               <>
-                {/* Portfolio Preview Card */}
+ 
                 <div className="post-card p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-foreground">Professional Portfolio</h2>
@@ -547,7 +548,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     </button>
                   </div>
 
-                  {/* Tagline & Bio */}
+
                   {(portfolioData.tagline || portfolioData.bio) && (
                     <div className="mb-6">
                       {portfolioData.tagline && (
@@ -559,7 +560,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     </div>
                   )}
 
-                  {/* Quick Stats */}
+
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="text-center p-4 bg-secondary rounded-lg">
                       <ChefHat className="h-6 w-6 text-primary mx-auto mb-2" />
@@ -583,7 +584,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     </div>
                   </div>
 
-                  {/* Specialties Preview */}
+
                   {portfolioData.specialties && portfolioData.specialties.length > 0 && (
                     <div className="mb-6">
                       <h3 className="font-semibold text-foreground mb-3 flex items-center space-x-2">
@@ -608,7 +609,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     </div>
                   )}
 
-                  {/* Skills Preview */}
+
                   {portfolioData.skills && portfolioData.skills.length > 0 && (
                     <div className="mb-6">
                       <h3 className="font-semibold text-foreground mb-3 flex items-center space-x-2">
@@ -633,7 +634,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     </div>
                   )}
 
-                  {/* Recent Experience */}
+
                   {portfolioData.experience && portfolioData.experience.length > 0 && (
                     <div className="mb-6">
                       <h3 className="font-semibold text-foreground mb-3 flex items-center space-x-2">
@@ -656,7 +657,7 @@ export function Account({ userId, currentUser, onNavigate }: AccountProps) {
                     </div>
                   )}
 
-                  {/* View Full Portfolio CTA */}
+
                   <div className="text-center pt-4 border-t border-border">
                     <button
                       onClick={() => onNavigate('portfolio', userId)}

@@ -29,7 +29,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
     const file = e.target.files?.[0];
     if (!file) return;
 
-
+    // Check file size (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
       alert('File size must be less than 50MB');
       return;
@@ -39,7 +39,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
     setMediaType(type);
     setMediaFile(file);
 
-
+    // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
       setMediaPreview(e.target?.result as string);
@@ -60,7 +60,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
       let mediaUrl = '';
       let storyType: 'image' | 'video' | 'text' = 'text';
 
-
+      // Upload media if present
       if (mediaFile) {
         const formData = new FormData();
         formData.append('file', mediaFile);
@@ -88,7 +88,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
         setUploadProgress(50);
       }
 
-
+      // Create story
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/stories/create`,
         {
@@ -173,7 +173,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
             </div>
           )}
 
-
+          {/* Text overlay */}
           {text && (
             <div className="absolute inset-0 flex items-center justify-center p-8">
               <p className="text-white text-2xl font-bold text-center break-words max-w-full">
@@ -183,9 +183,9 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
           )}
         </div>
 
-
+        {/* Controls */}
         <div className="p-3 space-y-3 flex-shrink-0 overflow-y-auto max-h-[35vh]">
-
+          {/* Text input for text-only stories */}
           {isTextOnly && (
             <>
               <textarea
@@ -197,7 +197,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
                 maxLength={200}
               />
 
-
+              {/* Background color picker */}
               <div>
                 <label className="text-white text-sm mb-1.5 block">Background Color</label>
                 <div className="flex gap-2 flex-wrap">
@@ -216,7 +216,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
             </>
           )}
 
-
+          {/* Caption for media stories */}
           {mediaFile && (
             <input
               type="text"
@@ -228,7 +228,7 @@ export function StoryCreator({ user, onClose, onStoryCreated }: StoryCreatorProp
             />
           )}
 
-
+          {/* Action buttons */}
           <div className="flex gap-2">
             <input
               ref={fileInputRef}

@@ -47,7 +47,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ user, onNavigate }: DashboardProps) {
-
+  // If user is admin, show AdminDashboard
   if (user.role === 'admin') {
     return <AdminDashboard user={user} onNavigate={onNavigate} />
   }
@@ -73,7 +73,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   const loadAssignments = async () => {
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) 
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/assignments`, {
         headers: {
@@ -106,7 +106,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
 
   const loadSubmissions = async () => {
     try {
-
+      // Validate user ID before making request
       if (!isValidUUID(user.id)) {
         console.error('Invalid user ID:', user.id)
         setSubmissions([])
@@ -188,7 +188,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
-
+        {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-6">
             <div className="mb-4 lg:mb-0">
@@ -567,7 +567,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             </GlassCard>
           </div>
 
- 
+
           <div className="lg:col-span-4">
             <GlassCard className="p-6 bg-gradient-to-br from-pink-400/20 to-purple-500/20 border-pink-200/30 dark:border-pink-400/30">
               <div className="text-center">

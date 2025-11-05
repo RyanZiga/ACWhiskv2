@@ -23,7 +23,7 @@ interface FAQ {
 }
 
 const FAQS: FAQ[] = [
-  // Cooking Techniques
+
   {
     id: 'knife-skills-basic',
     question: 'What are the basic knife skills every chef should know?',
@@ -265,23 +265,23 @@ export function ChatBot() {
     scrollToBottom()
   }, [messages])
 
-
+  // Show help popup every 5 minutes
   useEffect(() => {
     const showPopup = () => {
-
+      // Only show popup if chat is closed
       if (!isOpen) {
         setShowHelpPopup(true)
-  
+        // Auto-hide after 10 seconds
         setTimeout(() => {
           setShowHelpPopup(false)
         }, 10000)
       }
     }
 
-
+    // Show first popup after 5 minutes
     const timer = setInterval(() => {
       showPopup()
-    }, 5 * 60 * 1000) 
+    }, 5 * 60 * 1000) // 5 minutes
 
     return () => clearInterval(timer)
   }, [isOpen])
@@ -292,7 +292,7 @@ export function ChatBot() {
 
   const getGeminiResponse = async (userMessage: string): Promise<string> => {
     try {
-
+      // Create a culinary-focused system prompt
       const systemContext = `You are a professional culinary assistant helping students and instructors in a culinary education platform called ACWhisk. Your role is to:
 - Provide expert advice on cooking techniques, recipes, and food preparation
 - Help with food safety and proper kitchen practices
@@ -303,7 +303,7 @@ export function ChatBot() {
 
 Keep responses concise (2-3 paragraphs max), practical, and easy to understand. Use bullet points when listing steps or tips.`
 
-
+      // Build conversation history for context
       const contents = [
         {
           role: 'user',
@@ -352,7 +352,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
       const data = await response.json()
       
-
+      // Check if we got a valid response
       if (!data.candidates || data.candidates.length === 0) {
         throw new Error('No response generated from AI')
       }
@@ -363,13 +363,13 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
         throw new Error('Invalid response format from AI')
       }
 
-
+      // Update chat history
       chatHistoryRef.current.push(
         { role: 'user', parts: userMessage },
         { role: 'model', parts: text }
       )
 
-
+      // Keep only last 10 exchanges to manage context
       if (chatHistoryRef.current.length > 20) {
         chatHistoryRef.current = chatHistoryRef.current.slice(-20)
       }
@@ -377,7 +377,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       return text
     } catch (error) {
       console.error('Gemini API Error:', error)
-
+      // Return a more helpful error message
       if (error instanceof Error && error.message.includes('not found')) {
         throw new Error('AI model temporarily unavailable. Please try FAQ mode or try again later.')
       }
@@ -399,12 +399,12 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
   const findBestAnswer = (query: string): FAQ | null => {
     const lowerQuery = query.toLowerCase()
     
-
+    // Exact keyword match
     let bestMatch = FAQS.find(faq =>
       faq.keywords.some(keyword => lowerQuery.includes(keyword.toLowerCase()))
     )
 
-
+    // If no keyword match, try partial question match
     if (!bestMatch) {
       bestMatch = FAQS.find(faq =>
         faq.question.toLowerCase().includes(lowerQuery) ||
@@ -426,16 +426,16 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
 
     try {
       if (useAI) {
-    
+        // Use Gemini AI for response
         const aiResponse = await getGeminiResponse(userMessage)
         addMessage(aiResponse, 'bot', 'ai')
         
-
+        // Optionally suggest related FAQs based on keywords
         const bestAnswer = findBestAnswer(userMessage)
         if (bestAnswer && bestAnswer.relatedFAQs && bestAnswer.relatedFAQs.length > 0) {
           const relatedFAQs = FAQS.filter(faq => 
             bestAnswer.relatedFAQs?.includes(faq.id)
-          ).slice(0, 3)
+          ).slice(0, 3) // Limit to 3 suggestions
           
           if (relatedFAQs.length > 0) {
             const suggestions = relatedFAQs.map(faq => faq.question).join('\n• ')
@@ -443,7 +443,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
           }
         }
       } else {
-
+        // Use FAQ-based response (fallback)
         const bestAnswer = findBestAnswer(userMessage)
         
         if (bestAnswer) {
@@ -470,7 +470,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     } catch (error) {
       console.error('Error getting response:', error)
       
-
+      // Fallback to FAQ mode automatically
       const bestAnswer = findBestAnswer(userMessage)
       if (bestAnswer) {
         addMessage(
@@ -484,7 +484,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
           'bot'
         )
         setShowFAQs(true)
-
+        // Auto-switch to FAQ mode
         setUseAI(false)
       }
     } finally {
@@ -500,7 +500,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     setTimeout(() => {
       addMessage(faq.answer, 'bot', 'faq')
       
-
+      // Add related FAQs
       if (faq.relatedFAQs && faq.relatedFAQs.length > 0) {
         const relatedFAQs = FAQS.filter(f => faq.relatedFAQs?.includes(f.id))
         if (relatedFAQs.length > 0) {
@@ -529,7 +529,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     }
   }
 
-
+  // Handle drag start
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true)
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
@@ -537,7 +537,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     setDragStart({ x: clientX, y: clientY })
   }
 
- 
+  // Handle drag move
   useEffect(() => {
     const handleDragMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return
@@ -546,13 +546,16 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
       const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX
       const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
       
-
+      // Calculate deltas correctly for bottom/right positioning
+      // For right: drag right (increase X) should decrease right value (move away from right edge)
+      // For bottom: drag down (increase Y) should decrease bottom value (move away from bottom edge)
       const deltaX = dragStart.x - clientX
       const deltaY = dragStart.y - clientY
       
       setButtonPosition(prev => {
-
-        const minBottom = isMobile ? 90 : 16 
+        // Add delta to move in the correct direction
+        // Constrain to screen bounds with mobile navbar consideration
+        const minBottom = isMobile ? 90 : 16 // Keep above mobile navbar
         const newRight = Math.max(16, Math.min(window.innerWidth - 72, prev.right + deltaX))
         const newBottom = Math.max(minBottom, Math.min(window.innerHeight - 72, prev.bottom + deltaY))
         return { right: newRight, bottom: newBottom }
@@ -580,7 +583,7 @@ Keep responses concise (2-3 paragraphs max), practical, and easy to understand. 
     }
   }, [isDragging, dragStart, isMobile])
 
-
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768)

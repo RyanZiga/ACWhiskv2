@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, MessageCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, MessageCircle, Loader2, Bell, BellOff, User as UserIcon, Trash2, AlertTriangle } from 'lucide-react'
 import { User } from '../../utils/auth'
 import { ImageWithFallback } from '../figma/ImageWithFallback'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu'
+import { toast } from 'sonner@2.0.3'
 
 interface Message {
   id: string
@@ -47,10 +49,11 @@ export function ChatWindow({
 }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -83,16 +86,16 @@ export function ChatWindow({
   const handleMessageChange = (value: string) => {
     setNewMessage(value)
     
-
+    // Handle typing indicator
     if (value.length > 0) {
       onTyping(true)
       
-
+      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
       }
       
-
+      // Set timeout to stop typing indicator
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false)
       }, 2000)
@@ -115,7 +118,7 @@ export function ChatWindow({
       await onSendMessage(messageContent)
     } catch (error) {
       console.error('Failed to send message:', error)
-      setNewMessage(messageContent) 
+      setNewMessage(messageContent) // Restore message on error
     } finally {
       setSendingMessage(false)
     }
@@ -126,6 +129,70 @@ export function ChatWindow({
       e.preventDefault()
       handleSendMessage()
     }
+  }
+
+  const handleVoiceCall = () => {
+    toast.info('Voice Call', {
+      description: `Initiating voice call with ${conversation?.participant?.name || 'Unknown User'}...`,
+    })
+    // TODO: Implement WebRTC voice calling functionality
+  }
+
+  const handleVideoCall = () => {
+    toast.info('Video Call', {
+      description: `Initiating video call with ${conversation?.participant?.name || 'Unknown User'}...`,
+    })
+    // TODO: Implement WebRTC video calling functionality
+  }
+
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+    toast.success(
+      !isMuted ? 'Notifications muted' : 'Notifications enabled',
+      {
+        description: `You ${!isMuted ? 'won\'t' : 'will'} receive notifications from this conversation.`
+      }
+    )
+  }
+
+  const handleViewProfile = () => {
+    toast.info('View Profile', {
+      description: 'Opening profile...',
+    })
+    // TODO: Navigate to user profile
+  }
+
+  const handleClearChat = () => {
+    toast.warning('Clear Chat', {
+      description: 'This will delete all messages in this conversation.',
+      action: {
+        label: 'Clear',
+        onClick: () => {
+          toast.success('Chat cleared')
+          // TODO: Implement clear chat functionality
+        },
+      },
+    })
+  }
+
+  const handleBlockUser = () => {
+    toast.warning('Block User', {
+      description: `Are you sure you want to block ${conversation?.participant?.name || 'this user'}?`,
+      action: {
+        label: 'Block',
+        onClick: () => {
+          toast.success('User blocked')
+          // TODO: Implement block user functionality
+        },
+      },
+    })
+  }
+
+  const handleReport = () => {
+    toast.info('Report Conversation', {
+      description: 'Opening report form...',
+    })
+    // TODO: Implement report functionality
   }
 
   if (!conversation) {
@@ -156,7 +223,7 @@ export function ChatWindow({
     <div className={`${
       isMobile ? (showConversationList ? 'hidden' : 'flex') : 'flex'
     } flex-col flex-1`}>
-
+      {/* Chat Header */}
       <div className="p-4 border-b post-card flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {isMobile && (
@@ -203,9 +270,68 @@ export function ChatWindow({
             </div>
           </div>
         </div>
+        
+        <div className="hidden flex items-center space-x-2">
+          <button 
+            onClick={handleVoiceCall}
+            className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"
+            aria-label="Voice call"
+          >
+            <Phone className="h-5 w-5" />
+          </button>
+          <button 
+            onClick={handleVideoCall}
+            className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"
+            aria-label="Video call"
+          >
+            <Video className="h-5 w-5" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button 
+                className="p-2 hover:bg-secondary rounded-lg touch-target transition-colors"
+                aria-label="More options"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleMuteToggle}>
+                {isMuted ? (
+                  <>
+                    <Bell className="mr-2 h-4 w-4" />
+                    <span>Unmute Notifications</span>
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="mr-2 h-4 w-4" />
+                    <span>Mute Notifications</span>
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleViewProfile}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>View Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleClearChat} className="text-orange-600 dark:text-orange-400">
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Clear Chat History</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleBlockUser} className="text-red-600 dark:text-red-400">
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                <span>Block User</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleReport} className="text-red-600 dark:text-red-400">
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                <span>Report Conversation</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       
-
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
         {messages.length === 0 ? (
           <div className="text-center py-8">
@@ -243,7 +369,7 @@ export function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
       
-
+      {/* Message Input */}
       <div className="p-4 border-t post-card chat-input-mobile">
         <div className="flex items-center space-x-2">
           <button 

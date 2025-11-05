@@ -18,6 +18,7 @@
         'lucide-react@0.487.0': 'lucide-react',
         'input-otp@1.4.2': 'input-otp',
         'figma:asset/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png': path.resolve(__dirname, './src/assets/868eb8cd441d8d76debd4a1fae08c51899b81cd8.png'),
+        'figma:asset/6ca58feaf512431e14a13cc86c72c7775ee404a3.png': path.resolve(__dirname, './src/assets/6ca58feaf512431e14a13cc86c72c7775ee404a3.png'),
         'embla-carousel-react@8.6.0': 'embla-carousel-react',
         'cmdk@1.1.1': 'cmdk',
         'class-variance-authority@0.7.1': 'class-variance-authority',

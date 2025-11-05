@@ -21,6 +21,7 @@ export interface User {
     posts_visible: boolean
     photos_visible: boolean
   }
+  has_temp_password?: boolean
 }
 
 export interface AuthResult {

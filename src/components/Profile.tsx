@@ -108,7 +108,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
       if (uploadResponse.ok) {
         const { url } = await uploadResponse.json()
         
-
+        // Update profile with new avatar
         const updateResponse = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c56dfc7a/profile`, {
           method: 'PUT',
           headers: {
@@ -388,7 +388,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
               </div>
             </div>
 
-
+            {/* Privacy Settings */}
             <div>
               <h3 className="text-lg font-medium text-foreground mb-4">Privacy Settings</h3>
               
@@ -481,7 +481,7 @@ export function Profile({ user, onNavigate }: ProfileProps) {
                 </div>
               </div>
 
-
+              {/* Account Stats */}
               <div className="mt-8 pt-6 border-t border-border">
                 <h4 className="font-medium text-foreground mb-3">Account Statistics</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">

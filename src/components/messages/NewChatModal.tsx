@@ -12,15 +12,15 @@ interface UserProfile {
 }
 
 interface NewChatModalProps {
-  currentUser: User
+  user: User
   onClose: () => void
-  onStartConversation: (userId: string) => void
+  onSelectUser: (userId: string) => void
 }
 
 export function NewChatModal({
-  currentUser,
+  user,
   onClose,
-  onStartConversation
+  onSelectUser
 }: NewChatModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
@@ -29,6 +29,12 @@ export function NewChatModal({
 
   const getInitials = (name: string): string => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  // Safety check - if no user, don't render
+  if (!user) {
+    console.error('❌ NewChatModal: No user provided')
+    return null
   }
 
   // Search for users with debouncing
@@ -43,7 +49,7 @@ export function NewChatModal({
     setSearchingUsers(true)
 
     try {
-      if (!currentUser.access_token) {
+      if (!user?.access_token) {
         console.error('❌ No access token for search')
         setSearchResults([])
         setSearchingUsers(false)
@@ -55,7 +61,7 @@ export function NewChatModal({
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${currentUser.access_token}`,
+            'Authorization': `Bearer ${user.access_token}`,
             'Content-Type': 'application/json'
           }
         }
@@ -65,7 +71,7 @@ export function NewChatModal({
         const responseData = await response.json()
         const users = responseData?.users || []
         const filteredUsers = users
-          .filter((u: any) => u.id && u.id !== currentUser.id)
+          .filter((u: any) => u.id && u.id !== user.id)
           .map((u: any) => ({
             id: u.id,
             name: u.name || 'Unknown User',
@@ -85,7 +91,7 @@ export function NewChatModal({
     } finally {
       setSearchingUsers(false)
     }
-  }, [currentUser.access_token, currentUser.id])
+  }, [user?.access_token, user?.id])
 
   // Debounced user search
   useEffect(() => {
@@ -101,10 +107,10 @@ export function NewChatModal({
     return () => clearTimeout(timeoutId)
   }, [searchQuery, searchUsers])
 
-  const handleStartConversation = async (userId: string) => {
+  const handleSelectUser = (userId: string) => {
     setCreatingConversation(true)
     try {
-      await onStartConversation(userId)
+      onSelectUser(userId)
     } finally {
       setCreatingConversation(false)
     }
@@ -161,7 +167,7 @@ export function NewChatModal({
                   key={userProfile.id}
                   onClick={() => {
                     if (!creatingConversation) {
-                      handleStartConversation(userProfile.id)
+                      handleSelectUser(userProfile.id)
                     }
                   }}
                   className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors touch-target ${

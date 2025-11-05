@@ -32,7 +32,7 @@ export function PostImageCarousel({ images, alt, className = "" }: PostImageCaro
 
   return (
     <div className={`relative h-48 overflow-hidden group ${className}`}>
-
+      {/* Images */}
       <div
         className="flex h-full transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -48,10 +48,10 @@ export function PostImageCarousel({ images, alt, className = "" }: PostImageCaro
         ))}
       </div>
 
-
+      {/* Navigation Arrows - Only show if more than 1 image */}
       {images.length > 1 && (
         <>
-
+          {/* Previous Button */}
           {currentIndex > 0 && (
             <button
               onClick={goToPrevious}
@@ -62,7 +62,7 @@ export function PostImageCarousel({ images, alt, className = "" }: PostImageCaro
             </button>
           )}
 
-
+          {/* Next Button */}
           {currentIndex < images.length - 1 && (
             <button
               onClick={goToNext}
@@ -73,7 +73,7 @@ export function PostImageCarousel({ images, alt, className = "" }: PostImageCaro
             </button>
           )}
 
-
+          {/* Dot Indicators */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
             {images.map((_, index) => (
               <button
@@ -89,7 +89,7 @@ export function PostImageCarousel({ images, alt, className = "" }: PostImageCaro
             ))}
           </div>
 
-
+          {/* Image Counter - Top Right */}
           <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs z-10">
             {currentIndex + 1} / {images.length}
           </div>

@@ -304,28 +304,40 @@ async function initializeBuckets() {
     "make-c56dfc7a-submissions",
     "make-c56dfc7a-assignment-files",
     "make-c56dfc7a-stories",
+    "make-c56dfc7a-dish-evaluations",
   ];
 
   for (const bucketName of buckets) {
-    const { data: existingBuckets } =
-      await supabase.storage.listBuckets();
-    const bucketExists = existingBuckets?.some(
-      (bucket) => bucket.name === bucketName,
-    );
+    try {
+      const { data: existingBuckets } =
+        await supabase.storage.listBuckets();
+      const bucketExists = existingBuckets?.some(
+        (bucket) => bucket.name === bucketName,
+      );
 
-    if (!bucketExists) {
-      // Create bucket with public access
-      const { data: bucket, error: bucketError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        allowedMimeTypes: ['image/*', 'video/*'],
-        fileSizeLimit: 52428800 // 50MB
-      });
-      
-      if (bucketError) {
-        console.error(`Error creating bucket ${bucketName}:`, bucketError);
+      if (!bucketExists) {
+        // Create bucket with public access
+        const { data: bucket, error: bucketError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          allowedMimeTypes: ['image/*', 'video/*'],
+          fileSizeLimit: 52428800 // 50MB
+        });
+        
+        if (bucketError) {
+          // Ignore 409 errors (bucket already exists) - this can happen due to race conditions
+          if (bucketError.statusCode === '409' || bucketError.message?.includes('already exists')) {
+            console.log(`Bucket ${bucketName} already exists, skipping...`);
+          } else {
+            console.error(`Error creating bucket ${bucketName}:`, bucketError);
+          }
+        } else {
+          console.log(`Created public bucket: ${bucketName}`);
+        }
       } else {
-        console.log(`Created public bucket: ${bucketName}`);
+        console.log(`Bucket ${bucketName} already exists`);
       }
+    } catch (error) {
+      console.error(`Unexpected error checking/creating bucket ${bucketName}:`, error);
     }
   }
 }
@@ -925,7 +937,7 @@ app.post("/make-server-c56dfc7a/posts", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const { content, images = [], video = null, background_color = null, type, recipe_data } = await c.req.json();
+    const { content, images = [], video = null, background_color = null, type, recipe_data, privacy = "public" } = await c.req.json();
     const postId = crypto.randomUUID();
 
     // Get user profile to include avatar
@@ -938,6 +950,7 @@ app.post("/make-server-c56dfc7a/posts", async (c) => {
       images: Array.isArray(images) ? images : [],
       video: video || null,                // ✅ include video
       background_color: background_color,  // ✅ include background color
+      privacy: privacy || "public",        // ✅ include privacy setting
       author_id: user.id,
       author_name: user.user_metadata.name || safeUserProfile.name,
       author_role: user.user_metadata.role || safeUserProfile.role,
@@ -1067,9 +1080,42 @@ app.get("/make-server-c56dfc7a/feed", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
+    // Get current user's profile to check who they're following
+    const userProfile = await kv.get(`user:${user.id}`);
+    const safeUserProfile = ensureUserProfile(userProfile, user.id);
+    const followingIds = safeUserProfile.following || [];
+
     const allPosts = await kv.getByPrefix("post:");
     const safePosts = Array.isArray(allPosts) ? allPosts : [];
-    const sortedPosts = safePosts.sort(
+    
+    // Filter posts based on privacy settings
+    const filteredPosts = safePosts.filter((post: any) => {
+      const postPrivacy = post.privacy || "public";
+      
+      // Public posts are visible to everyone
+      if (postPrivacy === "public") {
+        return true;
+      }
+      
+      // Author can always see their own posts
+      if (post.author_id === user.id) {
+        return true;
+      }
+      
+      // Followers-only posts are visible to followers
+      if (postPrivacy === "followers") {
+        return followingIds.includes(post.author_id);
+      }
+      
+      // Private posts are only visible to the author (already handled above)
+      if (postPrivacy === "private") {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    const sortedPosts = filteredPosts.sort(
       (a: any, b: any) =>
         new Date(b.created_at).getTime() -
         new Date(a.created_at).getTime(),
@@ -1376,12 +1422,28 @@ app.post("/make-server-c56dfc7a/conversations", async (c) => {
       return c.json({ conversation });
     }
 
+    // Check follow status
+    const currentUserProfile = await kv.get(`user:${user.id}`);
+    const targetUserProfile = await kv.get(`user:${participant_id}`);
+
+    const safeCurrentProfile = ensureUserProfile(currentUserProfile, user.id);
+    const safeTargetProfile = ensureUserProfile(targetUserProfile, participant_id);
+
+    const currentUserFollowsTarget = safeCurrentProfile.following.includes(participant_id);
+    const targetFollowsCurrent = safeTargetProfile.following.includes(user.id);
+    const mutualFollow = currentUserFollowsTarget && targetFollowsCurrent;
+
+    // Create conversation with appropriate status
     const conversation = {
       id: conversationId,
+      type: "direct",
       participants: [user.id, participant_id],
       created_at: new Date().toISOString(),
       last_message: null,
       messages: [],
+      request_status: mutualFollow ? null : "pending",
+      requested_by: mutualFollow ? null : user.id,
+      requested_at: mutualFollow ? null : new Date().toISOString()
     };
 
     await kv.set(
@@ -1441,28 +1503,41 @@ app.get("/make-server-c56dfc7a/conversations", async (c) => {
           `conversation:${convId}`,
         );
         if (conversation) {
-          // Get participant info
-          const otherParticipantId =
-            conversation.participants.find(
-              (id: string) => id !== user.id,
-            );
-          
-          if (otherParticipantId) {
-            const participantProfile = await kv.get(
-              `user:${otherParticipantId}`,
-            );
-            const safeParticipantProfile = ensureUserProfile(
-              participantProfile,
-              otherParticipantId
-            );
-
-            conversation.participant = {
-              id: safeParticipantProfile.id,
-              name: safeParticipantProfile.name,
-              avatar_url: safeParticipantProfile.avatar_url,
-            };
-            conversations.push(conversation);
+          // Skip declined requests
+          if (conversation.request_status === "declined") {
+            continue;
           }
+
+          // For direct chats, get participant info
+          if (conversation.type === "direct" || !conversation.type) {
+            const otherParticipantId =
+              conversation.participants.find(
+                (id: string) => id !== user.id,
+              );
+            
+            if (otherParticipantId) {
+              const participantProfile = await kv.get(
+                `user:${otherParticipantId}`,
+              );
+              const safeParticipantProfile = ensureUserProfile(
+                participantProfile,
+                otherParticipantId
+              );
+
+              conversation.participant = {
+                id: safeParticipantProfile.id,
+                name: safeParticipantProfile.name,
+                avatar_url: safeParticipantProfile.avatar_url,
+              };
+            }
+          }
+
+          // Add participant count for groups
+          if (conversation.type === "group") {
+            conversation.participant_count = conversation.participants?.length || 0;
+          }
+
+          conversations.push(conversation);
         }
       } catch (convError) {
         console.log(`Error loading conversation ${convId}:`, convError);
@@ -1579,6 +1654,177 @@ app.get(
     }
   },
 );
+
+// Accept message request
+app.post("/make-server-c56dfc7a/message-requests/:id/accept", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("id");
+    const conversation = await kv.get(`conversation:${conversationId}`);
+
+    if (!conversation) {
+      return c.json({ error: "Conversation not found" }, 404);
+    }
+
+    if (!conversation.participants.includes(user.id)) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    // Check if user is NOT the requester
+    if (conversation.requested_by === user.id) {
+      return c.json({ error: "Cannot accept your own request" }, 400);
+    }
+
+    // Update conversation status
+    conversation.request_status = "accepted";
+    await kv.set(`conversation:${conversationId}`, conversation);
+
+    return c.json({ success: true, conversation });
+  } catch (error) {
+    console.log("Accept request error:", error);
+    return c.json({ error: "Error accepting request" }, 500);
+  }
+});
+
+// Decline message request
+app.post("/make-server-c56dfc7a/message-requests/:id/decline", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("id");
+    const conversation = await kv.get(`conversation:${conversationId}`);
+
+    if (!conversation) {
+      return c.json({ error: "Conversation not found" }, 404);
+    }
+
+    if (!conversation.participants.includes(user.id)) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    // Check if user is NOT the requester
+    if (conversation.requested_by === user.id) {
+      return c.json({ error: "Cannot decline your own request" }, 400);
+    }
+
+    // Update conversation status
+    conversation.request_status = "declined";
+    await kv.set(`conversation:${conversationId}`, conversation);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.log("Decline request error:", error);
+    return c.json({ error: "Error declining request" }, 500);
+  }
+});
+
+// Create group chat
+app.post("/make-server-c56dfc7a/group-chats", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Check if user is instructor or admin
+    const userProfile = await kv.get(`user:${user.id}`);
+    const safeUserProfile = ensureUserProfile(userProfile, user.id);
+
+    if (!["instructor", "admin"].includes(safeUserProfile.role)) {
+      return c.json({ error: "Only instructors and admins can create group chats" }, 403);
+    }
+
+    const { name, description = null, participant_ids = [] } = await c.req.json();
+
+    if (!name || !name.trim()) {
+      return c.json({ error: "Group name is required" }, 400);
+    }
+
+    const conversationId = crypto.randomUUID();
+
+    // Include creator in participants
+    const allParticipants = [user.id, ...participant_ids.filter((id: string) => id !== user.id)];
+
+    const conversation = {
+      id: conversationId,
+      type: "group",
+      name: name.trim(),
+      description: description?.trim() || null,
+      participants: allParticipants,
+      created_by: user.id,
+      created_at: new Date().toISOString(),
+      last_message: null,
+      messages: [],
+      participant_roles: {
+        [user.id]: "owner",
+        ...Object.fromEntries(participant_ids.map((id: string) => [id, "member"]))
+      }
+    };
+
+    await kv.set(`conversation:${conversationId}`, conversation);
+
+    // Update all participants' conversation lists
+    for (const participantId of allParticipants) {
+      const participantConversations = (await kv.get(`user_conversations:${participantId}`)) || [];
+      const safeParticipantConversations = Array.isArray(participantConversations)
+        ? participantConversations
+        : [];
+      safeParticipantConversations.push(conversationId);
+      await kv.set(`user_conversations:${participantId}`, safeParticipantConversations);
+    }
+
+    return c.json({ conversation_id: conversationId, conversation });
+  } catch (error) {
+    console.log("Group chat creation error:", error);
+    return c.json({ error: "Error creating group chat" }, 500);
+  }
+});
+
+// Check if users follow each other
+app.get("/make-server-c56dfc7a/follows/check/:targetId", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const targetId = c.req.param("targetId");
+    
+    const currentUserProfile = await kv.get(`user:${user.id}`);
+    const targetUserProfile = await kv.get(`user:${targetId}`);
+
+    const safeCurrentProfile = ensureUserProfile(currentUserProfile, user.id);
+    const safeTargetProfile = ensureUserProfile(targetUserProfile, targetId);
+
+    const currentUserFollowsTarget = safeCurrentProfile.following.includes(targetId);
+    const targetFollowsCurrent = safeTargetProfile.following.includes(user.id);
+    const mutualFollow = currentUserFollowsTarget && targetFollowsCurrent;
+
+    return c.json({
+      currentUserFollowsTarget,
+      targetFollowsCurrent,
+      mutualFollow
+    });
+  } catch (error) {
+    console.log("Follow check error:", error);
+    return c.json({ error: "Error checking follow status" }, 500);
+  }
+});
 
 // Create recipe (existing endpoint)
 app.post("/make-server-c56dfc7a/recipes", async (c) => {
@@ -2188,7 +2434,7 @@ app.post("/make-server-c56dfc7a/admin/create-user", async (c) => {
     }
 
     if (!email.toLowerCase().endsWith("@asiancollege.edu.ph")) {
-      return c.json({ error: "Use Asian College Email" }, 400);
+      return c.json({ error: "Only @asiancollege.edu.ph accounts are allowed" }, 400);
     }
 
     // Generate temporary password (8 characters)
@@ -2266,7 +2512,7 @@ app.post("/make-server-c56dfc7a/admin/send-invitation", async (c) => {
     }
 
     if (!email.toLowerCase().endsWith("@asiancollege.edu.ph")) {
-      return c.json({ error: "Use Asian College Email" }, 400);
+      return c.json({ error: "Only @asiancollege.edu.ph accounts are allowed" }, 400);
     }
 
     // Generate invitation token (secure random string)
@@ -2584,6 +2830,205 @@ app.post("/make-server-c56dfc7a/change-password", async (c) => {
   } catch (error) {
     console.log("Change password error:", error);
     return c.json({ error: "Error changing password" }, 500);
+  }
+});
+
+// ================== CONTENT MANAGEMENT ENDPOINTS ==================
+
+// Admin-only endpoint: Get all posts with comments and ratings
+app.get("/make-server-c56dfc7a/admin/content", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user || user.user_metadata.role !== "admin") {
+      return c.json({ error: "Unauthorized - Admin access required" }, 403);
+    }
+
+    // Get all posts from KV
+    const allPosts = await kv.getByPrefix("post:") || [];
+    
+    // Enrich posts with author details and related data
+    const enrichedPosts = await Promise.all(
+      allPosts.map(async (post: any) => {
+        // Get author details
+        const author = await kv.get(`user:${post.user_id}`);
+        
+        // Get comments for this post
+        const allComments = await kv.getByPrefix(`comment:${post.id}:`) || [];
+        const comments = await Promise.all(
+          allComments.map(async (comment: any) => {
+            const commentAuthor = await kv.get(`user:${comment.user_id}`);
+            return {
+              id: comment.id,
+              content: comment.content,
+              user_id: comment.user_id,
+              user_name: commentAuthor?.name || "Unknown User",
+              created_at: comment.created_at,
+            };
+          })
+        );
+        
+        // Get ratings for this post
+        const allRatings = await kv.getByPrefix(`rating:${post.id}:`) || [];
+        const ratings = await Promise.all(
+          allRatings.map(async (rating: any) => {
+            const ratingAuthor = await kv.get(`user:${rating.user_id}`);
+            return {
+              user_id: rating.user_id,
+              user_name: ratingAuthor?.name || "Unknown User",
+              rating: rating.rating,
+              created_at: rating.created_at,
+            };
+          })
+        );
+
+        return {
+          id: post.id,
+          content: post.content,
+          type: post.type || "regular",
+          author_id: post.user_id,
+          author_name: author?.name || "Unknown User",
+          author_role: author?.role || "student",
+          created_at: post.created_at,
+          images: post.images || [],
+          comments,
+          ratings,
+          recipe_data: post.recipe_data,
+          privacy: post.privacy || "public",
+        };
+      })
+    );
+
+    // Sort by creation date (newest first)
+    enrichedPosts.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    console.log(`Admin ${user.user_metadata.name} fetched ${enrichedPosts.length} posts for content management`);
+
+    return c.json({ posts: enrichedPosts });
+  } catch (error) {
+    console.log("Admin content fetch error:", error);
+    return c.json({ error: "Error fetching content" }, 500);
+  }
+});
+
+// Admin-only endpoint: Delete a post
+app.delete("/make-server-c56dfc7a/admin/posts/:postId", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user || user.user_metadata.role !== "admin") {
+      return c.json({ error: "Unauthorized - Admin access required" }, 403);
+    }
+
+    const postId = c.req.param("postId");
+
+    // Get the post to verify it exists and get author info
+    const post = await kv.get(`post:${postId}`);
+    
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    const author = await kv.get(`user:${post.user_id}`);
+
+    // Delete the post
+    await kv.delete(`post:${postId}`);
+
+    // Delete all comments for this post
+    const comments = await kv.getByPrefix(`comment:${postId}:`);
+    for (const comment of comments) {
+      await kv.delete(`comment:${postId}:${comment.id}`);
+    }
+
+    // Delete all ratings for this post
+    const ratings = await kv.getByPrefix(`rating:${postId}:`);
+    for (const rating of ratings) {
+      await kv.delete(`rating:${postId}:${rating.user_id}`);
+    }
+
+    // Delete from user's posts list
+    const userPosts = await kv.get(`user_posts:${post.user_id}`) || [];
+    const updatedUserPosts = userPosts.filter((id: string) => id !== postId);
+    await kv.set(`user_posts:${post.user_id}`, updatedUserPosts);
+
+    console.log(`Admin ${user.user_metadata.name} deleted post ${postId} by ${author?.name || "Unknown User"}`);
+
+    return c.json({ 
+      success: true,
+      message: "Post deleted successfully"
+    });
+  } catch (error) {
+    console.log("Admin delete post error:", error);
+    return c.json({ error: "Error deleting post" }, 500);
+  }
+});
+
+// Admin-only endpoint: Issue warning to user
+app.post("/make-server-c56dfc7a/admin/warn-user", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user || user.user_metadata.role !== "admin") {
+      return c.json({ error: "Unauthorized - Admin access required" }, 403);
+    }
+
+    const { user_id, reason, post_id } = await c.req.json();
+
+    if (!user_id || !reason) {
+      return c.json({ error: "User ID and reason are required" }, 400);
+    }
+
+    // Get the target user
+    const targetUser = await kv.get(`user:${user_id}`);
+    
+    if (!targetUser) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Create warning record
+    const warningId = crypto.randomUUID();
+    const warning = {
+      id: warningId,
+      user_id,
+      reason,
+      post_id: post_id || null,
+      issued_by: user.id,
+      issued_by_name: user.user_metadata.name,
+      issued_at: new Date().toISOString(),
+    };
+
+    // Store warning
+    await kv.set(`warning:${user_id}:${warningId}`, warning);
+
+    // Update user's warning count
+    const warnings = await kv.getByPrefix(`warning:${user_id}:`) || [];
+    const warningCount = warnings.length;
+
+    // Optionally update user profile with warning count
+    const updatedUser = {
+      ...targetUser,
+      warning_count: warningCount,
+      last_warning_at: new Date().toISOString(),
+    };
+    await kv.set(`user:${user_id}`, updatedUser);
+
+    console.log(`Admin ${user.user_metadata.name} issued warning to ${targetUser.name} (${targetUser.email}) for: ${reason}`);
+
+    // TODO: Send email notification to user about the warning
+
+    return c.json({ 
+      success: true,
+      message: "Warning issued successfully",
+      warningCount,
+    });
+  } catch (error) {
+    console.log("Admin warn user error:", error);
+    return c.json({ error: "Error issuing warning" }, 500);
   }
 });
 
@@ -4551,6 +4996,782 @@ app.get("/make-server-c56dfc7a/admin/analytics", async (c) => {
   } catch (error) {
     console.error("❌ Admin analytics error:", error);
     return c.json({ error: "Error fetching analytics" }, 500);
+  }
+});
+
+// Get instructors list
+app.get("/make-server-c56dfc7a/instructors", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Get all users and filter for instructors
+    const { data: { users }, error } = await supabase.auth.admin.listUsers();
+    
+    if (error) {
+      console.error("Error fetching users:", error);
+      return c.json({ error: "Error fetching instructors" }, 500);
+    }
+
+    const instructors = users
+      ?.filter(u => u.user_metadata?.role === "instructor")
+      .map(u => ({
+        id: u.id,
+        name: u.user_metadata?.name || "Unknown",
+        avatar_url: u.user_metadata?.avatar_url || null,
+      })) || [];
+
+    return c.json({ instructors });
+  } catch (error) {
+    console.error("Error fetching instructors:", error);
+    return c.json({ error: "Error fetching instructors" }, 500);
+  }
+});
+
+// Create dish evaluation request (Student)
+app.post("/make-server-c56dfc7a/dish-evaluations", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { dish_name, description, instructor_id, images, difficulty, prep_time, notes } = await c.req.json();
+
+    if (!dish_name || !description || !instructor_id || !images || images.length === 0) {
+      return c.json({ error: "Missing required fields" }, 400);
+    }
+
+    const evaluationId = crypto.randomUUID();
+    
+    // Get student and instructor profiles
+    const studentProfile = await kv.get(`user:${user.id}`);
+    const instructorProfile = await kv.get(`user:${instructor_id}`);
+    
+    const safeStudentProfile = ensureUserProfile(studentProfile, user.id);
+    const safeInstructorProfile = ensureUserProfile(instructorProfile, instructor_id);
+
+    const evaluation = {
+      id: evaluationId,
+      dish_name,
+      description,
+      images,
+      difficulty: difficulty || "Medium",
+      prep_time: prep_time || 0,
+      notes: notes || "",
+      student_id: user.id,
+      student_name: safeStudentProfile.name || user.user_metadata?.name || "Unknown",
+      student_avatar: safeStudentProfile.avatar_url,
+      instructor_id,
+      instructor_name: safeInstructorProfile.name || "Unknown",
+      status: "pending",
+      created_at: new Date().toISOString(),
+    };
+
+    await kv.set(`dish_evaluation:${evaluationId}`, evaluation);
+
+    // Add to student's evaluations list
+    const studentEvaluations = (await kv.get(`user_dish_evaluations:${user.id}`)) || [];
+    const safeStudentEvaluations = Array.isArray(studentEvaluations) ? studentEvaluations : [];
+    safeStudentEvaluations.unshift(evaluationId);
+    await kv.set(`user_dish_evaluations:${user.id}`, safeStudentEvaluations);
+
+    // Add to instructor's evaluations list
+    const instructorEvaluations = (await kv.get(`instructor_dish_evaluations:${instructor_id}`)) || [];
+    const safeInstructorEvaluations = Array.isArray(instructorEvaluations) ? instructorEvaluations : [];
+    safeInstructorEvaluations.unshift(evaluationId);
+    await kv.set(`instructor_dish_evaluations:${instructor_id}`, safeInstructorEvaluations);
+
+    console.log(`✅ Dish evaluation created: ${dish_name} by ${safeStudentProfile.name} for ${safeInstructorProfile.name}`);
+
+    return c.json({ evaluation });
+  } catch (error) {
+    console.error("Error creating dish evaluation:", error);
+    return c.json({ error: "Error creating dish evaluation" }, 500);
+  }
+});
+
+// Get student's dish evaluations
+app.get("/make-server-c56dfc7a/dish-evaluations/student", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const evaluationIds = (await kv.get(`user_dish_evaluations:${user.id}`)) || [];
+    const safeEvaluationIds = Array.isArray(evaluationIds) ? evaluationIds : [];
+    
+    const evaluations = [];
+    for (const id of safeEvaluationIds) {
+      const evaluation = await kv.get(`dish_evaluation:${id}`);
+      if (evaluation) {
+        evaluations.push(evaluation);
+      }
+    }
+
+    return c.json({ evaluations });
+  } catch (error) {
+    console.error("Error fetching student evaluations:", error);
+    return c.json({ error: "Error fetching evaluations" }, 500);
+  }
+});
+
+// Get instructor's dish evaluations
+app.get("/make-server-c56dfc7a/dish-evaluations/instructor", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    if (user.user_metadata?.role !== "instructor") {
+      return c.json({ error: "Forbidden - Instructor access required" }, 403);
+    }
+
+    const evaluationIds = (await kv.get(`instructor_dish_evaluations:${user.id}`)) || [];
+    const safeEvaluationIds = Array.isArray(evaluationIds) ? evaluationIds : [];
+    
+    const evaluations = [];
+    for (const id of safeEvaluationIds) {
+      const evaluation = await kv.get(`dish_evaluation:${id}`);
+      if (evaluation) {
+        evaluations.push(evaluation);
+      }
+    }
+
+    return c.json({ evaluations });
+  } catch (error) {
+    console.error("Error fetching instructor evaluations:", error);
+    return c.json({ error: "Error fetching evaluations" }, 500);
+  }
+});
+
+// Submit evaluation (Instructor)
+app.post("/make-server-c56dfc7a/dish-evaluations/:id/evaluate", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    if (user.user_metadata?.role !== "instructor") {
+      return c.json({ error: "Forbidden - Instructor access required" }, 403);
+    }
+
+    const evaluationId = c.req.param("id");
+    const { rating, feedback } = await c.req.json();
+
+    if (!rating || !feedback) {
+      return c.json({ error: "Rating and feedback are required" }, 400);
+    }
+
+    const evaluation = await kv.get(`dish_evaluation:${evaluationId}`);
+    if (!evaluation) {
+      return c.json({ error: "Evaluation not found" }, 404);
+    }
+
+    if (evaluation.instructor_id !== user.id) {
+      return c.json({ error: "Unauthorized - Not your evaluation" }, 403);
+    }
+
+    evaluation.rating = rating;
+    evaluation.feedback = feedback;
+    evaluation.status = "completed";
+    evaluation.evaluated_at = new Date().toISOString();
+
+    await kv.set(`dish_evaluation:${evaluationId}`, evaluation);
+
+    // Create notification for student
+    const notificationId = crypto.randomUUID();
+    const notification = {
+      id: notificationId,
+      type: "dish_evaluation_completed",
+      title: "Dish Evaluation Completed",
+      message: `Your dish "${evaluation.dish_name}" has been evaluated by ${user.user_metadata?.name || "your instructor"}`,
+      data: {
+        evaluation_id: evaluationId,
+        dish_name: evaluation.dish_name,
+        rating,
+      },
+      read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    await kv.set(`notification:${notificationId}`, notification);
+
+    // Add to student's notifications
+    const studentNotifications = (await kv.get(`user_notifications:${evaluation.student_id}`)) || [];
+    const safeStudentNotifications = Array.isArray(studentNotifications) ? studentNotifications : [];
+    safeStudentNotifications.unshift(notificationId);
+    await kv.set(`user_notifications:${evaluation.student_id}`, safeStudentNotifications);
+
+    console.log(`✅ Dish evaluation completed: ${evaluation.dish_name} - Rating: ${rating}/5`);
+
+    return c.json({ evaluation });
+  } catch (error) {
+    console.error("Error submitting evaluation:", error);
+    return c.json({ error: "Error submitting evaluation" }, 500);
+  }
+});
+
+// ================== CONVERSATIONS/MESSAGING ENDPOINTS ==================
+
+// Get all user conversations with message request handling
+app.get("/make-server-c56dfc7a/conversations", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    console.log(`📬 Fetching conversations for user: ${user.id}`);
+
+    // Get user's following list from KV
+    const userProfile = await kv.get(`user:${user.id}`);
+    const safeUserProfile = ensureUserProfile(userProfile, user.id);
+    const followingIds = safeUserProfile.following || [];
+
+    // Get all conversations where user is a participant
+    const { data: participantRecords, error: participantError } = await supabase
+      .from('conversation_participants')
+      .select(`
+        conversation_id,
+        last_read_at,
+        conversations!inner(
+          id,
+          type,
+          name,
+          created_by,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('user_id', user.id)
+      .is('left_at', null);
+
+    if (participantError) {
+      console.error("Error fetching conversations:", participantError);
+      return c.json({ error: "Error fetching conversations" }, 500);
+    }
+
+    const conversationIds = participantRecords?.map(p => p.conversation_id) || [];
+    
+    if (conversationIds.length === 0) {
+      return c.json({ conversations: [] });
+    }
+
+    // Get all participants for these conversations
+    const { data: allParticipants, error: allParticipantsError } = await supabase
+      .from('conversation_participants')
+      .select(`
+        conversation_id,
+        user_id,
+        user_profiles!inner(
+          id,
+          name,
+          avatar_url,
+          role
+        )
+      `)
+      .in('conversation_id', conversationIds)
+      .is('left_at', null);
+
+    if (allParticipantsError) {
+      console.error("Error fetching participants:", allParticipantsError);
+      return c.json({ error: "Error fetching participants" }, 500);
+    }
+
+    // Get last message for each conversation
+    const { data: lastMessages, error: lastMessagesError } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        conversation_id,
+        content,
+        sender_id,
+        created_at,
+        sender:user_profiles!messages_sender_id_fkey(
+          id,
+          name
+        )
+      `)
+      .in('conversation_id', conversationIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (lastMessagesError) {
+      console.error("Error fetching last messages:", lastMessagesError);
+    }
+
+    // Group last messages by conversation
+    const lastMessageByConversation = {};
+    if (lastMessages) {
+      lastMessages.forEach(msg => {
+        if (!lastMessageByConversation[msg.conversation_id]) {
+          lastMessageByConversation[msg.conversation_id] = msg;
+        }
+      });
+    }
+
+    // Get unread counts for each conversation
+    const unreadCounts = {};
+    for (const convId of conversationIds) {
+      const participantRecord = participantRecords?.find(p => p.conversation_id === convId);
+      const lastReadAt = participantRecord?.last_read_at || new Date(0).toISOString();
+
+      const { count, error: countError } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('conversation_id', convId)
+        .neq('sender_id', user.id)
+        .gt('created_at', lastReadAt)
+        .is('deleted_at', null);
+
+      if (!countError) {
+        unreadCounts[convId] = count || 0;
+      }
+    }
+
+    // Build conversations array
+    const conversations = [];
+
+    for (const record of participantRecords || []) {
+      const conv = record.conversations;
+      if (!conv) continue;
+
+      const participants = allParticipants?.filter(p => p.conversation_id === conv.id) || [];
+      const otherParticipant = participants.find(p => p.user_id !== user.id);
+      
+      if (conv.type === 'direct' && otherParticipant) {
+        const otherProfile = otherParticipant.user_profiles;
+        const lastMessage = lastMessageByConversation[conv.id];
+
+        // Determine request status
+        let requestStatus = 'accepted';
+        let requestedBy = null;
+
+        // Check if users follow each other
+        const currentUserFollowsOther = followingIds.includes(otherParticipant.user_id);
+        
+        // Get other user's following list
+        const otherUserProfile = await kv.get(`user:${otherParticipant.user_id}`);
+        const safeOtherProfile = ensureUserProfile(otherUserProfile, otherParticipant.user_id);
+        const otherFollowsCurrent = (safeOtherProfile.following || []).includes(user.id);
+
+        // If neither follows the other, it's a message request
+        if (!currentUserFollowsOther && !otherFollowsCurrent) {
+          requestStatus = 'pending';
+          // The person who sent the first message is the requester
+          requestedBy = conv.created_by;
+        }
+
+        conversations.push({
+          id: conv.id,
+          type: conv.type,
+          participant: {
+            id: otherProfile?.id || otherParticipant.user_id,
+            name: otherProfile?.name || 'Unknown User',
+            avatar_url: otherProfile?.avatar_url || null,
+            role: otherProfile?.role || 'student'
+          },
+          participants: [otherParticipant.user_id],
+          last_message: lastMessage ? {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            sender_id: lastMessage.sender_id,
+            sender_name: lastMessage.sender?.name || 'Unknown',
+            created_at: lastMessage.created_at
+          } : null,
+          unread_count: unreadCounts[conv.id] || 0,
+          request_status: requestStatus,
+          requested_by: requestedBy,
+          created_at: conv.created_at,
+          updated_at: conv.updated_at
+        });
+      } else if (conv.type === 'group') {
+        const lastMessage = lastMessageByConversation[conv.id];
+        
+        conversations.push({
+          id: conv.id,
+          type: conv.type,
+          name: conv.name || 'Group Chat',
+          participants: participants.map(p => p.user_id),
+          participant_count: participants.length,
+          last_message: lastMessage ? {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            sender_id: lastMessage.sender_id,
+            sender_name: lastMessage.sender?.name || 'Unknown',
+            created_at: lastMessage.created_at
+          } : null,
+          unread_count: unreadCounts[conv.id] || 0,
+          created_at: conv.created_at,
+          updated_at: conv.updated_at
+        });
+      }
+    }
+
+    // Sort by most recent activity
+    conversations.sort((a, b) => {
+      const aTime = a.last_message?.created_at || a.created_at;
+      const bTime = b.last_message?.created_at || b.created_at;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+
+    console.log(`✅ Found ${conversations.length} conversations for user ${user.id}`);
+    console.log(`   - Pending requests: ${conversations.filter(c => c.request_status === 'pending' && c.requested_by !== user.id).length}`);
+
+    return c.json({ conversations });
+  } catch (error) {
+    console.error("Error in conversations endpoint:", error);
+    return c.json({ error: "Error fetching conversations" }, 500);
+  }
+});
+
+// Create new conversation
+app.post("/make-server-c56dfc7a/conversations", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const { participant_id, type = 'direct' } = await c.req.json();
+
+    if (!participant_id) {
+      return c.json({ error: "participant_id is required" }, 400);
+    }
+
+    console.log(`💬 Creating conversation between ${user.id} and ${participant_id}`);
+
+    // Check if conversation already exists for direct messages
+    if (type === 'direct') {
+      const { data: existingConversations, error: checkError } = await supabase
+        .from('conversation_participants')
+        .select(`
+          conversation_id,
+          conversations!inner(
+            id,
+            type
+          )
+        `)
+        .eq('user_id', user.id)
+        .is('left_at', null);
+
+      if (!checkError && existingConversations) {
+        for (const record of existingConversations) {
+          if (record.conversations?.type === 'direct') {
+            // Check if other participant is in this conversation
+            const { data: otherParticipant } = await supabase
+              .from('conversation_participants')
+              .select('user_id')
+              .eq('conversation_id', record.conversation_id)
+              .eq('user_id', participant_id)
+              .is('left_at', null)
+              .single();
+
+            if (otherParticipant) {
+              console.log(`✅ Found existing conversation: ${record.conversation_id}`);
+              return c.json({ conversation: { id: record.conversation_id } });
+            }
+          }
+        }
+      }
+    }
+
+    // Create new conversation
+    const { data: newConversation, error: conversationError } = await supabase
+      .from('conversations')
+      .insert({
+        type,
+        created_by: user.id
+      })
+      .select()
+      .single();
+
+    if (conversationError || !newConversation) {
+      console.error("Error creating conversation:", conversationError);
+      return c.json({ error: "Error creating conversation" }, 500);
+    }
+
+    // Add participants
+    const { error: participantsError } = await supabase
+      .from('conversation_participants')
+      .insert([
+        {
+          conversation_id: newConversation.id,
+          user_id: user.id,
+          role: 'owner'
+        },
+        {
+          conversation_id: newConversation.id,
+          user_id: participant_id,
+          role: 'member'
+        }
+      ]);
+
+    if (participantsError) {
+      console.error("Error adding participants:", participantsError);
+      // Clean up conversation
+      await supabase.from('conversations').delete().eq('id', newConversation.id);
+      return c.json({ error: "Error adding participants" }, 500);
+    }
+
+    console.log(`✅ Created conversation: ${newConversation.id}`);
+
+    return c.json({ 
+      conversation: {
+        id: newConversation.id,
+        type: newConversation.type
+      }
+    });
+  } catch (error) {
+    console.error("Error creating conversation:", error);
+    return c.json({ error: "Error creating conversation" }, 500);
+  }
+});
+
+// Get messages for a conversation
+app.get("/make-server-c56dfc7a/conversations/:conversationId/messages", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("conversationId");
+
+    // Verify user is participant
+    const { data: participant, error: participantError } = await supabase
+      .from('conversation_participants')
+      .select('id')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id)
+      .is('left_at', null)
+      .single();
+
+    if (participantError || !participant) {
+      return c.json({ error: "Unauthorized - Not a participant" }, 403);
+    }
+
+    // Get messages
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        content,
+        sender_id,
+        message_type,
+        file_url,
+        created_at,
+        edited_at,
+        sender:user_profiles!messages_sender_id_fkey(
+          id,
+          name,
+          avatar_url
+        )
+      `)
+      .eq('conversation_id', conversationId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+
+    if (messagesError) {
+      console.error("Error fetching messages:", messagesError);
+      return c.json({ error: "Error fetching messages" }, 500);
+    }
+
+    const formattedMessages = messages?.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      sender_id: msg.sender_id,
+      sender_name: msg.sender?.name || 'Unknown',
+      created_at: msg.created_at,
+      type: msg.message_type || 'text'
+    })) || [];
+
+    // Update last_read_at
+    await supabase
+      .from('conversation_participants')
+      .update({ last_read_at: new Date().toISOString() })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id);
+
+    return c.json({ 
+      conversation: {
+        id: conversationId,
+        messages: formattedMessages
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    return c.json({ error: "Error fetching messages" }, 500);
+  }
+});
+
+// Send message to conversation
+app.post("/make-server-c56dfc7a/conversations/:conversationId/messages", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("conversationId");
+    const { content } = await c.req.json();
+
+    if (!content || !content.trim()) {
+      return c.json({ error: "Message content is required" }, 400);
+    }
+
+    // Verify user is participant
+    const { data: participant, error: participantError } = await supabase
+      .from('conversation_participants')
+      .select('id')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id)
+      .is('left_at', null)
+      .single();
+
+    if (participantError || !participant) {
+      return c.json({ error: "Unauthorized - Not a participant" }, 403);
+    }
+
+    // Insert message
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: content.trim(),
+        message_type: 'text'
+      })
+      .select(`
+        id,
+        content,
+        sender_id,
+        created_at,
+        sender:user_profiles!messages_sender_id_fkey(
+          id,
+          name
+        )
+      `)
+      .single();
+
+    if (messageError || !message) {
+      console.error("Error sending message:", messageError);
+      return c.json({ error: "Error sending message" }, 500);
+    }
+
+    // Update conversation timestamp
+    await supabase
+      .from('conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', conversationId);
+
+    return c.json({ 
+      message: {
+        id: message.id,
+        content: message.content,
+        sender_id: message.sender_id,
+        sender_name: message.sender?.name || 'Unknown',
+        created_at: message.created_at
+      }
+    });
+  } catch (error) {
+    console.error("Error sending message:", error);
+    return c.json({ error: "Error sending message" }, 500);
+  }
+});
+
+// Accept message request
+app.post("/make-server-c56dfc7a/message-requests/:conversationId/accept", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("conversationId");
+
+    console.log(`✅ Accepting message request for conversation: ${conversationId}`);
+
+    // Verify user is participant
+    const { data: participant, error: participantError } = await supabase
+      .from('conversation_participants')
+      .select('id')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id)
+      .is('left_at', null)
+      .single();
+
+    if (participantError || !participant) {
+      return c.json({ error: "Unauthorized - Not a participant" }, 403);
+    }
+
+    // For now, accepting just means the conversation continues normally
+    // The request_status is determined by follow relationships
+    // We could add a separate table to track explicit accepts if needed
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error accepting message request:", error);
+    return c.json({ error: "Error accepting request" }, 500);
+  }
+});
+
+// Decline message request
+app.post("/make-server-c56dfc7a/message-requests/:conversationId/decline", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    const user = await getUserFromToken(accessToken!);
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const conversationId = c.req.param("conversationId");
+
+    console.log(`❌ Declining message request for conversation: ${conversationId}`);
+
+    // Remove user from conversation
+    const { error: deleteError } = await supabase
+      .from('conversation_participants')
+      .update({ left_at: new Date().toISOString() })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error("Error declining request:", deleteError);
+      return c.json({ error: "Error declining request" }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error declining message request:", error);
+    return c.json({ error: "Error declining request" }, 500);
   }
 });
 

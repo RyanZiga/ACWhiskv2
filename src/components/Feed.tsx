@@ -29,6 +29,10 @@ import {
   Image as ImageIcon,
   Send,
   ChevronRight,
+  ArrowUpDown,
+  BookOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { projectId } from "../utils/supabase/info";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -78,6 +82,7 @@ interface Post {
   comments: Comment[];
   ratings?: Rating[];
   type?: "recipe" | "post";
+  privacy?: "public" | "followers" | "private";
   recipe_data?: {
     title: string;
     difficulty: "Easy" | "Medium" | "Hard";
@@ -233,7 +238,9 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [followLoading, setFollowLoading] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<"all" | "following" | "newest" | "popular">("all");
-
+  const [sortBy, setSortBy] = useState<"all" | "posts" | "recipes">("all");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [recentLearningPost, setRecentLearningPost] = useState<any>(null);
 
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
   const [showStoryCreator, setShowStoryCreator] = useState(false);
@@ -264,6 +271,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
     loadTopRecipes();
     loadSuggestedUsers();
     loadStories();
+    loadRecentLearningPost();
 
 
     const feedInterval = setInterval(() => {
@@ -322,7 +330,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
             Authorization: `Bearer ${user.access_token}`,
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(10000), // 10 second timeout
+          signal: AbortSignal.timeout(10000), 
         },
       );
 
@@ -422,7 +430,7 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
           },
         }
       );
-      // Reload stories to update view status
+
       loadStories();
     } catch (error) {
       console.error("Error marking story as viewed:", error);
@@ -500,6 +508,20 @@ export function Feed({ user, onNavigate, unreadMessagesCount = 0, onCreatePostRe
         console.warn("Error loading suggested users:", error.message);
       }
     }
+  };
+
+  const loadRecentLearningPost = () => {
+
+    const demoLearningPost = {
+      id: "learning_1",
+      title: "Mastering Knife Skills: Essential Techniques",
+      description: "Learn the fundamental knife techniques every chef should master, from basic cuts to advanced julienne.",
+      category: "Techniques",
+      author: "Chef Maria Rodriguez",
+      created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+      thumbnail: "https://images.unsplash.com/photo-1607184281250-1c87a09be3d5?w=400",
+    };
+    setRecentLearningPost(demoLearningPost);
   };
 
   const handleFollowToggle = async (targetUserId: string) => {
@@ -857,7 +879,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error liking post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) =>
         prevPosts.map((post) => {
           if (post.id === postId) {
@@ -982,7 +1004,7 @@ Serve immediately with vanilla ice cream`,
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-      // Optimistic update for demo
+
       setPosts((prevPosts) => prevPosts.filter((p) => p.id !== postId));
       setShowDeleteConfirm(null);
     }
@@ -1117,6 +1139,18 @@ Serve immediately with vanilla ice cream`,
       setSearchLoading(false);
     }
   };
+
+
+  const getFilteredPosts = () => {
+    if (sortBy === "posts") {
+      return posts.filter(post => post.type !== "recipe");
+    } else if (sortBy === "recipes") {
+      return posts.filter(post => post.type === "recipe");
+    }
+    return posts;
+  };
+
+  const filteredPosts = getFilteredPosts();
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -1340,10 +1374,47 @@ Serve immediately with vanilla ice cream`,
               </div>
             </div>
 
-
+            {/* Sort Button */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Feed</h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSortBy("all")}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    sortBy === "all"
+                      ? "bg-primary text-white"
+                      : "bg-secondary text-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setSortBy("posts")}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
+                    sortBy === "posts"
+                      ? "bg-primary text-white"
+                      : "bg-secondary text-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Posts
+                </button>
+                <button
+                  onClick={() => setSortBy("recipes")}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
+                    sortBy === "recipes"
+                      ? "bg-primary text-white"
+                      : "bg-secondary text-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  <ChefHat className="h-3.5 w-3.5" />
+                  Recipes
+                </button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {posts.map((post, index) => (
+              {filteredPosts.map((post, index) => (
                 <div
                   key={post.id}
                   className="post-card overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
@@ -1645,19 +1716,42 @@ Serve immediately with vanilla ice cream`,
           </div>
 
 
-          <div className="hidden lg:block w-80 space-y-4 sticky top-24 h-fit">
-            <SidebarContent
-              user={user}
-              topRankedRecipes={topRecipes}
-              currentTip={currentTip}
-              cookingTips={cookingTips}
-              getDifficultyColor={getDifficultyColor}
-              suggestedUsers={suggestedUsers}
-              followingUsers={followingUsers}
-              followLoading={followLoading}
-              onFollowToggle={handleFollowToggle}
-              onNavigate={onNavigate}
-            />
+          {/* Desktop Sidebar - Collapsible */}
+          <div className={`hidden lg:block space-y-4 sticky top-24 h-fit transition-all duration-300 ${
+            sidebarCollapsed ? 'w-16' : 'w-80'
+          }`}>
+            {/* Collapse Toggle Button */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="w-full flex items-center justify-center p-3 post-card hover:bg-secondary/50 transition-colors"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-5 w-5 text-primary" />
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-sm font-medium text-foreground">Discover</span>
+                  <PanelLeftClose className="h-5 w-5 text-primary" />
+                </div>
+              )}
+            </button>
+            
+            {!sidebarCollapsed && (
+              <SidebarContent
+                user={user}
+                topRankedRecipes={topRecipes}
+                currentTip={currentTip}
+                setCurrentTip={setCurrentTip}
+                cookingTips={cookingTips}
+                getDifficultyColor={getDifficultyColor}
+                suggestedUsers={suggestedUsers}
+                followingUsers={followingUsers}
+                followLoading={followLoading}
+                onFollowToggle={handleFollowToggle}
+                onNavigate={onNavigate}
+                recentLearningPost={recentLearningPost}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -1688,6 +1782,7 @@ Serve immediately with vanilla ice cream`,
                 user={user}
                 topRankedRecipes={topRecipes}
                 currentTip={currentTip}
+                setCurrentTip={setCurrentTip}
                 cookingTips={cookingTips}
                 getDifficultyColor={getDifficultyColor}
                 suggestedUsers={suggestedUsers}
@@ -1695,6 +1790,7 @@ Serve immediately with vanilla ice cream`,
                 followLoading={followLoading}
                 onFollowToggle={handleFollowToggle}
                 onNavigate={onNavigate}
+                recentLearningPost={recentLearningPost}
               />
             </div>
           </div>
@@ -1933,6 +2029,7 @@ interface SidebarContentProps {
   user: User;
   topRankedRecipes: Recipe[];
   currentTip: number;
+  setCurrentTip: (tip: number) => void;
   cookingTips: any[];
   getDifficultyColor: (difficulty: string) => string;
   suggestedUsers: any[];
@@ -1940,12 +2037,14 @@ interface SidebarContentProps {
   followLoading: Set<string>;
   onFollowToggle: (userId: string) => void;
   onNavigate: (page: string, id?: string) => void;
+  recentLearningPost: any;
 }
 
 function SidebarContent({
   user,
   topRankedRecipes,
   currentTip,
+  setCurrentTip,
   cookingTips,
   getDifficultyColor,
   suggestedUsers,
@@ -1953,9 +2052,61 @@ function SidebarContent({
   followLoading,
   onFollowToggle,
   onNavigate,
+  recentLearningPost,
 }: SidebarContentProps) {
   return (
     <>
+      {/* Recent Learning Post */}
+      {recentLearningPost && (
+        <div className="post-card p-4 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary" />
+              Recent Learning
+            </h3>
+            <button 
+              onClick={() => onNavigate('learning')}
+              className="text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              View All
+            </button>
+          </div>
+          
+          <div 
+            onClick={() => onNavigate('learning')}
+            className="cursor-pointer group"
+          >
+            {/* Thumbnail with badge */}
+            <div className="relative overflow-hidden rounded-lg mb-3 aspect-video bg-muted">
+              <img
+                src={recentLearningPost.thumbnail}
+                alt={recentLearningPost.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute top-2 left-2 px-3 py-1 bg-primary/95 backdrop-blur-sm text-white rounded-full text-xs font-medium z-10 shadow-lg">
+                {recentLearningPost.category}
+              </div>
+              {/* Gradient overlay for better text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
+
+            {/* Content */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-foreground text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                {recentLearningPost.title}
+              </h4>
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                {recentLearningPost.description}
+              </p>
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                <span className="font-medium">{recentLearningPost.author}</span>
+                <span>{new Date(recentLearningPost.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Suggestions for you */}
       <div className="post-card p-4">
         <div className="flex items-center justify-between mb-4">
@@ -2063,17 +2214,39 @@ function SidebarContent({
           <p className="text-sm text-muted-foreground leading-relaxed">
             {cookingTips[currentTip].tip}
           </p>
-          <div className="flex items-center justify-center mt-4 space-x-1">
-            {cookingTips.slice(0, 5).map((_, index) => (
-              <div
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === currentTip % 5
-                    ? "bg-primary w-6"
-                    : "bg-border"
-                }`}
-              />
-            ))}
+          
+          {/* Manual Navigation Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <button
+              onClick={() => setCurrentTip((prev) => (prev - 1 + cookingTips.length) % cookingTips.length)}
+              className="p-1 hover:bg-primary/10 rounded-full transition-colors"
+              aria-label="Previous tip"
+            >
+              <ChevronLeft className="h-4 w-4 text-primary" />
+            </button>
+            
+            <div className="flex items-center space-x-1">
+              {cookingTips.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentTip(index)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    index === currentTip
+                      ? "bg-primary w-6"
+                      : "bg-border w-2 hover:bg-border/60"
+                  }`}
+                  aria-label={`Go to tip ${index + 1}`}
+                />
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setCurrentTip((prev) => (prev + 1) % cookingTips.length)}
+              className="p-1 hover:bg-primary/10 rounded-full transition-colors"
+              aria-label="Next tip"
+            >
+              <ChevronRight className="h-4 w-4 text-primary" />
+            </button>
           </div>
         </div>
       </div>
@@ -2099,8 +2272,9 @@ function CreatePostModal({
   const [backgroundColor, setBackgroundColor] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [privacy, setPrivacy] = useState<"public" | "followers" | "private">("public");
   
-  // Recipe-specific fields
+
   const [recipeTitle, setRecipeTitle] = useState("");
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Easy");
   const [cookingTime, setCookingTime] = useState("");
@@ -2114,7 +2288,7 @@ function CreatePostModal({
   ) => {
     const files = Array.from(e.target.files || []);
     setImages((prev) => [...prev, ...files].slice(0, 4));
-    // Clear video if images are added
+
     if (files.length > 0) {
       setVideo(null);
     }
@@ -2126,7 +2300,7 @@ function CreatePostModal({
     const file = e.target.files?.[0];
     if (file) {
       setVideo(file);
-      // Clear images if video is added
+
       setImages([]);
     }
   };
@@ -2163,7 +2337,7 @@ function CreatePostModal({
       const imageUrls: string[] = [];
       let videoUrl: string | undefined = undefined;
 
-      // Upload images
+
       for (const image of images) {
         const formData = new FormData();
         formData.append("file", image);
@@ -2185,7 +2359,7 @@ function CreatePostModal({
         }
       }
 
-      // Upload video
+
       if (video) {
         const formData = new FormData();
         formData.append("file", video);
@@ -2207,18 +2381,19 @@ function CreatePostModal({
         }
       }
 
-      // Create post in KV store (for feed)
+
       const postPayload: any = {
         content: content.trim(),
         images: imageUrls,
+        privacy: privacy,
       };
 
-      // Add video if uploaded
+
       if (videoUrl) {
         postPayload.video = videoUrl;
       }
 
-      // Add background color for text-only posts
+
       if (!imageUrls.length && !videoUrl && backgroundColor) {
         postPayload.background_color = backgroundColor;
       }
@@ -2258,11 +2433,11 @@ function CreatePostModal({
       }
     } catch (err) {
       console.error("Post creation error:", err);
-      // For demo, create post locally
+
       const newPost: Post = {
         id: `post_${Date.now()}`,
         content: content.trim(),
-        images: [], // In demo mode, we don't have uploaded image URLs
+        images: [], 
         author_id: user.id,
         author_name: user.name,
         author_role: user.role,
@@ -2347,7 +2522,7 @@ function CreatePostModal({
             </div>
           </div>
 
-          {/* Post Type Selector */}
+
           <div className="mb-4 flex gap-2">
             <button
               type="button"
@@ -2374,15 +2549,66 @@ function CreatePostModal({
             >
               <div className="flex items-center justify-center gap-2">
                 <ChefHat className="h-4 w-4" />
-                <span>Recipe</span>
+                <span>Recipe Post</span>
               </div>
             </button>
           </div>
 
-          {/* Recipe-specific fields */}
+          {/* Privacy Selector */}
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-foreground mb-2">
+              Who can view this?
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPrivacy("public")}
+                className={`flex-1 py-2 px-3 rounded-lg transition-all text-xs font-medium ${
+                  privacy === "public"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <Users className="h-3 w-3" />
+                  <span>Public</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrivacy("followers")}
+                className={`flex-1 py-2 px-3 rounded-lg transition-all text-xs font-medium ${
+                  privacy === "followers"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <UserCheck className="h-3 w-3" />
+                  <span>Followers</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrivacy("private")}
+                className={`flex-1 py-2 px-3 rounded-lg transition-all text-xs font-medium ${
+                  privacy === "private"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <PanelLeftClose className="h-3 w-3" />
+                  <span>Private</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+
           {postType === "recipe" && (
             <div className="space-y-3 mb-4 p-3 bg-secondary/30 rounded-lg">
-              {/* Recipe Title */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Recipe Title *
@@ -2397,7 +2623,7 @@ function CreatePostModal({
                 />
               </div>
 
-              {/* Difficulty, Time, Servings Row */}
+
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
@@ -2428,7 +2654,7 @@ function CreatePostModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-foreground mb-1">
-                    Servings
+                    Suggested Servings
                   </label>
                   <input
                     type="number"
@@ -2441,7 +2667,7 @@ function CreatePostModal({
                 </div>
               </div>
 
-              {/* Ingredients */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Ingredients (one per line)
@@ -2455,7 +2681,7 @@ function CreatePostModal({
                 />
               </div>
 
-              {/* Instructions */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Instructions (one step per line)
@@ -2469,7 +2695,7 @@ function CreatePostModal({
                 />
               </div>
 
-              {/* Tags */}
+
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">
                   Tags (comma-separated)
@@ -2485,7 +2711,7 @@ function CreatePostModal({
             </div>
           )}
 
-          {/* Description/Content */}
+
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -2498,7 +2724,7 @@ function CreatePostModal({
             rows={postType === "recipe" ? 3 : 4}
           />
 
-          {/* Background Color Selector - Only show for text-only posts */}
+
           {!images.length && !video && postType === "post" && (
             <div className="mt-4 p-3 bg-secondary/30 rounded-lg">
               <label className="block text-xs font-medium text-foreground mb-2">
@@ -2527,7 +2753,7 @@ function CreatePostModal({
             </div>
           )}
 
-          {/* Image Preview */}
+
           {images.length > 0 && (
             <div className="grid grid-cols-2 gap-2 lg:gap-3 mt-4">
               {images.map((image, index) => (
@@ -2768,7 +2994,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
         className="relative w-full max-w-6xl max-h-[90vh] bg-background rounded-lg overflow-hidden flex flex-col lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors"
@@ -2776,9 +3002,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           <X className="h-5 w-5" />
         </button>
 
-        {/* Left Side - Media (Video, Image, or Text) */}
+
         <div className="lg:w-3/5 bg-black flex items-center justify-center">
-          {/* ✅ If recipe has a video (or any post) — show video */}
+
           {post.video ? (
             <video
               src={post.video}
@@ -2814,9 +3040,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
           )}
         </div>
 
-        {/* Right Side - Details and Comments */}
+
         <div className="lg:w-2/5 flex flex-col max-h-[90vh] lg:max-h-none">
-          {/* Post Header */}
+
           <div className="p-4 border-b border-border">
             <button
               onClick={(e) => {
@@ -2853,7 +3079,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </button>
           </div>
 
-          {/* Post Content & Recipe Data */}
+
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Recipe Title */}
             {post.recipe_data?.title && (
@@ -2864,7 +3090,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Post Description */}
+
             {post.content && (
               <div>
                 <p className="text-foreground whitespace-pre-wrap">
@@ -2873,7 +3099,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Recipe Metadata */}
+
             {post.recipe_data && (
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="p-2 bg-secondary/30 rounded-lg text-center">
@@ -2904,7 +3130,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Tags */}
+
             {post.recipe_data?.tags && post.recipe_data.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {post.recipe_data.tags.map((tag, index) => (
@@ -2918,7 +3144,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Ingredients */}
+
             {post.recipe_data?.ingredients && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -2938,7 +3164,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Instructions */}
+
             {post.recipe_data?.instructions && (
               <div>
                 <h3 className="font-semibold text-foreground mb-2">
@@ -2960,7 +3186,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             )}
 
-            {/* Rating Section - Only for recipe posts */}
+
             {post.type === "recipe" && (
               <>
                 <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
@@ -2987,12 +3213,12 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
                   </div>
                 </div>
 
-                {/* Divider */}
+
                 <div className="border-t border-border my-4" />
               </>
             )}
 
-            {/* Comments Section */}
+
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Comments ({post.comments.length})</h3>
               
@@ -3027,9 +3253,9 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
             </div>
           </div>
 
-          {/* Post Actions & Comment Input */}
+
           <div className="border-t border-border p-4 space-y-3 bg-background">
-            {/* Like and Comment Counts */}
+
             <div className="flex items-center justify-between text-sm">
               <button
                 onClick={(e) => {
@@ -3054,7 +3280,7 @@ function PostDetailModal({ post, user, onClose, onLike, onComment, onRate, onNav
               </div>
             </div>
 
-            {/* Comment Input */}
+
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user.avatar_url ? (

@@ -143,7 +143,7 @@ export function Search({ user, onNavigate }: SearchProps) {
       })
 
       if (response.ok) {
-
+        // Update the results to reflect the new follow status
         setResults(prevResults =>
           prevResults.map(result =>
             result.id === userId && result.type === 'user'
@@ -247,7 +247,7 @@ export function Search({ user, onNavigate }: SearchProps) {
         </div>
       </div>
 
-
+      {/* Top Recipes Ranking */}
       {!query && (
         <div className="mb-8">
           <div className="flex items-center space-x-2 mb-4">
@@ -290,7 +290,7 @@ export function Search({ user, onNavigate }: SearchProps) {
         </div>
       )}
 
-
+      {/* Search Results */}
       {query && (
         <div>
           <div className="flex items-center justify-between mb-4">

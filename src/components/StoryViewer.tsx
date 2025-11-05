@@ -51,14 +51,14 @@ export function StoryViewer({
   const currentGroup = storyGroups[currentGroupIndex];
   const currentStory = currentGroup?.stories[currentStoryIndex];
 
-
+  // Mark story as viewed
   useEffect(() => {
     if (currentStory && !currentStory.viewed) {
       onStoryView(currentStory.id);
     }
   }, [currentStory?.id]);
 
-
+  // Progress bar animation
   useEffect(() => {
     if (!currentStory || isPaused) {
       if (progressInterval.current) {
@@ -68,8 +68,8 @@ export function StoryViewer({
     }
 
     setProgress(0);
-    const duration = currentStory.duration * 1000; 
-    const interval = 50; 
+    const duration = currentStory.duration * 1000; // Convert to ms
+    const interval = 50; // Update every 50ms
     const increment = (interval / duration) * 100;
 
     progressInterval.current = setInterval(() => {
@@ -89,7 +89,7 @@ export function StoryViewer({
     };
   }, [currentStory?.id, isPaused]);
 
-
+  // Handle video
   useEffect(() => {
     if (currentStory?.type === 'video' && videoRef.current) {
       if (isPaused) {
@@ -139,7 +139,7 @@ export function StoryViewer({
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-
+      {/* Close button */}
       <button
         onClick={onClose}
         className="absolute top-4 right-4 z-50 text-white/80 hover:text-white transition-colors"
@@ -147,7 +147,7 @@ export function StoryViewer({
         <X className="w-8 h-8" />
       </button>
 
-
+      {/* Navigation arrows for desktop */}
       <div className="hidden md:flex absolute inset-0 items-center justify-between px-4 pointer-events-none z-40">
         {(currentGroupIndex > 0 || currentStoryIndex > 0) && (
           <button
@@ -167,9 +167,9 @@ export function StoryViewer({
         )}
       </div>
 
-
+      {/* Story container */}
       <div className="relative max-w-md w-full h-full md:h-[90vh] bg-black">
-
+        {/* Progress bars */}
         <div className="absolute top-0 left-0 right-0 z-30 flex gap-1 p-2">
           {currentGroup.stories.map((story, index) => (
             <div key={story.id} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
@@ -248,7 +248,7 @@ export function StoryViewer({
             />
           )}
 
-
+          {/* Text overlay for media stories */}
           {currentStory.type !== 'text' && currentStory.text_content && (
             <div className="absolute bottom-20 left-0 right-0 px-6">
               <p className="text-white text-lg text-center drop-shadow-lg">

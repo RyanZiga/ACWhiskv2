@@ -98,7 +98,7 @@ export function AdminDashboard({ user, onNavigate }: AdminDashboardProps) {
   useEffect(() => {
     fetchAnalytics()
     
-    // Auto-refresh every 30 seconds
+
     const interval = setInterval(fetchAnalytics, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -380,8 +380,8 @@ export function AdminDashboard({ user, onNavigate }: AdminDashboardProps) {
                 />
                 <Legend />
                 <Bar dataKey="messages" fill="#3b82f6" name="Messages" />
-                <Bar dataKey="assignments" fill="#8b5cf6" name="Posts" />
-                <Bar dataKey="submissions" fill="#10b981" name="Recipes" />
+                <Bar dataKey="assignments" fill="#8b5cf6" name="Assignments" />
+                <Bar dataKey="submissions" fill="#10b981" name="Submissions" />
               </BarChart>
             </ResponsiveContainer>
           </GlassCard>
